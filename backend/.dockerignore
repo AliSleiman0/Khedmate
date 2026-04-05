@@ -1,0 +1,27 @@
+# Build artifacts
+**/bin/
+**/obj/
+**/.vs/
+
+# Test projects
+tests/
+
+# IDE files
+*.user
+.idea/
+.vscode/
+
+# Docker compose files (not needed in image)
+docker-compose*.yml
+.dockerignore
+
+# Git
+.git/
+.gitignore
+
+# Secrets / local config
+appsettings.Development.json
+**/*.pfx
+**/*.key
+.env
+.env.*

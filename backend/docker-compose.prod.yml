@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # ── PostgreSQL 16 ──────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # NOT exposed to host — only accessible inside Docker network
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── .NET 8 API ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DefaultConnection: >-
+        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: khudmati
+      Jwt__CustomerAudience: customer
+      Jwt__ProviderAudience: provider
+      Jwt__AdminAudience: admin
+      Jwt__SuperAdminAudience: superadmin
+      Stripe__SecretKey: ${STRIPE_SECRET_KEY}
+      Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY}
+      Stripe__WebhookSecret: ${STRIPE_WEBHOOK_SECRET}
+      Stripe__Connect__RefreshUrl: https://${DOMAIN}/stripe/reauth
+      Stripe__Connect__ReturnUrl: https://${DOMAIN}/stripe/return
+      Firebase__CredentialsJson: ${FIREBASE_CREDENTIALS_JSON}
+      CommissionRate: ${COMMISSION_RATE:-0.15}
+      JobTimeoutMinutes: ${JOB_TIMEOUT_MINUTES:-2}
+      Features__AiScheduling: "false"
+      PaymentBypass: ${PAYMENT_BYPASS:-false}
+    volumes:
+      - uploads:/app/uploads
+      - ./firebase-service-account.json:/app/firebase-service-account.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Nginx reverse proxy ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - uploads:/app/uploads:ro
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  uploads:

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.2.0" />
+    <PackageReference Include="FluentValidation" Version="11.9.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../Khudmati.Shared/Khudmati.Shared.csproj" />
+    <ProjectReference Include="../../Customers/Khudmati.Modules.Customers/Khudmati.Modules.Customers.csproj" />
+    <ProjectReference Include="../../Payments/Khudmati.Modules.Payments/Khudmati.Modules.Payments.csproj" />
+    <ProjectReference Include="../../Providers/Khudmati.Modules.Providers/Khudmati.Modules.Providers.csproj" />
+    <ProjectReference Include="../../Notifications/Khudmati.Modules.Notifications/Khudmati.Modules.Notifications.csproj" />
+  </ItemGroup>
+</Project>

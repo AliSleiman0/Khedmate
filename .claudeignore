@@ -1,0 +1,56 @@
+# Dependencies
+**/node_modules/
+**/.dart_tool/
+**/build/
+**/.pub-cache/
+**/bin/obj/
+**/bin/Debug/
+**/bin/Release/
+
+# Flutter build artifacts
+**/android/
+**/ios/
+**/linux/
+**/macos/
+**/windows/
+**/web/
+**/*.g.dart
+**/*.freezed.dart
+
+# .NET artifacts
+**/bin/
+**/obj/
+**/.vs/
+**/*.user
+**/*.suo
+
+# Vite / React build output
+**/dist/
+
+# Environment and secrets
+**/.env
+**/.env.local
+**/.env.*.local
+**/appsettings.Production.json
+**/appsettings.Staging.json
+
+# Fonts and images (binary assets)
+**/assets/fonts/
+**/assets/images/
+**/public/fonts/
+**/public/images/
+
+# Lock files (let Claude read package.json / pubspec.yaml directly)
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+**/pubspec.lock
+
+# Git
+**/.git/
+**/.gitignore
+
+# IDE
+**/.idea/
+**/.vscode/
+**/*.swp

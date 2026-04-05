@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "999608961860",
+    "project_id": "khudmati-1089b",
+    "storage_bucket": "khudmati-1089b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:999608961860:android:91f87f9d0f098ff246a511",
+        "android_client_info": {
+          "package_name": "com.khudmati.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWLQL2PnIu5YiSRO6slNeQEYGiiFoYi4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

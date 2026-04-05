@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FirebaseAdmin" Version="2.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Khudmati.Shared/Khudmati.Shared.csproj" />
+    <ProjectReference Include="../Modules/Bookings/Khudmati.Modules.Bookings/Khudmati.Modules.Bookings.csproj" />
+    <ProjectReference Include="../Modules/Customers/Khudmati.Modules.Customers/Khudmati.Modules.Customers.csproj" />
+    <ProjectReference Include="../Modules/Providers/Khudmati.Modules.Providers/Khudmati.Modules.Providers.csproj" />
+    <ProjectReference Include="../Modules/Payments/Khudmati.Modules.Payments/Khudmati.Modules.Payments.csproj" />
+    <ProjectReference Include="../Modules/Notifications/Khudmati.Modules.Notifications/Khudmati.Modules.Notifications.csproj" />
+  </ItemGroup>
+</Project>
