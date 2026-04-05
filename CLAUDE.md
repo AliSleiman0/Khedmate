@@ -30,7 +30,7 @@ PostgreSQL 16. Schema-per-module:
 - `payments.*` — transactions, provider_stripe_accounts
 - `public.*` — notifications (shared), contact_inquiries (landing page contact form submissions), reminder_rules (admin-configured reminder interval per category; `interval_days`, `is_active`), scheduled_reminders (per-customer scheduled reminders — status: Scheduled|Sent|Dismissed|Snoozed|Booked)
 
-Start DB: `cd backend && docker-compose up -d postgres`
+Start DB (local dev): `cd backend && docker-compose up -d postgres`
 
 ## Auth
 JWT with 4 distinct audiences: `customer`, `provider`, `admin`, `superadmin`.

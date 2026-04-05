@@ -67,7 +67,7 @@ CREATE INDEX idx_ratings_provider_created ON bookings.ratings(provider_id, creat
 
 ## Run
 ```bash
-# Start Postgres
+# Start Postgres (local dev)
 docker-compose up -d postgres
 
 # Run API (from backend/)
@@ -77,6 +77,22 @@ dotnet run --project src/Khudmati.API
 dotnet test
 ```
 API is available at `http://localhost:5000`. Swagger at `http://localhost:5000/swagger`.
+
+## Production deployment (server: 157.230.22.154)
+Always use `docker-compose.prod.yml` on the server — it reads credentials from `.env`:
+```bash
+# On server: /opt/khudmati/backend/
+docker compose -f docker-compose.prod.yml build api
+docker compose -f docker-compose.prod.yml up -d api
+```
+`docker-compose.yml` has been renamed to `docker-compose.dev.yml` on the server to prevent accidental use.
+
+**Production `.env` keys** (server only — `/opt/khudmati/backend/.env`):
+- `POSTGRES_USER=khudmati_user`, `POSTGRES_PASSWORD=SomethingStrong123!`
+- `JWT_KEY`, `STRIPE_*`, `GROK_API_KEY`, `AI_ASSIST_ENABLED=true`
+
+## Known bugs fixed
+- `SuperAdminController.GetDashboard` — EF Core could not translate `.Status.ToString()` inside a LINQ `.CountAsync()`. Fixed by comparing `JobStatus` enum values directly instead of converting to string.
 
 ## Solution structure
 ```
