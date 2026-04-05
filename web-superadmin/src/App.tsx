@@ -20,7 +20,7 @@ function NavigateSetter() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/superadmin">
       <NavigateSetter />
       <Routes>
         <Route path="/login" element={<Login />} />

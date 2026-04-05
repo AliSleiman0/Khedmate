@@ -51,9 +51,8 @@ public class SuperAdminController : ControllerBase
                 .Where(t => t.Status == "Released" && t.CreatedAt >= monthStart)
                 .SumAsync(t => (decimal?)t.CommissionAmount, ct) ?? 0m;
 
-            var activeStatuses = new[] { "Accepted", "EnRoute", "InProgress" };
             var activeJobs = await _context.Set<Job>()
-                .CountAsync(j => activeStatuses.Contains(j.Status.ToString()), ct);
+                .CountAsync(j => j.Status == JobStatus.Accepted || j.Status == JobStatus.EnRoute || j.Status == JobStatus.InProgress, ct);
 
             return Ok(new
             {

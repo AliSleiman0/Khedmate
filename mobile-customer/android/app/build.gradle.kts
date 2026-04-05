@@ -32,6 +32,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Only build for arm64-v8a in debug to minimize artifact downloads
+            ndk {
+                abiFilters += listOf("arm64-v8a")
+            }
+        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
