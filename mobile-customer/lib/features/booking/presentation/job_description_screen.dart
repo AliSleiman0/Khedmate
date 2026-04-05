@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/colors.dart';
+import '../data/ai_repository.dart';
 import 'booking_provider.dart';
 
 class JobDescriptionScreen extends ConsumerStatefulWidget {
@@ -16,6 +17,7 @@ class JobDescriptionScreen extends ConsumerStatefulWidget {
 class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
   final _controller = TextEditingController();
   final _picker = ImagePicker();
+  bool _isImprovingWithAi = false;
 
   @override
   void initState() {
@@ -32,6 +34,154 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
   }
 
   bool get _isValid => _controller.text.trim().length >= 20;
+
+  Future<void> _improveWithAi() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+
+    final categoryName =
+        ref.read(bookingNotifierProvider).valueOrNull?.categoryName ?? '';
+
+    setState(() => _isImprovingWithAi = true);
+
+    try {
+      final repo = ref.read(aiRepositoryProvider);
+      final improved = await repo.improveDescription(
+        roughDescription: text,
+        categoryName: categoryName,
+      );
+      if (!mounted) return;
+      _showAiPreviewSheet(improved);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تعذر تحسين النص، حاول مجدداً',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isImprovingWithAi = false);
+    }
+  }
+
+  void _showAiPreviewSheet(String improved) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+              16, 20, 16, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Icon(Icons.auto_awesome,
+                      color: AppColors.amber, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'الوصف المحسّن بالذكاء الاصطناعي',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Text(
+                  improved,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 14,
+                    height: 1.6,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side:
+                            const BorderSide(color: AppColors.brandBlue),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text(
+                        'تجاهل',
+                        style: TextStyle(
+                            fontFamily: 'Cairo',
+                            color: AppColors.brandBlue),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _controller.text = improved;
+                        ref
+                            .read(bookingNotifierProvider.notifier)
+                            .setDescription(improved);
+                        Navigator.of(ctx).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.brandBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text(
+                        'استخدم هذا الوصف',
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<void> _pickPhoto() async {
     final booking = ref.read(bookingNotifierProvider).valueOrNull;
@@ -140,7 +290,47 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
+
+              // ── AI improve button ───────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed:
+                      (charCount > 0 && !_isImprovingWithAi)
+                          ? _improveWithAi
+                          : null,
+                  icon: _isImprovingWithAi
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.amber),
+                          ),
+                        )
+                      : const Icon(Icons.auto_awesome,
+                          color: AppColors.amber, size: 18),
+                  label: Text(
+                    _isImprovingWithAi ? 'جارٍ التحسين...' : 'تحسين بالذكاء الاصطناعي',
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 13,
+                      color: AppColors.amber,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    side: const BorderSide(color: AppColors.amber),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    disabledForegroundColor: Colors.grey,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
 
               // Photo upload
               Row(

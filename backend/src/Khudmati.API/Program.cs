@@ -4,6 +4,7 @@ using Google.Apis.Auth.OAuth2;
 using Khudmati.API.Domain;
 using Khudmati.API.EventHandlers;
 using Khudmati.API.Infrastructure;
+using Khudmati.API.Services;
 using Khudmati.Modules.Bookings;
 using Khudmati.Modules.Bookings.Domain.Entities;
 using Khudmati.Modules.Bookings.Domain.Enums;
@@ -368,6 +369,16 @@ builder.Services.AddAuthorization(opts =>
     opts.AddPolicy("AdminOrSuperAdmin", p => p.RequireClaim("aud", "admin", "superadmin"));
     opts.AddPolicy("SuperAdminOnly", p => p.RequireClaim("aud", "superadmin"));
 });
+
+// ── Grok AI Service ──────────────────────────────────────────────────────────
+var grokApiKey = builder.Configuration["Grok:ApiKey"] ?? string.Empty;
+builder.Services.AddHttpClient("grok", client =>
+{
+    client.BaseAddress = new Uri("https://api.x.ai");
+    if (!string.IsNullOrEmpty(grokApiKey))
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {grokApiKey}");
+});
+builder.Services.AddScoped<IGrokService, GrokService>();
 
 // ── Shared services ───────────────────────────────────────────────────────────
 builder.Services.AddScoped<IJwtService, JwtService>();

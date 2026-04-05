@@ -49,6 +49,8 @@ services:
       CommissionRate: ${COMMISSION_RATE:-0.15}
       JobTimeoutMinutes: ${JOB_TIMEOUT_MINUTES:-2}
       Features__AiScheduling: "false"
+      Features__AiAssist: ${AI_ASSIST_ENABLED:-false}
+      Grok__ApiKey: ${GROK_API_KEY:-}
       PaymentBypass: ${PAYMENT_BYPASS:-false}
     volumes:
       - uploads:/app/uploads
