@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
+import '../../../core/providers/locale_provider.dart';
 import 'auth_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -24,6 +26,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   String? _errorMessage;
+  String _dialCode = '+966';
 
   @override
   void dispose() {
@@ -51,7 +54,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     setState(() => _errorMessage = null);
     if (!_formKey.currentState!.validate()) return;
 
-    final phone = _phoneController.text.trim();
+    final phone = '$_dialCode${_phoneController.text.trim()}';
 
     await ref.read(authNotifierProvider.notifier).register(
           fullName: _fullNameController.text.trim(),
@@ -73,16 +76,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       },
       loading: () {},
       error: (err, _) {
-        String message = 'حدث خطأ. حاول مرة أخرى';
+        String message = S.read(ref).errorGeneric;
         if (err is DioException) {
           if (err.type == DioExceptionType.connectionError ||
               err.type == DioExceptionType.receiveTimeout ||
               err.type == DioExceptionType.sendTimeout) {
-            message = 'تحقق من اتصالك بالإنترنت';
+            message = S.read(ref).errorNetwork;
           } else {
             final code = _extractErrorCode(err);
             if (code == 'PHONE_ALREADY_REGISTERED') {
-              message = 'هذا الرقم مسجل مسبقاً';
+              message = S.read(ref).errorPhoneAlreadyRegistered;
             }
           }
         }
@@ -95,21 +98,39 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
+    final s = S.of(ref);
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.surface,
-        appBar: AppBar(
-          backgroundColor: AppColors.brandBlue,
-          foregroundColor: Colors.white,
-          title: const Text(
-            'إنشاء حساب جديد',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
-          ),
-          centerTitle: true,
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.brandBlue,
+        foregroundColor: Colors.white,
+        title: Text(
+          s.registerTitle,
+          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
         ),
-        body: SafeArea(
+        centerTitle: true,
+        actions: [
+          TextButton(
+            onPressed: () {
+              final current = ref.read(localeProvider);
+              ref.read(localeProvider.notifier).state =
+                  current.languageCode == 'ar'
+                      ? const Locale('en')
+                      : const Locale('ar');
+            },
+            child: Text(
+              s.langToggle,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Form(
@@ -144,43 +165,92 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     controller: _fullNameController,
                     textInputAction: TextInputAction.next,
                     decoration: _inputDecoration(
-                      label: 'الاسم الكامل',
+                      label: s.fullName,
                       icon: Icons.person_outline,
                     ),
                     style: const TextStyle(fontFamily: 'Cairo'),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
-                        return 'الاسم الكامل مطلوب';
+                        return s.fullNameRequired;
                       }
                       if (v.trim().length < 3) {
-                        return 'الاسم يجب أن يكون 3 أحرف على الأقل';
+                        return s.fullNameTooShort;
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // Phone
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.next,
-                    decoration: _inputDecoration(
-                      label: 'رقم الهاتف',
-                      icon: Icons.phone_outlined,
-                      prefix: '+966 ',
-                    ),
-                    style: const TextStyle(fontFamily: 'Cairo'),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'رقم الهاتف مطلوب';
-                      }
-                      final digits = v.trim().replaceAll(RegExp(r'\D'), '');
-                      if (digits.length < 9) {
-                        return 'أدخل رقم هاتف صحيح';
-                      }
-                      return null;
-                    },
+                  // Phone with country code
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Country code dropdown
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        height: 56,
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _dialCode,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 15,
+                              color: Colors.black87,
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: '+966', child: Text('+966 🇸🇦')),
+                              DropdownMenuItem(value: '+971', child: Text('+971 🇦🇪')),
+                              DropdownMenuItem(value: '+965', child: Text('+965 🇰🇼')),
+                              DropdownMenuItem(value: '+973', child: Text('+973 🇧🇭')),
+                              DropdownMenuItem(value: '+968', child: Text('+968 🇴🇲')),
+                              DropdownMenuItem(value: '+974', child: Text('+974 🇶🇦')),
+                              DropdownMenuItem(value: '+962', child: Text('+962 🇯🇴')),
+                              DropdownMenuItem(value: '+961', child: Text('+961 🇱🇧')),
+                              DropdownMenuItem(value: '+20', child: Text('+20 🇪🇬')),
+                              DropdownMenuItem(value: '+212', child: Text('+212 🇲🇦')),
+                              DropdownMenuItem(value: '+1', child: Text('+1 🇺🇸')),
+                              DropdownMenuItem(value: '+44', child: Text('+44 🇬🇧')),
+                              DropdownMenuItem(value: '+33', child: Text('+33 🇫🇷')),
+                              DropdownMenuItem(value: '+49', child: Text('+49 🇩🇪')),
+                              DropdownMenuItem(value: '+91', child: Text('+91 🇮🇳')),
+                              DropdownMenuItem(value: '+92', child: Text('+92 🇵🇰')),
+                              DropdownMenuItem(value: '+880', child: Text('+880 🇧🇩')),
+                              DropdownMenuItem(value: '+63', child: Text('+63 🇵🇭')),
+                            ],
+                            onChanged: (v) => setState(() => _dialCode = v!),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Phone number input
+                      Expanded(
+                        child: TextFormField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.next,
+                          decoration: _inputDecoration(
+                            label: s.phoneNumber,
+                            icon: Icons.phone_outlined,
+                          ),
+                          style: const TextStyle(fontFamily: 'Cairo'),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return s.phoneRequired;
+                            }
+                            final digits = v.trim().replaceAll(RegExp(r'\D'), '');
+                            if (digits.length < 7) {
+                              return s.phoneInvalid;
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -190,7 +260,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: _inputDecoration(
-                      label: 'البريد الإلكتروني (اختياري)',
+                      label: s.emailOptional,
                       icon: Icons.email_outlined,
                     ),
                     style: const TextStyle(fontFamily: 'Cairo'),
@@ -198,7 +268,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       if (v == null || v.trim().isEmpty) return null;
                       final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
                       if (!emailRegex.hasMatch(v.trim())) {
-                        return 'أدخل بريد إلكتروني صحيح';
+                        return s.emailInvalid;
                       }
                       return null;
                     },
@@ -211,7 +281,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.next,
                     decoration: _inputDecoration(
-                      label: 'كلمة المرور',
+                      label: s.password,
                       icon: Icons.lock_outline,
                     ).copyWith(
                       suffixIcon: IconButton(
@@ -227,9 +297,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     style: const TextStyle(fontFamily: 'Cairo'),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'كلمة المرور مطلوبة';
+                      if (v == null || v.isEmpty) return s.passwordRequired;
                       if (v.length < 8) {
-                        return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+                        return s.passwordTooShort;
                       }
                       return null;
                     },
@@ -243,7 +313,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _submit(),
                     decoration: _inputDecoration(
-                      label: 'تأكيد كلمة المرور',
+                      label: s.confirmPassword,
                       icon: Icons.lock_outline,
                     ).copyWith(
                       suffixIcon: IconButton(
@@ -260,10 +330,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     style: const TextStyle(fontFamily: 'Cairo'),
                     validator: (v) {
                       if (v == null || v.isEmpty) {
-                        return 'تأكيد كلمة المرور مطلوب';
+                        return s.confirmPasswordRequired;
                       }
                       if (v != _passwordController.text) {
-                        return 'كلمات المرور غير متطابقة';
+                        return s.passwordsMismatch;
                       }
                       return null;
                     },
@@ -295,15 +365,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('إنشاء الحساب'),
+                        : Text(s.createAccountButton),
                   ),
                   const SizedBox(height: 16),
 
                   // Login link
                   TextButton(
                     onPressed: () => context.go('/login'),
-                    child: const Text(
-                      'لديك حساب بالفعل؟ تسجيل الدخول',
+                    child: Text(
+                      s.alreadyHaveAccount,
                       style: TextStyle(
                         color: AppColors.brandBlue,
                         fontFamily: 'Cairo',
@@ -316,7 +386,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
         ),
-      ),
     );
   }
 

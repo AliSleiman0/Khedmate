@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
+import '../../../core/providers/locale_provider.dart';
 import 'auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -63,22 +65,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       },
       loading: () {},
       error: (err, _) {
-        String message = 'حدث خطأ. حاول مرة أخرى';
+        final s = S.read(ref);
+        String message = s.errorGeneric;
         bool showResend = false;
 
         if (err is DioException) {
           if (err.type == DioExceptionType.connectionError ||
               err.type == DioExceptionType.receiveTimeout ||
               err.type == DioExceptionType.sendTimeout) {
-            message = 'تحقق من اتصالك بالإنترنت';
+            message = s.errorNetwork;
           } else {
             final code = _extractErrorCode(err);
             switch (code) {
               case 'INVALID_CREDENTIALS':
-                message = 'رقم الهاتف أو كلمة المرور غير صحيحة';
+                message = s.errorInvalidCredentials;
                 break;
               case 'EMAIL_NOT_VERIFIED':
-                message = 'لم يتم التحقق من حسابك';
+                message = s.errorAccountNotVerified;
                 showResend = true;
                 break;
             }
@@ -98,12 +101,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
     final phone = _phoneController.text.trim();
+    final s = S.of(ref);
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: AppColors.surface,
-        body: SafeArea(
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          TextButton(
+            onPressed: () {
+              final current = ref.read(localeProvider);
+              ref.read(localeProvider.notifier).state =
+                  current.languageCode == 'ar'
+                      ? const Locale('en')
+                      : const Locale('ar');
+            },
+            child: Text(
+              s.langToggle,
+              style: const TextStyle(
+                color: AppColors.brandBlue,
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
             child: Form(
@@ -113,8 +138,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 children: [
                   const SizedBox(height: 20),
                   // Brand header
-                  const Text(
-                    'خدمتي',
+                  Text(
+                    s.appName,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 48,
@@ -124,8 +149,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'بوابة مزودي الخدمة',
+                  Text(
+                    s.tagline,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 18,
@@ -161,8 +186,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               onTap: () => context.go(
                                 '/otp?phone=${Uri.encodeComponent(phone)}',
                               ),
-                              child: const Text(
-                                'إعادة إرسال الرمز',
+                              child: Text(
+                                s.resendCode,
                                 style: TextStyle(
                                   color: AppColors.brandBlue,
                                   fontFamily: 'Cairo',
@@ -185,13 +210,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     keyboardType: TextInputType.phone,
                     textInputAction: TextInputAction.next,
                     decoration: _inputDecoration(
-                      label: 'رقم الهاتف',
+                      label: s.phoneNumber,
                       icon: Icons.phone_outlined,
                     ),
                     style: const TextStyle(fontFamily: 'Cairo'),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
-                        return 'رقم الهاتف مطلوب';
+                        return s.phoneRequired;
                       }
                       return null;
                     },
@@ -205,7 +230,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _submit(),
                     decoration: _inputDecoration(
-                      label: 'كلمة المرور',
+                      label: s.password,
                       icon: Icons.lock_outline,
                     ).copyWith(
                       suffixIcon: IconButton(
@@ -222,7 +247,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     style: const TextStyle(fontFamily: 'Cairo'),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'كلمة المرور مطلوبة';
+                      if (v == null || v.isEmpty) return s.passwordRequired;
                       return null;
                     },
                   ),
@@ -278,15 +303,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('تسجيل الدخول'),
+                        : Text(s.signIn),
                   ),
                   const SizedBox(height: 24),
 
                   // Register link
                   TextButton(
                     onPressed: () => context.go('/register'),
-                    child: const Text(
-                      'ليس لديك حساب؟ سجّل الآن',
+                    child: Text(
+                      s.noAccount,
                       style: TextStyle(
                         color: AppColors.brandBlue,
                         fontFamily: 'Cairo',
@@ -300,7 +325,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           ),
         ),
-      ),
     );
   }
 
