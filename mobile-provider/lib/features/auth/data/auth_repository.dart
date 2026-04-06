@@ -14,7 +14,7 @@ class AuthRepository {
     required String password,
     required List<String> serviceCategories,
   }) async {
-    final res = await _dio.post('/providers/auth/register', data: {
+    final res = await _dio.post('/auth/providers/register', data: {
       'fullName': fullName,
       'phone': phone,
       'password': password,
@@ -27,7 +27,7 @@ class AuthRepository {
     required String phone,
     required String otp,
   }) async {
-    final res = await _dio.post('/providers/auth/verify-otp', data: {
+    final res = await _dio.post('/auth/providers/verify-otp', data: {
       'phone': phone,
       'otp': otp,
     });
@@ -38,7 +38,7 @@ class AuthRepository {
     required String phone,
     required String password,
   }) async {
-    final res = await _dio.post('/providers/auth/login', data: {
+    final res = await _dio.post('/auth/providers/login', data: {
       'phone': phone,
       'password': password,
     });
@@ -46,7 +46,7 @@ class AuthRepository {
   }
 
   Future<void> resendOtp(String phone) async {
-    await _dio.post('/providers/auth/resend-otp', data: {'phone': phone});
+    await _dio.post('/auth/providers/resend-otp', data: {'phone': phone});
   }
 
   Future<Map<String, dynamic>?> refreshToken() async {
@@ -56,7 +56,7 @@ class AuthRepository {
       final refreshToken = await _storage.read(key: 'refresh_token');
       if (refreshToken == null) return null;
       final res = await _dio.post(
-        '/providers/auth/refresh',
+        '/auth/providers/refresh',
         data: {'refreshToken': refreshToken},
       );
       return res.data as Map<String, dynamic>;
@@ -69,7 +69,7 @@ class AuthRepository {
 
   Future<void> logout() async {
     try {
-      await _dio.post('/providers/auth/logout');
+      await _dio.post('/auth/providers/logout');
     } catch (_) {}
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
