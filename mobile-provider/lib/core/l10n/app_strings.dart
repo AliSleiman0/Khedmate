@@ -65,6 +65,13 @@ class S {
   String get fullNameTooShort =>
       isAr ? 'الاسم يجب أن يكون حرفين على الأقل'
            : 'Name must be at least 2 characters';
+  String get email => isAr ? 'البريد الإلكتروني' : 'Email';
+  String get emailRequired =>
+      isAr ? 'البريد الإلكتروني مطلوب' : 'Email is required';
+  String get emailInvalid =>
+      isAr ? 'أدخل بريد إلكتروني صحيح' : 'Enter a valid email';
+  String get errorEmailAlreadyUsed =>
+      isAr ? 'هذا البريد الإلكتروني مسجل مسبقاً' : 'This email is already registered';
   String get confirmPasswordRequired =>
       isAr ? 'تأكيد كلمة المرور مطلوب' : 'Please confirm your password';
   String get passwordsMismatch =>

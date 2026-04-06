@@ -9,7 +9,7 @@ namespace Khudmati.Modules.Customers.Application.Commands.Auth;
 
 public record RegisterCustomerCommand(
     string Phone,
-    string? Email,
+    string Email,
     string FullName,
     string Password
 ) : IRequest<Result<object>>;

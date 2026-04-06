@@ -59,9 +59,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     await ref.read(authNotifierProvider.notifier).register(
           fullName: _fullNameController.text.trim(),
           phone: phone,
-          email: _emailController.text.trim().isEmpty
-              ? null
-              : _emailController.text.trim(),
+          email: _emailController.text.trim(),
           password: _passwordController.text,
         );
 
@@ -86,6 +84,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             final code = _extractErrorCode(err);
             if (code == 'PHONE_ALREADY_REGISTERED') {
               message = S.read(ref).errorPhoneAlreadyRegistered;
+            } else if (code == 'EMAIL_ALREADY_REGISTERED') {
+              message = S.read(ref).errorEmailAlreadyUsed;
             }
           }
         }
@@ -254,18 +254,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Email (optional)
+                  // Email (required)
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: _inputDecoration(
-                      label: s.emailOptional,
+                      label: s.email,
                       icon: Icons.email_outlined,
                     ),
                     style: const TextStyle(fontFamily: 'Cairo'),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return null;
+                      if (v == null || v.trim().isEmpty) {
+                        return s.emailRequired;
+                      }
                       final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
                       if (!emailRegex.hasMatch(v.trim())) {
                         return s.emailInvalid;

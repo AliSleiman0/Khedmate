@@ -28,6 +28,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -41,6 +42,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void dispose() {
     _fullNameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -74,6 +76,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     await ref.read(authNotifierProvider.notifier).register(
           fullName: _fullNameController.text.trim(),
           phone: phone,
+          email: _emailController.text.trim(),
           password: _passwordController.text,
           serviceCategories: _selectedCategories.toList(),
         );
@@ -99,6 +102,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             final code = _extractErrorCode(err);
             if (code == 'PHONE_ALREADY_REGISTERED') {
               message = S.read(ref).errorPhoneAlreadyRegistered;
+            } else if (code == 'EMAIL_ALREADY_REGISTERED') {
+              message = S.read(ref).errorEmailAlreadyUsed;
             }
           }
         }
@@ -264,6 +269,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Email (required)
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    decoration: _inputDecoration(
+                      label: s.email,
+                      icon: Icons.email_outlined,
+                    ),
+                    style: const TextStyle(fontFamily: 'Cairo'),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return s.emailRequired;
+                      }
+                      final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                      if (!emailRegex.hasMatch(v.trim())) {
+                        return s.emailInvalid;
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
 

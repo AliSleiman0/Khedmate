@@ -24,6 +24,7 @@ using Khudmati.Modules.Providers;
 using Khudmati.Modules.Providers.Domain.Entities;
 using Khudmati.Modules.Providers.Domain.Enums;
 using Khudmati.Shared.Application.Auth;
+using Khudmati.Shared.Infrastructure;
 using Khudmati.Shared.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,7 @@ AppDbContext.AdditionalModelConfiguration = modelBuilder =>
     {
         e.ToTable("accounts", "customers");
         e.HasIndex(x => x.Phone).IsUnique();
+        e.HasIndex(x => x.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");
     });
     modelBuilder.Entity<OtpVerification>(e =>
     {
@@ -90,6 +92,7 @@ AppDbContext.AdditionalModelConfiguration = modelBuilder =>
     {
         e.ToTable("accounts", "providers");
         e.HasIndex(x => x.Phone).IsUnique();
+        e.HasIndex(x => x.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");
         e.Property(x => x.ServiceCategories).HasColumnType("text[]");
     });
     modelBuilder.Entity<ProviderOtpVerification>(e =>
@@ -382,7 +385,8 @@ builder.Services.AddScoped<IGrokService, GrokService>();
 
 // ── Shared services ───────────────────────────────────────────────────────────
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IOtpNotificationService, ConsoleOtpNotificationService>();
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.AddScoped<IOtpNotificationService, SmtpOtpNotificationService>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 
 // ── Modules ───────────────────────────────────────────────────────────────────

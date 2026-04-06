@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../data/auth_repository.dart';
+import '../../../core/api/api_client.dart';
 
 // ---------------------------------------------------------------------------
 // Provider model
@@ -46,9 +47,10 @@ class AuthAuthenticated extends AuthState {
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
+final _authApiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  // Overridden in main.dart via ProviderScope overrides
-  throw UnimplementedError('Override authRepositoryProvider in ProviderScope');
+  return AuthRepository(ref.read(_authApiClientProvider).dio, const FlutterSecureStorage());
 });
 
 // ---------------------------------------------------------------------------
@@ -79,6 +81,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> register({
     required String fullName,
     required String phone,
+    required String email,
     required String password,
     required List<String> serviceCategories,
   }) async {
@@ -88,6 +91,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       await repo.register(
         fullName: fullName,
         phone: phone,
+        email: email,
         password: password,
         serviceCategories: serviceCategories,
       );

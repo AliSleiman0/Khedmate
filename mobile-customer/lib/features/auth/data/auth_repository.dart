@@ -11,13 +11,13 @@ class AuthRepository {
   Future<Map<String, dynamic>> register({
     required String fullName,
     required String phone,
-    String? email,
+    required String email,
     required String password,
   }) async {
     final res = await _dio.post('/auth/customers/register', data: {
       'fullName': fullName,
       'phone': phone,
-      if (email != null && email.isNotEmpty) 'email': email,
+      'email': email,
       'password': password,
     });
     return res.data as Map<String, dynamic>;

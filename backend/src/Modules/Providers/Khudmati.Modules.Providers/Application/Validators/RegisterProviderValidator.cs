@@ -22,5 +22,9 @@ public class RegisterProviderValidator : AbstractValidator<RegisterProviderComma
         RuleFor(x => x.ServiceCategories)
             .NotNull().WithMessage("Service categories are required.")
             .Must(c => c != null && c.Length > 0).WithMessage("At least one service category must be provided.");
+
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required.")
+            .EmailAddress().WithMessage("A valid email address is required.");
     }
 }

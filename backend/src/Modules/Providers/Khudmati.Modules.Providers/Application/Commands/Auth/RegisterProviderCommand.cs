@@ -8,7 +8,7 @@ namespace Khudmati.Modules.Providers.Application.Commands.Auth;
 
 public record RegisterProviderCommand(
     string Phone,
-    string? Email,
+    string Email,
     string FullName,
     string Password,
     string[] ServiceCategories

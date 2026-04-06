@@ -40,6 +40,7 @@ class S {
   String get fullName => isAr ? 'الاسم الكامل' : 'Full Name';
   String get emailOptional =>
       isAr ? 'البريد الإلكتروني (اختياري)' : 'Email (optional)';
+  String get email => isAr ? 'البريد الإلكتروني' : 'Email';
   String get confirmPassword =>
       isAr ? 'تأكيد كلمة المرور' : 'Confirm Password';
   String get createAccountButton =>
@@ -64,6 +65,10 @@ class S {
            : 'Name must be at least 3 characters';
   String get emailInvalid =>
       isAr ? 'أدخل بريد إلكتروني صحيح' : 'Enter a valid email';
+  String get emailRequired =>
+      isAr ? 'البريد الإلكتروني مطلوب' : 'Email is required';
+  String get errorEmailAlreadyUsed =>
+      isAr ? 'هذا البريد الإلكتروني مسجل مسبقاً' : 'This email is already registered';
   String get confirmPasswordRequired =>
       isAr ? 'تأكيد كلمة المرور مطلوب' : 'Please confirm your password';
   String get passwordsMismatch =>
