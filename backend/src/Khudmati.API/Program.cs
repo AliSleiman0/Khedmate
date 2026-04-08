@@ -7,13 +7,11 @@ using Khudmati.API.Infrastructure;
 using Khudmati.API.Services;
 using Khudmati.Modules.Bookings;
 using Khudmati.Modules.Bookings.Domain.Entities;
-using Khudmati.Modules.Bookings.Domain.Enums;
-using Khudmati.Modules.Bookings.Infrastructure.Persistence;
+
 using Khudmati.Modules.Bookings.Infrastructure.BackgroundJobs;
 using Khudmati.Modules.Customers;
 using Khudmati.Modules.Customers.Domain.Entities;
 using Khudmati.Modules.Notifications;
-using Khudmati.Modules.Notifications.Application;
 using Khudmati.Modules.Notifications.Domain.Entities;
 using Khudmati.Modules.Notifications.Infrastructure;
 using Khudmati.Modules.Notifications.Infrastructure.Hubs;
@@ -385,8 +383,8 @@ builder.Services.AddScoped<IGrokService, GrokService>();
 
 // ── Shared services ───────────────────────────────────────────────────────────
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
-builder.Services.AddScoped<IOtpNotificationService, SmtpOtpNotificationService>();
+builder.Services.Configure<Smtp2GoSettings>(builder.Configuration.GetSection("Smtp2GoSettings"));
+builder.Services.AddHttpClient<IOtpNotificationService, Smtp2GoOtpNotificationService>();
 builder.Services.AddScoped<IAdminRepository, AdminRepository>();
 
 // ── Modules ───────────────────────────────────────────────────────────────────

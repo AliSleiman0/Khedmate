@@ -61,6 +61,7 @@ Each prompt covers one vertical feature slice across all platforms.
 | 18 | `18-subscription-power-provider-tier.md` | Power Provider monthly subscription — 99 SAR/month (configurable), 10% commission vs 15% standard, 30-second job priority head-start via `providers-power` SignalR group; Stripe Subscriptions + webhook lifecycle; provider app subscription screen; admin overview + super admin plan config |
 | 19 | `19-maintenance-reminders.md` | Maintenance reminders — rule-based scheduling (IRemindersScheduler + AI stub behind feature flag), hourly background worker dispatches push notifications, customer can snooze (≤30 days) or dismiss; admin configures interval per category; reminder card in customer app with "احجز الآن" deep link back to booking flow |
 | 20 | `20-provider-analytics-dashboard.md` | Provider analytics dashboard — earnings summary with line chart + period-over-period %, job stats (completed count, acceptance rate, top categories bar chart), rating breakdown (positive %, tag frequency, sparkline of last 10); 5-min local cache; all three API calls parallelised via Future.wait; fl_chart for charts |
+| 21 | `21-Grok_AI_Booking_Description_Helper.md` | Grok AI description helper — "Improve with AI" button on job description screen; backend proxies to `api.x.ai` (grok-3-mini); feature-flagged via `Features:AiAssist`; toggled on in `appsettings.Development.json` |
 
 ## Key conventions
 - Never return OTP values in API responses
@@ -92,6 +93,9 @@ Each prompt covers one vertical feature slice across all platforms.
 - `IRemindersScheduler` interface in `Modules/Customers/Application/Services/`; `RuleBasedRemindersScheduler` (V1) + `AiRemindersScheduler` (stub); toggled by `Features:AiScheduling` appsettings flag
 - Analytics endpoints: `GET /api/providers/me/analytics/earnings?period=`, `GET /api/providers/me/analytics/jobs?period=`, `GET /api/providers/me/analytics/ratings`; all return zero/null values (never 404) for providers with no data; `changePercent` and `positiveRatePct` are nullable
 - Analytics periods: `Last7Days` | `Last30Days` | `Last3Months` | `AllTime`; chart truncation unit is day/week/month depending on period
+- Grok AI: `POST /api/ai/improve-description` (CustomerOnly); feature-flagged via `Features:AiAssist`; `Grok:ApiKey` config key; model `grok-3-mini`; returns `503` when flag off, `502` on Grok failure; enabled locally via `appsettings.Development.json`
+- Location screen (customer app): NO GPS permission — map defaults to Riyadh, user drags pin, taps "تأكيد الموقع" for reverse geocoding; no `geolocator` calls in `LocationScreen`
+- App language defaults to English (`localeProvider` = `Locale('en')`); toggle EN↔AR via welcome screen button or profile page Language tile; both profile pages are `ConsumerWidget`
 
 ## SignalR events (server → client)
 | Event | Fired when | Group | Payload |

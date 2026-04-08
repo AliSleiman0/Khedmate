@@ -65,6 +65,16 @@ CREATE INDEX idx_jobs_provider_status_date ON bookings.jobs(provider_id, status,
 CREATE INDEX idx_ratings_provider_created ON bookings.ratings(provider_id, created_at DESC);
 ```
 
+## Grok AI — Job Description Helper (Feature #21)
+New files — no DB migration required:
+- `Khudmati.API/Controllers/AiController.cs` — `POST /api/ai/improve-description` (CustomerOnly auth). Returns `503` if `Features:AiAssist = false`, `502` if Grok API fails.
+- `Khudmati.API/Services/IGrokService.cs` — interface `ImproveDescriptionAsync(roughDescription, categoryName)`
+- `Khudmati.API/Services/GrokService.cs` — calls Grok API (`https://api.x.ai/v1/chat/completions`) using `IHttpClientFactory("grok")`, model `grok-3-mini`, max_tokens 400, temperature 0.4. Returns null on failure (logged).
+- Request DTO: `{ roughDescription (max 500 chars), categoryName }` → Response: `{ improvedDescription }`
+- **Feature flag**: `Features:AiAssist` in appsettings (default `false`). Enable locally in `appsettings.Development.json`.
+- **API key**: `Grok:ApiKey` in appsettings/env. Never committed. Stored in server `.env` as `GROK_API_KEY`.
+- **Dev testing**: `appsettings.Development.json` sets `Features:AiAssist: true` and `Grok:ApiKey: xai-...`
+
 ## Run
 ```bash
 # Start Postgres (local dev)

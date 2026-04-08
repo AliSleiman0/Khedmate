@@ -148,9 +148,16 @@ Unverified → PhoneVerified → IdVerified → SkillTested → Active
 ## UI conventions
 - Same RTL-first, Cairo font, AppColors rules as customer app
 - Welcome screen tagline: "بوابة مزودي الخدمة"
+- Welcome screen shows `Image.asset('assets/images/logo.png', height: 130)` above the app name (32pt). Asset must be placed at `assets/images/logo.png` (declared in pubspec).
 - On login success: navigate to `/jobs` (not `/home`)
 - Pulsing amber dot on job cards where `secondsRemaining < 60`
 - Job detail map uses `flutter_map` in non-interactive mode (just shows pin)
+
+## Locale / Language
+`lib/core/providers/locale_provider.dart` — `StateProvider<Locale>` defaulting to `Locale('en')`. Toggle between EN↔AR at runtime.
+- **Welcome screen**: language toggle button at top right
+- **Profile page**: Language tile (between ساعات العمل and الإشعارات) calls `ref.read(localeProvider.notifier).state = ...` to toggle; `ProfilePage` is a `ConsumerWidget`
+- `lib/core/l10n/app_strings.dart` — `S.of(ref)` type-safe string accessor
 
 ## Key dependencies
 | Package | Purpose |

@@ -37,7 +37,7 @@ lib/
     │       ├── booking_provider.dart          # BookingNotifier (AsyncNotifier<BookingState>); full payment+booking flow
     │       ├── category_screen.dart           # 6-category grid
     │       ├── job_description_screen.dart    # Text + up to 3 photos
-    │       ├── location_screen.dart           # flutter_map + GPS + reverse geocoding
+    │       ├── location_screen.dart           # flutter_map (OpenStreetMap) + drag-pin + reverse geocoding; NO GPS permission — user drags pin, taps confirm, address auto-filled
     │       ├── booking_summary_screen.dart    # Price input + "ادفع وأكد الحجز" → Stripe PaymentSheet
     │       └── booking_confirmation_screen.dart # Real-time status (Searching/Accepted/Expired)
     ├── payments/
@@ -148,7 +148,22 @@ GoRouter in `lib/app/router.dart`. Auth redirect guard watches `authNotifierProv
 - **Error handling**: `DISPUTE_WINDOW_CLOSED` (transaction no longer Held) → Arabic inline message; `DISPUTE_ALREADY_EXISTS` → navigate back with snackbar
 - **SignalR**: `DisputeResolved` event received on `customer-{customerId}` group — show snackbar with action and message
 
-## Token storage
+## Locale / Language
+`lib/core/providers/locale_provider.dart` — `StateProvider<Locale>` defaulting to `Locale('en')`. Toggle between EN↔AR at runtime.
+- **Welcome screen**: language toggle button at top right
+- **Profile page**: Language tile in settings list calls `ref.read(localeProvider.notifier).state = ...` to toggle
+- `lib/core/l10n/app_strings.dart` — `S.of(ref)` type-safe string accessor; supports both Arabic and English for all UI strings
+
+## Logo
+Welcome screen shows `Image.asset('assets/images/logo.png', height: 130)` above the app name text (32pt).
+Asset must be placed at `assets/images/logo.png` (folder declared in pubspec).
+
+## Grok AI — Job Description Helper (Feature #21)
+- **AI button** on `job_description_screen.dart`: tapping calls `POST /api/ai/improve-description` via `ai_repository.dart`
+- Shows a bottom-sheet preview of the improved description; customer accepts or dismisses
+- Error handling: if feature flag off (503) or Grok fails (502) → snackbar, field unchanged
+- `lib/features/booking/data/ai_repository.dart` — `AiRepository.improveDescription(roughDescription, categoryName)`
+
 `FlutterSecureStorage`. Keys: `access_token`, `refresh_token`.
 `ApiClient` attaches access token to every request and auto-refreshes on 401.
 

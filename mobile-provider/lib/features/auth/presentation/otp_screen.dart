@@ -206,8 +206,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           centerTitle: true,
         ),
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [

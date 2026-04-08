@@ -1,6 +1,7 @@
 :root {
   --brand-blue: #1B4F72;
   --amber: #F39C12;
+  --amber-dark: #D68910;
   --success: #27AE60;
   --danger: #E74C3C;
   --surface: #F5F7FA;
@@ -8,7 +9,21 @@
   --text-secondary: #7F8C8D;
   --font-arabic: 'Cairo', sans-serif;
   --font-latin: 'Inter', sans-serif;
+
+  --brown-primary: #3B1704;
+  --brown-deep: #2A0F02;
+  --brown-mid: #6B3A1F;
+  --brown-light: #C17F4A;
+  --cream-warm: #FAF0E6;
+  --surface-warm: #FDF8F3;
+  --cream-border: #EDE0D0;
+  --shadow-brown: rgba(59,23,4,0.12);
+  --shadow-brown-lg: rgba(59,23,4,0.20);
+  --radius-card: 20px;
+  --radius-pill: 999px;
+  --transition-base: 0.18s ease;
 }
+
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -23,7 +38,7 @@ body {
 
 a { color: inherit; text-decoration: none; }
 
-section { padding: 64px 24px; }
+section { padding: 80px 24px; }
 
 @media (max-width: 768px) {
   section { padding: 40px 16px; }

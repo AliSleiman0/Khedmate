@@ -16,7 +16,7 @@ export default function AdminLayout() {
     <div className="flex h-screen bg-gray-100">
       <aside className="w-64 bg-[#1B4F72] text-white flex flex-col flex-shrink-0">
         <div className="p-6 border-b border-blue-800">
-          <p className="text-xl font-bold">Khudmati</p>
+          <img src="/logo.png" alt="Khudmati" className="h-10 w-auto" />
           <p className="text-xs text-blue-300 mt-1">Admin Portal</p>
         </div>
         <nav className="flex-1 p-4 space-y-1">

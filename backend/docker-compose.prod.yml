@@ -52,6 +52,9 @@ services:
       Features__AiAssist: ${AI_ASSIST_ENABLED:-false}
       Grok__ApiKey: ${GROK_API_KEY:-}
       PaymentBypass: ${PAYMENT_BYPASS:-false}
+      Smtp2GoSettings__ApiKey: ${SMTP2GO_API_KEY}
+      Smtp2GoSettings__SenderEmail: info@khudmati.app
+      Smtp2GoSettings__SenderName: Khudmati
     volumes:
       - uploads:/app/uploads
       - ./firebase-service-account.json:/app/firebase-service-account.json:ro

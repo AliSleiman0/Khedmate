@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/providers/locale_provider.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('الملف الشخصي')),
       body: ListView(
@@ -60,6 +63,10 @@ class ProfilePage extends StatelessWidget {
           _tile(Icons.verified_user, 'مستوى التوثيق', () {}),
           _tile(Icons.account_balance, 'بيانات الدفع', () {}),
           _tile(Icons.schedule, 'ساعات العمل', () {}),
+          _tile(Icons.language, locale.languageCode == 'ar' ? 'English' : 'عربي', () {
+            ref.read(localeProvider.notifier).state =
+                locale.languageCode == 'ar' ? const Locale('en') : const Locale('ar');
+          }),
           _tile(Icons.notifications, 'الإشعارات', () {}),
           _tile(Icons.help_outline, 'المساعدة', () {}),
           const Divider(),

@@ -43,12 +43,19 @@ class WelcomeScreen extends ConsumerWidget {
                 ),
               ),
               const Spacer(),
-              // Logo
+              // Logo image
+              Image.asset(
+                'assets/images/logo.png',
+                height: 130,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 16),
+              // App name
               Text(
                 s.appName,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 64,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   fontFamily: 'Cairo',

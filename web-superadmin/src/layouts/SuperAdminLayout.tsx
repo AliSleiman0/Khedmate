@@ -16,7 +16,7 @@ export default function SuperAdminLayout() {
     <div className="flex h-screen bg-gray-900">
       <aside className="w-64 bg-gray-950 text-white flex flex-col flex-shrink-0">
         <div className="p-6 border-b border-gray-800">
-          <p className="text-xl font-bold text-white">Khudmati</p>
+          <img src="/logo.png" alt="Khudmati" className="h-10 w-auto" />
           <div className="mt-1 flex items-center gap-2">
             <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full font-medium">
               SUPER ADMIN
