@@ -49,6 +49,33 @@ class AuthRepository {
     await _dio.post('/auth/customers/resend-otp', data: {'phone': phone});
   }
 
+  Future<void> forgotPassword({required String phone}) async {
+    await _dio.post('/auth/customers/forgot-password', data: {'phone': phone});
+  }
+
+  Future<void> resetPassword({
+    required String phone,
+    required String otp,
+    required String newPassword,
+  }) async {
+    await _dio.post('/auth/customers/reset-password', data: {
+      'phone': phone,
+      'otp': otp,
+      'newPassword': newPassword,
+    });
+  }
+
+  Future<Map<String, dynamic>> loginWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    final res = await _dio.post('/auth/customers/login', data: {
+      'email': email,
+      'password': password,
+    });
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>?> refreshToken() async {
     if (_isRefreshing) return null;
     _isRefreshing = true;

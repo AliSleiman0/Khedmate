@@ -36,6 +36,13 @@ public class RegisterCustomerCommandHandler : IRequestHandler<RegisterCustomerCo
         if (existing is not null)
             return Result<object>.Fail("PHONE_ALREADY_REGISTERED");
 
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            var existingByEmail = await _repository.GetByEmailAsync(request.Email, cancellationToken);
+            if (existingByEmail is not null)
+                return Result<object>.Fail("EMAIL_ALREADY_REGISTERED");
+        }
+
         var passwordHash = _jwtService.HashPassword(request.Password);
         var customer = Customer.Create(request.FullName, request.Phone, request.Email, passwordHash);
         await _repository.AddAsync(customer, cancellationToken);

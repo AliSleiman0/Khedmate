@@ -153,6 +153,29 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     state = AsyncValue.data(AuthUnauthenticated());
   }
 
+  Future<void> loginWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    state = const AsyncValue.loading();
+    final repo = ref.read(authRepositoryProvider);
+    try {
+      final result = await repo.loginWithEmail(email: email, password: password);
+      final data = result['data'] as Map<String, dynamic>;
+      await repo.saveTokens(
+        data['accessToken'] as String,
+        data['refreshToken'] as String,
+      );
+      state = AsyncValue.data(
+        AuthAuthenticated(
+          CustomerUser.fromJson(data['customer'] as Map<String, dynamic>),
+        ),
+      );
+    } on DioException catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
   Future<void> refreshToken() async {
     final repo = ref.read(authRepositoryProvider);
     final result = await repo.refreshToken();

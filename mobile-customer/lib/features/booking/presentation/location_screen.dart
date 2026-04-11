@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/constants/colors.dart';
@@ -22,6 +23,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   LatLng _center = const LatLng(33.8938, 35.5018); // Beirut default
   bool _locationConfirmed = false;
   bool _isGeocodingLoading = false;
+  bool _isLocating = false;
 
   @override
   void initState() {
@@ -32,7 +34,8 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _addressController.text = booking.address ?? '';
       _locationConfirmed = true;
     } else {
-      // Auto-geocode the default Riyadh center so the Next button is enabled immediately
+      // Enable Next button immediately — user can always confirm position manually
+      _locationConfirmed = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _reverseGeocode(_center));
     }
   }
@@ -41,6 +44,41 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   void dispose() {
     _addressController.dispose();
     super.dispose();
+  }
+
+  Future<void> _goToMyLocation() async {
+    setState(() => _isLocating = true);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                S.read(ref).locPermissionDenied,
+                style: const TextStyle(fontFamily: 'Cairo'),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      final latLng = LatLng(pos.latitude, pos.longitude);
+      setState(() => _center = latLng);
+      _mapController.move(latLng, 16);
+      await _reverseGeocode(latLng);
+    } catch (_) {
+      // silently ignore — user can drag pin manually
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
   }
 
   Future<void> _reverseGeocode(LatLng latLng) async {
@@ -56,7 +94,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
         _addressController.text = parts;
       }
     } catch (_) {
-      // leave address field empty for manual entry
+      // Fallback to coordinate string so the address field is not empty
+      _addressController.text =
+          '${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}';
     } finally {
       setState(() {
         _isGeocodingLoading = false;
@@ -99,10 +139,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                       initialZoom: 15,
                       onPositionChanged: (camera, hasGesture) {
                         if (hasGesture) {
-                          setState(() {
-                            _center = camera.center ?? _center;
-                            _locationConfirmed = false;
-                          });
+                          // No setState — rebuilding on every drag frame causes
+                          // flutter_map to fight itself and freeze the map.
+                          // _center is only read on button tap, so this is safe.
+                          _center = camera.center ?? _center;
                         }
                       },
                     ),
@@ -120,6 +160,28 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                       Icons.location_pin,
                       color: Colors.red,
                       size: 44,
+                    ),
+                  ),
+                  // GPS — use my location button
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: FloatingActionButton.small(
+                      heroTag: 'gps_btn',
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.brandBlue,
+                      tooltip: s.locMyLocation,
+                      onPressed: _isLocating ? null : _goToMyLocation,
+                      child: _isLocating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.brandBlue,
+                              ),
+                            )
+                          : const Icon(Icons.my_location),
                     ),
                   ),
                   // Confirm position button

@@ -138,6 +138,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Logo
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 72,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 16),
+
                   // Top error banner
                   if (_errorMessage != null) ...[
                     Container(

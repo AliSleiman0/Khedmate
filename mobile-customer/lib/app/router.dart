@@ -24,14 +24,18 @@ import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/referral/presentation/referral_screen.dart';
 import '../features/reminders/presentation/reminders_screen.dart';
 import '../features/profile/presentation/edit_profile_screen.dart';
+import '../features/auth/presentation/forgot_password_screen.dart';
+import '../features/auth/presentation/reset_password_screen.dart';
 import '../widgets/main_scaffold.dart';
 
 /// Routes accessible without authentication.
-const _authRoutes = {'/welcome', '/login', '/register'};
+const _authRoutes = {'/welcome', '/login', '/register', '/forgot-password', '/reset-password'};
 
 bool _isAuthRoute(String location) {
   if (_authRoutes.contains(location)) return true;
   if (location.startsWith('/otp')) return true;
+  if (location.startsWith('/forgot-password')) return true;
+  if (location.startsWith('/reset-password')) return true;
   return false;
 }
 
@@ -83,6 +87,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           final phone =
               Uri.decodeComponent(state.uri.queryParameters['phone'] ?? '');
           return OtpScreen(phone: phone);
+        },
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, __) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, state) {
+          final phone =
+              Uri.decodeComponent(state.uri.queryParameters['phone'] ?? '');
+          return ResetPasswordScreen(phone: phone);
         },
       ),
 

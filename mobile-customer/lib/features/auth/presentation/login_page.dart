@@ -17,15 +17,19 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
   String? _errorMessage;
   bool _showResendOtp = false;
+  bool _useEmail = false;
+  String _dialCode = '+961';
 
   @override
   void dispose() {
     _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -47,12 +51,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
     if (!_formKey.currentState!.validate()) return;
 
-    final phone = _phoneController.text.trim();
-
-    await ref.read(authNotifierProvider.notifier).login(
-          phone: phone,
-          password: _passwordController.text,
-        );
+    if (_useEmail) {
+      final email = _emailController.text.trim();
+      await ref.read(authNotifierProvider.notifier).loginWithEmail(
+            email: email,
+            password: _passwordController.text,
+          );
+    } else {
+      final phone = '$_dialCode${_phoneController.text.trim()}';
+      await ref.read(authNotifierProvider.notifier).login(
+            phone: phone,
+            password: _passwordController.text,
+          );
+    }
 
     if (!mounted) return;
 
@@ -137,6 +148,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 20),
+                  // Logo
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 80,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 12),
                   // Brand header
                   Text(
                     s.appName,
@@ -204,23 +222,143 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Phone field
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.next,
-                    decoration: _inputDecoration(
-                      label: s.phoneNumber,
-                      icon: Icons.phone_outlined,
-                    ),
-                    style: const TextStyle(fontFamily: 'Cairo'),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return s.phoneRequired;
-                      }
-                      return null;
-                    },
+                  // Phone / Email toggle
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _useEmail = false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: !_useEmail ? AppColors.brandBlue : Colors.white,
+                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+                              border: Border.all(color: AppColors.brandBlue),
+                            ),
+                            child: Text(
+                              s.loginWithPhone,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.w600,
+                                color: !_useEmail ? Colors.white : AppColors.brandBlue,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _useEmail = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _useEmail ? AppColors.brandBlue : Colors.white,
+                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
+                              border: Border.all(color: AppColors.brandBlue),
+                            ),
+                            child: Text(
+                              s.loginWithEmail,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontWeight: FontWeight.w600,
+                                color: _useEmail ? Colors.white : AppColors.brandBlue,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
+
+                  // Phone field (with dial code) or Email field
+                  if (!_useEmail) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          height: 56,
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _dialCode,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 15,
+                                color: Colors.black87,
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: '+966', child: Text('+966 🇸🇦')),
+                                DropdownMenuItem(value: '+971', child: Text('+971 🇦🇪')),
+                                DropdownMenuItem(value: '+965', child: Text('+965 🇰🇼')),
+                                DropdownMenuItem(value: '+973', child: Text('+973 🇧🇭')),
+                                DropdownMenuItem(value: '+968', child: Text('+968 🇴🇲')),
+                                DropdownMenuItem(value: '+974', child: Text('+974 🇶🇦')),
+                                DropdownMenuItem(value: '+962', child: Text('+962 🇯🇴')),
+                                DropdownMenuItem(value: '+961', child: Text('+961 🇱🇧')),
+                                DropdownMenuItem(value: '+20', child: Text('+20 🇪🇬')),
+                                DropdownMenuItem(value: '+212', child: Text('+212 🇲🇦')),
+                                DropdownMenuItem(value: '+1', child: Text('+1 🇺🇸')),
+                                DropdownMenuItem(value: '+44', child: Text('+44 🇬🇧')),
+                                DropdownMenuItem(value: '+33', child: Text('+33 🇫🇷')),
+                                DropdownMenuItem(value: '+49', child: Text('+49 🇩🇪')),
+                                DropdownMenuItem(value: '+91', child: Text('+91 🇮🇳')),
+                                DropdownMenuItem(value: '+92', child: Text('+92 🇵🇰')),
+                                DropdownMenuItem(value: '+880', child: Text('+880 🇧🇩')),
+                                DropdownMenuItem(value: '+63', child: Text('+63 🇵🇭')),
+                              ],
+                              onChanged: (v) => setState(() => _dialCode = v!),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                            decoration: _inputDecoration(
+                              label: s.phoneNumber,
+                              icon: Icons.phone_outlined,
+                            ),
+                            style: const TextStyle(fontFamily: 'Cairo'),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return s.phoneRequired;
+                              final digits = v.trim().replaceAll(RegExp(r'\D'), '');
+                              if (digits.length < 7) return s.phoneInvalid;
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      decoration: _inputDecoration(
+                        label: s.email,
+                        icon: Icons.email_outlined,
+                      ),
+                      style: const TextStyle(fontFamily: 'Cairo'),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return s.emailRequired;
+                        final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                        if (!emailRegex.hasMatch(v.trim())) return s.emailInvalid;
+                        return null;
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 16),
 
                   // Password field
@@ -257,18 +395,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
-                      onPressed: () => ScaffoldMessenger.of(context)
-                          .showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'قريباً — استعادة كلمة المرور',
-                                style: TextStyle(fontFamily: 'Cairo'),
-                              ),
-                            ),
-                          ),
-                      child: const Text(
-                        'نسيت كلمة المرور؟',
-                        style: TextStyle(
+                      onPressed: () => context.push('/forgot-password'),
+                      child: Text(
+                        s.forgotPassword,
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontFamily: 'Cairo',
                           fontSize: 13,

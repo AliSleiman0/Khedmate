@@ -213,7 +213,7 @@ class _HistoryCard extends ConsumerWidget {
     );
   }
 
-  void _showDetail(BuildContext context) {
+  void _showDetail(BuildContext context, S s, String displayName) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

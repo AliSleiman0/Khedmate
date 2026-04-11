@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../data/reminders_repository.dart';
@@ -105,9 +105,9 @@ class _ReminderCard extends ConsumerWidget {
 
     final categoryDisplay =
         categoryNames[reminder.categoryId] ??
-        reminder.categoryName.isNotEmpty
+        (reminder.categoryName.isNotEmpty
             ? reminder.categoryName
-            : reminder.categoryId.replaceAll('_', ' ');
+            : reminder.categoryId.replaceAll('_', ' '));
 
     final formattedDate =
         DateFormat('d MMMM', 'ar').format(reminder.scheduledFor);

@@ -33,6 +33,9 @@ class S {
   String get password => isAr ? 'كلمة المرور' : 'Password';
   String get noAccount =>
       isAr ? 'ليس لديك حساب؟ إنشاء حساب' : "Don't have an account? Register";
+  String get forgotPassword => isAr ? 'نسيت كلمة المرور؟' : 'Forgot password?';
+  String get loginWithPhone => isAr ? 'رقم الهاتف' : 'Phone';
+  String get loginWithEmail => isAr ? 'بريد إلكتروني' : 'Email';
 
   // ── Register ─────────────────────────────────────────────────────────────────
   String get registerTitle =>
@@ -150,6 +153,8 @@ class S {
   String get locTitle              => isAr ? 'حدد موقع الخدمة'                    : 'Set Service Location';
   String get locConfirm            => isAr ? 'تأكيد الموقع'                       : 'Confirm Location';
   String get locAddress            => isAr ? 'العنوان'                            : 'Address';
+  String get locMyLocation         => isAr ? 'موقعي الحالي'                        : 'My Location';
+  String get locPermissionDenied   => isAr ? 'لم يتم منح إذن الموقع'             : 'Location permission denied';
   String get summaryTitle          => isAr ? 'مراجعة الطلب'                       : 'Review Order';
   String get summaryYourDetails    => isAr ? 'تفاصيل طلبك'                        : 'Your Order Details';
   String get summaryServiceType    => isAr ? 'نوع الخدمة'                         : 'Service Type';
@@ -337,8 +342,20 @@ class S {
   String get editProfileTitle => isAr ? 'تعديل البيانات'  : 'Edit Profile';
   String get editProfileName  => isAr ? 'الاسم الكامل'    : 'Full Name';
   String get editProfileEmail => isAr ? 'البريد الإلكتروني' : 'Email';
-  String get editProfileSave  => isAr ? 'حفظ'              : 'Save';
+  String get editProfileSave  => isAr ? 'حفظ'              : 'Save';  String get editProfilePhone => isAr ? 'رقم الهاتف (غير قابل للتعديل)' : 'Phone (read-only)';
 
+  // ── Forgot / Reset Password ───────────────────────────────────────────────
+  String get forgotPasswordTitle    => isAr ? 'استعادة كلمة المرور' : 'Forgot Password';
+  String get forgotPasswordSubtitle => isAr ? 'أدخل رقم هاتفك وسنرسل لك رمزاً للتحقق' : 'Enter your phone number and we\'ll send you a verification code';
+  String get forgotPasswordSend     => isAr ? 'إرسال الرمز' : 'Send Code';
+  String get resetPasswordTitle     => isAr ? 'تعيين كلمة مرور جديدة' : 'Set New Password';
+  String resetPasswordSubtitle(String phone) =>
+      isAr ? 'أدخل الرمز المرسل إلى $phone' : 'Enter the code sent to $phone';
+  String get resetPasswordOtpLabel  => isAr ? 'رمز التحقق' : 'Verification Code';
+  String get resetPasswordNew       => isAr ? 'كلمة المرور الجديدة' : 'New Password';
+  String get resetPasswordConfirm   => isAr ? 'تأكيد وحفظ' : 'Confirm & Save';
+  String get resetPasswordSuccess   => isAr ? 'تم تغيير كلمة المرور بنجاح' : 'Password changed successfully';
+  String get resetPasswordMaxAttempts => isAr ? 'تجاوزت الحد الأقصى للمحاولات. اطلب رمزاً جديداً.' : 'Too many attempts. Please request a new code.';
   // ── Shared ───────────────────────────────────────────────────────────────────
   String get comingSoon => isAr ? 'قريباً' : 'Coming Soon';
 

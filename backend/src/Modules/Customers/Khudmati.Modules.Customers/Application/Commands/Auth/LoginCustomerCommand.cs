@@ -7,8 +7,9 @@ using MediatR;
 namespace Khudmati.Modules.Customers.Application.Commands.Auth;
 
 public record LoginCustomerCommand(
-    string Phone,
-    string Password
+    string? Phone,
+    string Password,
+    string? Email = null
 ) : IRequest<Result<object>>;
 
 public class LoginCustomerCommandHandler : IRequestHandler<LoginCustomerCommand, Result<object>>
@@ -24,7 +25,13 @@ public class LoginCustomerCommandHandler : IRequestHandler<LoginCustomerCommand,
 
     public async Task<Result<object>> Handle(LoginCustomerCommand request, CancellationToken cancellationToken)
     {
-        var customer = await _repository.GetByPhoneAsync(request.Phone, cancellationToken);
+        Customer? customer = null;
+
+        if (!string.IsNullOrWhiteSpace(request.Email))
+            customer = await _repository.GetByEmailAsync(request.Email, cancellationToken);
+        else if (!string.IsNullOrWhiteSpace(request.Phone))
+            customer = await _repository.GetByPhoneAsync(request.Phone, cancellationToken);
+
         if (customer is null)
             return Result<object>.Fail("INVALID_CREDENTIALS");
 

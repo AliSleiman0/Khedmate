@@ -66,7 +66,7 @@ class ProfilePage extends ConsumerWidget {
                     : const Locale('ar');
           }),
           _tile(Icons.notifications, s.profileNotifs,
-              () => _comingSoon(context, s)),
+              () => context.push('/notifications')),
           _tile(Icons.help_outline, s.profileHelp, () async {
             final uri = Uri.parse('https://khudmati.app/#contact');
             if (await canLaunchUrl(uri)) {

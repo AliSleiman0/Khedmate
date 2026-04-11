@@ -17,6 +17,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
+  late final String _phone;
   bool _isSaving = false;
   String? _errorMessage;
 
@@ -28,6 +29,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         authState is AuthAuthenticated ? authState.customer : null;
     _nameController = TextEditingController(text: user?.fullName ?? '');
     _emailController = TextEditingController(text: user?.email ?? '');
+    _phone = user?.phone ?? '';
   }
 
   @override
@@ -114,6 +116,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     if (v.trim().length < 3) return s.fullNameTooShort;
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+                // Read-only phone field
+                TextFormField(
+                  initialValue: _phone,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: s.editProfilePhone,
+                    labelStyle: const TextStyle(fontFamily: 'Cairo'),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    prefixIcon: const Icon(Icons.phone_outlined,
+                        color: AppColors.textSecondary),
+                  ),
+                  style: const TextStyle(
+                      fontFamily: 'Cairo', color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(

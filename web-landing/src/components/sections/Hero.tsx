@@ -85,6 +85,24 @@ export default function Hero() {
         initial="hidden"
         animate="visible"
       >
+        {/* Logo badge */}
+        <motion.div variants={fadeInUp} style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+          <div style={{
+            background: 'white',
+            borderRadius: 20,
+            padding: '10px 20px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.30)',
+          }}>
+            <img src="/logo.png" alt="خدمتي" style={{ height: 48 }} />
+            <span style={{ color: 'var(--brown-primary)', fontWeight: 800, fontSize: 26, letterSpacing: '-0.5px' }}>
+              خدمتي
+            </span>
+          </div>
+        </motion.div>
+
         {/* Word-split headline */}
         <motion.h1 style={{
           fontSize: 'clamp(38px, 6vw, 58px)',

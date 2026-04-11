@@ -45,8 +45,8 @@ flutter build apk --debug
 
 $customerApk = "$ROOT\mobile-customer\build\app\outputs\flutter-apk\app-debug.apk"
 if (Test-Path $customerApk) {
-    Copy-Item $customerApk "$ROOT\khudmati-customer-demo.apk"
-    Write-Host "  DONE: khudmati-customer-demo.apk" -ForegroundColor Green
+    Copy-Item $customerApk "$ROOT\Khudmati - Book a Service.apk"
+    Write-Host "  DONE: Khudmati - Book a Service.apk" -ForegroundColor Green
 } else {
     Write-Host "  WARNING: APK not found at expected path. Check build output above." -ForegroundColor Yellow
 }
@@ -63,8 +63,8 @@ flutter build apk --debug
 
 $providerApk = "$ROOT\mobile-provider\build\app\outputs\flutter-apk\app-debug.apk"
 if (Test-Path $providerApk) {
-    Copy-Item $providerApk "$ROOT\khudmati-provider-demo.apk"
-    Write-Host "  DONE: khudmati-provider-demo.apk" -ForegroundColor Green
+    Copy-Item $providerApk "$ROOT\Khudmati - For Providers.apk"
+    Write-Host "  DONE: Khudmati - For Providers.apk" -ForegroundColor Green
 } else {
     Write-Host "  WARNING: APK not found at expected path. Check build output above." -ForegroundColor Yellow
 }
@@ -74,8 +74,8 @@ Set-Location $ROOT
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host "  APKs ready in workspace root:" -ForegroundColor Green
-Write-Host "    khudmati-customer-demo.apk" -ForegroundColor Green
-Write-Host "    khudmati-provider-demo.apk" -ForegroundColor Green
+Write-Host "    Khudmati - Book a Service.apk" -ForegroundColor Green
+Write-Host "    Khudmati - For Providers.apk" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Once droplet is live, update AppConfig.backendHost in:" -ForegroundColor Yellow
 Write-Host "    mobile-customer\lib\core\constants\app_config.dart" -ForegroundColor Yellow

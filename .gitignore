@@ -36,3 +36,7 @@ Thumbs.db
 .idea/
 .vscode/settings.json
 *.orig
+
+# APK build outputs
+*.apk
+*.aab

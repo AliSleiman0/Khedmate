@@ -27,4 +27,10 @@ public class Customer : AuditableEntity
         IsActive = false;
         SetUpdated();
     }
+
+    public void UpdatePassword(string newPasswordHash)
+    {
+        PasswordHash = newPasswordHash;
+        SetUpdated();
+    }
 }
