@@ -36,6 +36,9 @@ public interface IBookingsRepository
 
     // Referral helper
     Task<int> CountPaidJobsByCustomerAsync(Guid customerId, CancellationToken ct = default);
+
+    // Provider completed jobs
+    Task<IReadOnlyList<Job>> GetPaidJobsByProviderAsync(Guid providerId, int page, int pageSize, CancellationToken ct = default);
 }
 
 public class BookingsRepository : IBookingsRepository
@@ -276,4 +279,13 @@ public class BookingsRepository : IBookingsRepository
     public async Task<int> CountPaidJobsByCustomerAsync(Guid customerId, CancellationToken ct = default) =>
         await _context.Set<Job>()
             .CountAsync(j => j.CustomerId == customerId && j.Status == JobStatus.Paid, ct);
+
+    public async Task<IReadOnlyList<Job>> GetPaidJobsByProviderAsync(Guid providerId, int page, int pageSize, CancellationToken ct = default) =>
+        await _context.Set<Job>()
+            .Include(j => j.Photos)
+            .Where(j => j.ProviderId == providerId && j.Status == JobStatus.Paid)
+            .OrderByDescending(j => j.PaidAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
 }

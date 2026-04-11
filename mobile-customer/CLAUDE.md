@@ -44,8 +44,8 @@ lib/
     │   ├── data/payment_repository.dart       # createIntent(), confirmPayment(), getMyTransactions()
     │   └── presentation/
     │       ├── payment_provider.dart          # PaymentSummary model + provider instances
-    │       ├── payment_receipt_screen.dart    # Post-payment success: amount, reference, "عرض الطلب"
-    │       └── payment_status_screen.dart     # Payment lifecycle view by jobId (all statuses, Arabic labels)
+    │       ├── payment_receipt_screen.dart    # Post-payment success screen; fully localised
+    │       └── payment_status_screen.dart     # Payment lifecycle view by jobId; all statuses localised
     ├── home/
     ├── tracking/
     │   ├── presentation/
@@ -56,12 +56,12 @@ lib/
     │   ├── data/referral_repository.dart         # GET /api/customers/me/referral, POST /api/customers/referral/apply
     │   └── presentation/
     │       ├── referral_provider.dart             # ReferralNotifier (AsyncNotifier<ReferralState>); share + apply code
-    │       └── referral_screen.dart               # دعوة الأصدقاء — code card, share button, credit balance, friends count
+    │       └── referral_screen.dart               # Invite Friends — code card, share button, credit balance, friends count; fully localised
     ├── reminders/
     │   ├── data/reminders_repository.dart        # GET /api/customers/me/reminders, PATCH /api/customers/me/reminders/{id}
     │   └── presentation/
     │       ├── reminders_provider.dart            # RemindersNotifier (AsyncNotifier<List<ReminderModel>>); snooze + dismiss
-    │       └── reminders_screen.dart              # تذكيرات الصيانة — reminder cards, overdue badge, Book Now CTA, 3-dot snooze/dismiss menu
+    │       └── reminders_screen.dart              # Maintenance Reminders — reminder cards, overdue badge, Book Now CTA, 3-dot snooze/dismiss menu
     └── profile/
 ```
 
@@ -74,7 +74,7 @@ Key providers:
 - `paymentRepositoryProvider` — `Provider<PaymentRepository>` — wired into `BookingNotifier` and payment screens.
 - `jobTrackingNotifierProvider` — `FamilyAsyncNotifier<JobTrackingState, String>` — subscribes to both `JobStatusChanged` and `ProviderLocationUpdated` SignalR events. Updates provider pin position + calculates distance using Haversine formula (`lib/core/utils/distance_utils.dart`).
 - `referralNotifierProvider` — `AsyncNotifier<ReferralState>` — fetches referral info, exposes `shareCode()` (via `share_plus`) and `applyCode(String code)`.
-- Job detail/history DTOs contain `beforePhotoUrls` and `afterPhotoUrls` as separate lists. History/detail screens render “صور قبل العمل” and “صور بعد العمل” sections (after-photos only shown once job is `Completed` or `Paid`; sections hidden when empty).
+- Job detail/history DTOs contain `beforePhotoUrls` and `afterPhotoUrls` as separate lists. History/detail screens render Before/After photo sections (after-photos only shown once job is `Completed` or `Paid`; sections hidden when empty).
 
 ## Routing
 GoRouter in `lib/app/router.dart`. Auth redirect guard watches `authNotifierProvider`:
@@ -99,16 +99,51 @@ GoRouter in `lib/app/router.dart`. Auth redirect guard watches `authNotifierProv
 | `/disputes/raise/:jobId` | RaiseDisputeScreen |
 | `/referral` | ReferralScreen |
 | `/reminders` | RemindersScreen |
+| `/profile/edit` | EditProfileScreen |
+
+## Customer App — UX Gaps & Profile (Feature #23)
+
+### Auth startup
+- `auth_repository.dart` — added `fetchMe()` (`GET /api/customers/me`) and `updateProfile()` (`PATCH /api/customers/me`)
+- `AuthNotifier.build()` calls `fetchMe()` after a successful token refresh so `customer.fullName` and `customer.phone` are real values on startup (profile header no longer shows `—`)
+
+### Profile page
+- **Logout** fixed: calls `AuthNotifier.logout()` (clears tokens from `FlutterSecureStorage`) then navigates to `/welcome`
+- **Edit Profile** (`edit_profile_screen.dart`): pre-fills fullName + email, calls `PATCH /api/customers/me`, invalidates `authNotifierProvider` on success; inline red error on failure; if endpoint missing, shows "Coming Soon" snackbar and pops
+- **Help & Support** tile: launches `https://khudmati.app/#contact` via `url_launcher` in external browser
+- **Saved Addresses / Payment Methods / Notification Settings**: show "Coming Soon" snackbar (no backend yet)
+
+### Home page
+- **Search filter**: `StateProvider<String>` (`_searchQueryProvider`) filters the category grid by label; empty result shows `s.homeNoResults` centred text
+- **Category tap pre-selects**: tapping a grid tile calls `bookingNotifierProvider.setCategory(categoryId, label)` then navigates to `/booking/description` (bypasses redundant category picker); category IDs mapped by index in `_categoryIds` constant
+
+### Notifications screen
+- Tap on a card marks it read **and** shows a `SnackBar` with a `s.notifViewJob` action that pushes `/history`
+
+### Payment receipt
+- Shows `chargedAmount` (actual amount after discounts) instead of `agreedAmount`; falls back to `agreedAmount` when `chargedAmount` is null
+- Breakdown rows for referral discount and credit-applied shown when > 0 (localised via `receiptReferralDiscount` / `receiptCreditApplied`)
+
+### History & Job Detail
+- Category maps in both `history_page.dart` and `job_detail_page.dart` now include `moving` and `other`
+- Unknown category IDs fall back to `id.replaceAll('_', ' ')` instead of raw ID string
+
+### Notification handler
+- `lib/core/services/notification_handler.dart` — `handleNotificationTap(data, router)`: routes `MAINTENANCE_REMINDER` payloads to `/booking/category` and fires best-effort PATCH to mark reminder as `Booked`
+- `fcm_service.dart` wires handler into both `onMessageOpenedApp` and `getInitialMessage()`
+
+### i18n keys added (app_strings.dart)
+`remindersTitle`, `remindersEmpty`, `remindersOverdue`, `remindersSnooze7`, `remindersSnooze30`, `remindersDismiss`, `remindersBookNow`, `remindersDue(date)`, `editProfileTitle`, `editProfileName`, `editProfileEmail`, `editProfileSave`, `comingSoon`, `notifViewJob`, `homeNoResults`, `receiptReferralDiscount`, `receiptCreditApplied`
 
 ## Referral System (Feature #17)
-- **ReferralScreen** (`features/referral/presentation/referral_screen.dart`): displays unique code with copy button, native share sheet via `share_plus`, credit balance card, reward explanation (15% referee / 20 SAR referrer)
-- **Profile screen**: "دعوة الأصدقاء" `ListTile` navigates to `ReferralScreen`
-- **Signup flow**: expandable "هل لديك كود دعوة؟" field on OTP/profile screen; calls `POST /api/customers/referral/apply`; success toast shows discount confirmation; errors `REFERRAL_NOT_FOUND` / `REFERRAL_ALREADY_USED` / `REFERRAL_SELF_REFERRAL` shown inline
-- **Booking checkout**: price breakdown shows referral discount (15%) and credit deduction rows; green badge "تم تطبيق خصم الدعوة" when applicable
+- **ReferralScreen** (`features/referral/presentation/referral_screen.dart`): displays unique code with copy button, native share sheet via `share_plus`, credit balance card, reward explanation (15% referee / 20 SAR referrer); fully localised
+- **Profile screen**: "Invite Friends" `ListTile` navigates to `ReferralScreen`
+- **Signup flow**: expandable "Do you have a referral code?" field on OTP screen (`_ReferralCodeSheet`, a `ConsumerStatefulWidget`); calls `POST /api/customers/referral/apply`; success toast shows discount confirmation; errors `REFERRAL_NOT_FOUND` / `REFERRAL_ALREADY_USED` / `REFERRAL_SELF_REFERRAL` shown inline (localised)
+- **Booking checkout**: price breakdown shows referral discount (15%) and credit deduction rows; green badge when applicable
 - **Deep link**: `https://khudmati.app/join?ref=CODE` — GoRouter extracts `ref` param and pre-fills referral code field at signup
 
 ## Maintenance Reminders (Feature #19)
-- **RemindersScreen** (`features/reminders/presentation/reminders_screen.dart`): lists upcoming reminders with Arabic due-date formatting, overdue amber badge "متأخر", "احجز الآن" CTA that deep-links to booking flow with pre-filled `categoryId`, 3-dot menu for snooze (7 days / 30 days) and dismiss; empty state illustration when no reminders
+- **RemindersScreen** (`features/reminders/presentation/reminders_screen.dart`): lists upcoming reminders with due-date formatting, overdue amber badge, "Book Now" CTA that deep-links to booking flow with pre-filled `categoryId`, 3-dot menu for snooze (7 days / 30 days) and dismiss; empty state illustration when no reminders
 - **Home screen / notification bell**: badge shown when there are `Sent` or overdue reminders; maintenance reminders appear as distinct card type with wrench icon in notifications list
 - **Push notification handling**: payload `{ "type": "MAINTENANCE_REMINDER", "categoryId": "...", "reminderId": "..." }` opens booking flow pre-filled with category; PATCH reminder to `Booked` after booking confirmed; handled in `lib/core/services/notification_handler.dart`
 - **RemindersNotifier**: `AsyncNotifier<List<ReminderModel>>` — `build()` fetches active reminders; `snooze(reminderId, days)` calls PATCH with `action: Snooze`; `dismiss(reminderId)` calls PATCH with `action: Dismiss`
@@ -122,7 +157,7 @@ GoRouter in `lib/app/router.dart`. Auth redirect guard watches `authNotifierProv
 4. `POST /payments/confirm` — links `paymentIntentId` to `jobId` on server
 5. On success → navigate to `/payment/receipt`
 
-`Stripe.publishableKey` is set in `main.dart`. Catches `StripeException` for cancel/failure with Arabic error message.
+`Stripe.publishableKey` is set in `main.dart`. Catches `StripeException` for cancel/failure with localised error message.
 
 ## Real-time (SignalR)
 `lib/core/services/signalr_service.dart` — `HubConnectionBuilder` connecting to `/hubs/jobs`:
@@ -136,23 +171,31 @@ GoRouter in `lib/app/router.dart`. Auth redirect guard watches `authNotifierProv
 `TrackingPage` renders a live `flutter_map` when job status = `EnRoute`:
 - **Two pins**: Customer location (blue, static) and provider location (amber, animated)
 - **Smooth animation**: Provider pin moves via `Tween` animation (2.5s duration) between location updates
-- **Distance calculation**: Real-time Haversine distance shown as "المسافة المتبقية: X.X كم"
+- **Distance calculation**: Real-time Haversine distance shown via `s.trackDistanceLeft(km)` (localised)
 - **Auto-fit bounds**: Map camera fits both pins with padding on each update
-- **Stale location fallback**: Shows "يتم تحديث الموقع..." if no update received for 15+ seconds
-- **InProgress transition**: Map freezes at last known location, shows "وصل المزود! جاري تنفيذ الخدمة" banner
+- **Stale location fallback**: Shows `s.trackLocationUpdating` if no update received for 15+ seconds
+- **InProgress transition**: Map freezes at last known location, shows `s.trackProviderArrived` banner
+- All `_StatusBanner`, `_RefBadge`, `_ProviderCard`, `_InProgressMap`, `_LiveTrackingMap`, `_BottomActions`, `_ErrorView` are `ConsumerWidget`/`ConsumerStatefulWidget`
 
 ## Disputes (Feature #13)
-- **RaiseDisputeScreen** (`features/booking/presentation/pages/raise_dispute_screen.dart`): form with complaint textarea (min 20 / max 1000 chars), character counter, submit sends `POST /api/bookings/jobs/{jobId}/dispute`
-- **Job Detail / History screens**: show "رفع شكوى" button only when `job.status == Paid` AND `transaction.status == Held`; show amber "شكوى مفتوحة" chip when `hasOpenDispute == true`
+- **RaiseDisputeScreen** (`features/dispute/presentation/raise_dispute_screen.dart`): form with complaint textarea (min 20 / max 1000 chars), character counter, submit sends `POST /api/bookings/jobs/{jobId}/dispute`; fully localised
+- **Job Detail / History screens**: show "Raise Dispute" button only when `job.status == Paid` AND `transaction.status == Held`; show amber "Dispute Under Review" chip when `hasOpenDispute == true`
 - **Repository**: `raiseDispute(jobId, complaint)` in `booking_repository.dart`
-- **Error handling**: `DISPUTE_WINDOW_CLOSED` (transaction no longer Held) → Arabic inline message; `DISPUTE_ALREADY_EXISTS` → navigate back with snackbar
+- **Error handling**: `DISPUTE_WINDOW_CLOSED` → `s.disputeDeadline`; `DISPUTE_ALREADY_EXISTS` → `s.disputeAlreadyRaised`; shown as snackbar
 - **SignalR**: `DisputeResolved` event received on `customer-{customerId}` group — show snackbar with action and message
 
 ## Locale / Language
 `lib/core/providers/locale_provider.dart` — `StateProvider<Locale>` defaulting to `Locale('en')`. Toggle between EN↔AR at runtime.
 - **Welcome screen**: language toggle button at top right
-- **Profile page**: Language tile in settings list calls `ref.read(localeProvider.notifier).state = ...` to toggle
-- `lib/core/l10n/app_strings.dart` — `S.of(ref)` type-safe string accessor; supports both Arabic and English for all UI strings
+- **Profile page**: Language tile calls `ref.read(localeProvider.notifier).state = ...` to toggle; shows user's real name/phone from `authNotifierProvider` (`customer.fullName`, `customer.phone`)
+- `lib/core/l10n/app_strings.dart` — `S` class with 130+ getters + parametric methods; `S.of(ref)` for `build()`, `S.read(ref)` for async callbacks
+- **All 20 screens fully localised** — every hardcoded Arabic string replaced with `s.<key>` calls
+- **Pattern**: `ConsumerWidget.build` → `final s = S.of(ref);`; private `StatelessWidget` helpers that render text are converted to `ConsumerWidget`; `StatefulWidget` helpers become `ConsumerStatefulWidget`; `const` maps with translated labels are built dynamically inside `build()`
+- **Category/status maps**: built as `Map<String, String>` inside `build()` using `s.catXxx` / `s.statusXxx` — never stored as `const` at class level
+- **`_StatusChip`** (`job_detail_page.dart`): `ConsumerWidget`; color map remains `const`, label map built dynamically
+- **`_ReferralCodeSheet`** (`otp_screen.dart`): converted from `StatefulWidget` → `ConsumerStatefulWidget`; all error/success strings use `S.read(ref)`
+- **`_LiveTrackingMap`** (`tracking_page.dart`): converted from `StatefulWidget` → `ConsumerStatefulWidget`
+- **Notifications `_relativeTime`**: accepts `S s` parameter; uses `s.timeNow`, `s.timeMinutesAgo(n)`, `s.timeHoursAgo(n)`, `s.timeDaysAgo(n)`
 
 ## Logo
 Welcome screen shows `Image.asset('assets/images/logo.png', height: 130)` above the app name text (32pt).

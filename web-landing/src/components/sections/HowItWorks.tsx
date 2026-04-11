@@ -1,4 +1,7 @@
 import { useTranslation } from 'react-i18next'
+import { motion } from 'framer-motion'
+import AnimatedSection from '../ui/AnimatedSection'
+import { fadeInUp, fadeIn, scaleIn, springBounce } from '../../animations/variants'
 
 function SearchIcon() {
   return (
@@ -29,10 +32,16 @@ function CheckCircleIcon() {
 
 function ChevronIcon({ flip }: { flip: boolean }) {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--brown-light)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-      style={{ transform: flip ? 'scaleX(-1)' : 'none', flexShrink: 0, alignSelf: 'center' }}>
-      <polyline points="9 18 15 12 9 6"/>
-    </svg>
+    <motion.span
+      variants={fadeIn}
+      transition={{ delay: 0.5 }}
+      style={{ flexShrink: 0, alignSelf: 'center', display: 'flex' }}
+    >
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--brown-light)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+        style={{ transform: flip ? 'scaleX(-1)' : 'none' }}>
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </motion.span>
   )
 }
 
@@ -49,68 +58,85 @@ export default function HowItWorks() {
 
   return (
     <section id="how-it-works" style={{ background: 'var(--surface-warm)' }}>
-      <h2 style={{ fontSize: 38, fontWeight: 700, color: 'var(--brown-primary)', textAlign: 'center', marginBottom: 12 }}>
+      <motion.h2
+        variants={fadeInUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        style={{ fontSize: 38, fontWeight: 700, color: 'var(--brown-primary)', textAlign: 'center', marginBottom: 12 }}
+      >
         {t('how_it_works')}
-      </h2>
-      <div style={{ width: 60, height: 4, borderRadius: 2, background: 'var(--amber)', margin: '0 auto 52px' }} />
+      </motion.h2>
+      <motion.div
+        variants={scaleIn}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        style={{ width: 60, height: 4, borderRadius: 2, background: 'var(--amber)', margin: '0 auto 52px' }}
+      />
 
-      <div style={{ display: 'flex', gap: 0, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
+      <AnimatedSection stagger="slow" style={{ display: 'flex', gap: 0, justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
         {steps.flatMap((s, i) => {
           const card = (
-            <div key={s.num} style={{
+            <motion.div key={s.num} variants={fadeInUp} style={{
               background: 'white',
               borderRadius: 'var(--radius-card)',
               padding: '40px 28px',
               width: 280,
               boxShadow: '0 4px 24px var(--shadow-brown)',
               position: 'relative',
-              animation: 'fadeInUp 0.6s ease both',
-              animationDelay: `${i * 0.15}s`,
               margin: '8px 0',
             }}>
-              <div style={{
-                position: 'absolute',
-                top: -22,
-                insetInlineStart: -22,
-                width: 44,
-                height: 44,
-                borderRadius: '50%',
-                background: 'var(--brown-primary)',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: 20,
-                boxShadow: '0 4px 12px var(--shadow-brown-lg)',
-              }}>{s.num}</div>
+              <motion.div
+                variants={springBounce}
+                style={{
+                  position: 'absolute',
+                  top: -22,
+                  insetInlineStart: -22,
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: 'var(--brown-primary)',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: 20,
+                  boxShadow: '0 4px 12px var(--shadow-brown-lg)',
+                }}
+              >{s.num}</motion.div>
 
-              <div style={{
-                width: 72,
-                height: 72,
-                borderRadius: '50%',
-                background: 'var(--cream-warm)',
-                border: '2px solid var(--cream-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-              }}>
+              <motion.div
+                whileHover={{ rotate: 15, scale: 1.1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 12 }}
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: '50%',
+                  background: 'var(--cream-warm)',
+                  border: '2px solid var(--cream-border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                }}
+              >
                 {STEP_ICONS[i]}
-              </div>
+              </motion.div>
 
               <h3 style={{ margin: '0 0 10px', color: 'var(--brown-primary)', fontSize: 18, fontWeight: 700, textAlign: 'center' }}>
                 {s.title}
               </h3>
               <p style={{ color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.6 }}>{s.desc}</p>
-            </div>
+            </motion.div>
           )
           if (i < steps.length - 1) {
             return [card, <ChevronIcon key={`arrow-${i}`} flip={isLtr} />]
           }
           return [card]
         })}
-      </div>
+      </AnimatedSection>
     </section>
   )
 }

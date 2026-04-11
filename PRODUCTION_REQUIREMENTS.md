@@ -247,14 +247,27 @@ Do the same for `mobile-provider/android/key.properties`.
 Update `mobile-customer/android/app/build.gradle` to load the keystore (standard Flutter release signing setup).
 
 #### Step 4 — Stripe Publishable Key
-The customer app initialises Stripe on startup. Find and replace the placeholder key:
+Both the customer app **and provider app** initialise Stripe on startup. Replace the placeholder key in each:
 
-**`mobile-customer/lib/main.dart`** (or wherever `StripeService.init` is called):
+**`mobile-customer/lib/main.dart`:**
 ```dart
 // Change:
 Stripe.publishableKey = 'pk_test_REPLACE_WITH_YOUR_TEST_KEY';
 // To:
 Stripe.publishableKey = 'pk_live_<YOUR_LIVE_PUBLISHABLE_KEY>';
+```
+
+**`mobile-provider/lib/main.dart`** (Feature #26 — subscription PaymentSheet):
+```dart
+// Change:
+Stripe.publishableKey = const String.fromEnvironment('STRIPE_PUBLISHABLE_KEY', defaultValue: 'pk_test_REPLACE_WITH_YOUR_TEST_KEY');
+// To:
+Stripe.publishableKey = 'pk_live_<YOUR_LIVE_PUBLISHABLE_KEY>';
+```
+
+Alternatively, supply via `--dart-define` at build time:
+```bash
+flutter build apk --release --dart-define=STRIPE_PUBLISHABLE_KEY=pk_live_<YOUR_KEY>
 ```
 
 ### 4.2 Customer App Build
@@ -435,6 +448,8 @@ If running manually, the SQL migration files in the repo root can also be applie
 3. `add-photo-type-migration.sql`
 4. `add-referral-system.sql`
 5. `add-superadmin-tables.sql`
+6. `add-admin-features.sql` — creates `providers.provider_subscriptions` and `public.reminder_rules` (Features #18, #19)
+7. `add-subscription-screen.sql` — adds `stripe_customer_id`, `cancels_at_period_end`, `cancelled_at` columns to `providers.provider_subscriptions` (Feature #26)
 
 ### 6.3 Performance Indexes (Run After Migration)
 
@@ -741,8 +756,9 @@ All endpoints exposed by the backend. Base URL: `https://api.khudmati.com`
 | `GET` | `/api/providers/earnings/transactions` | Transaction list |
 | `GET` | `/api/providers/earnings/stripe-onboarding-url` | Get Stripe Connect onboarding URL |
 | `GET` | `/api/providers/me/subscription` | Get subscription info |
+| `GET` | `/api/providers/me/subscription/setup-intent` | Create Stripe SetupIntent (returns `clientSecret`) |
 | `POST` | `/api/providers/me/subscription` | Subscribe to Power Provider |
-| `DELETE` | `/api/providers/me/subscription` | Cancel subscription |
+| `DELETE` | `/api/providers/me/subscription` | Cancel subscription (at period end) |
 | `GET` | `/api/providers/me/analytics/earnings?period=` | Earnings analytics |
 | `GET` | `/api/providers/me/analytics/jobs?period=` | Job stats analytics |
 | `GET` | `/api/providers/me/analytics/ratings` | Rating analytics |
@@ -792,4 +808,4 @@ All endpoints exposed by the backend. Base URL: `https://api.khudmati.com`
 
 ---
 
-*Last updated: April 2026 — covers Features #01 through #20*
+*Last updated: April 2026 — covers Features #01 through #26*

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import 'booking_provider.dart';
 
 class BookingSummaryScreen extends ConsumerWidget {
@@ -10,6 +11,7 @@ class BookingSummaryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final asyncState = ref.watch(bookingNotifierProvider);
 
     return Directionality(
@@ -19,9 +21,9 @@ class BookingSummaryScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'مراجعة الطلب',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.summaryTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -34,7 +36,7 @@ class BookingSummaryScreen extends ConsumerWidget {
           error: (e, _) => _ErrorBody(
             message: e.toString().contains('فشل')
                 ? e.toString()
-                : 'فشل الدفع، يرجى المحاولة مرة أخرى',
+                : s.summaryPaymentFailed,
             onRetry: () => ref.read(bookingNotifierProvider.notifier).submitBooking(),
           ),
           data: (booking) => _SummaryBody(booking: booking),
@@ -73,6 +75,7 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final asyncState = ref.watch(bookingNotifierProvider);
     final isLoading = asyncState.isLoading;
     final booking = asyncState.valueOrNull ?? widget.booking;
@@ -86,8 +89,8 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'تفاصيل طلبك',
+            Text(
+              s.summaryYourDetails,
               style: TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 20,
@@ -107,7 +110,7 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                   children: [
                     _SummaryRow(
                       icon: Icons.category,
-                      label: 'نوع الخدمة',
+                      label: s.summaryServiceType,
                       value: booking.categoryName ?? '-',
                     ),
                     const Divider(height: 24),
@@ -122,8 +125,8 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('الوصف',
-                                  style: TextStyle(
+                              Text(s.summaryDescription,
+                                  style: const TextStyle(
                                       fontFamily: 'Cairo',
                                       fontSize: 12,
                                       color: Colors.grey)),
@@ -138,13 +141,13 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
 
                     _SummaryRow(
                       icon: Icons.location_on_outlined,
-                      label: 'الموقع',
+                      label: s.summaryLocationLabel,
                       value: booking.address ?? '-',
                     ),
 
                     if (booking.photos.isNotEmpty) ...[
                       const Divider(height: 24),
-                      const Text('الصور',
+                      Text(s.summaryPhotos,
                           style: TextStyle(
                               fontFamily: 'Cairo',
                               fontSize: 12,
@@ -171,8 +174,8 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
             const SizedBox(height: 20),
 
             // Payment section
-            const Text(
-              'تفاصيل الدفع',
+            Text(
+              s.summaryPaymentDetails,
               style: TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 18,
@@ -203,7 +206,7 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                         color: AppColors.textPrimary,
                       ),
                       decoration: InputDecoration(
-                        labelText: 'أدخل الأجر المتفق عليه',
+                        labelText: s.summaryEnterAmount,
                         labelStyle: const TextStyle(
                             fontFamily: 'Cairo', color: Colors.grey),
                         prefixText: '\$ ',
@@ -219,8 +222,7 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                           borderSide:
                               const BorderSide(color: AppColors.brandBlue, width: 2),
                         ),
-                        helperText:
-                            'يتم الاتفاق على السعر مع المزود قبل تأكيد الحجز',
+                        helperText: s.summaryAmountHelper,
                         helperStyle: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 11,
@@ -229,7 +231,7 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                       validator: (v) {
                         final amount = double.tryParse(v ?? '');
                         if (amount == null || amount <= 0) {
-                          return 'يرجى إدخال مبلغ صحيح';
+                          return S.read(ref).summaryAmountInvalid;
                         }
                         if (amount > 10000) {
                           return 'المبلغ الأقصى هو \$10,000';
@@ -280,7 +282,7 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('خصم الدعوة',
+                              Text(s.summaryReferralDiscount,
                                   style: TextStyle(
                                       fontFamily: 'Cairo',
                                       fontSize: 13,
@@ -308,7 +310,7 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('رصيد المحفظة',
+                              Text(s.summaryWalletCredit,
                                   style: TextStyle(
                                       fontFamily: 'Cairo',
                                       fontSize: 13,
@@ -328,7 +330,7 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('الإجمالي المستحق',
+                          Text(s.summaryTotalDue,
                               style: TextStyle(
                                   fontFamily: 'Cairo',
                                   fontSize: 15,
@@ -383,14 +385,14 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2.5),
                       )
-                    : const Row(
+                    : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.lock_outline, size: 20),
-                          SizedBox(width: 8),
+                          const Icon(Icons.lock_outline, size: 20),
+                          const SizedBox(width: 8),
                           Text(
-                            'ادفع وأكد الحجز',
-                            style: TextStyle(
+                            s.summaryPayButton,
+                            style: const TextStyle(
                               fontFamily: 'Cairo',
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -402,9 +404,9 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
             ),
 
             const SizedBox(height: 8),
-            const Center(
+            Center(
               child: Text(
-                'الدفع مؤمّن بواسطة Stripe',
+                s.summarySecurePayment,
                 style: TextStyle(
                     fontFamily: 'Cairo', fontSize: 12, color: Colors.grey),
               ),
@@ -454,19 +456,20 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
-class _ExpandableText extends StatefulWidget {
+class _ExpandableText extends ConsumerStatefulWidget {
   final String text;
   const _ExpandableText({required this.text});
 
   @override
-  State<_ExpandableText> createState() => _ExpandableTextState();
+  ConsumerState<_ExpandableText> createState() => _ExpandableTextState();
 }
 
-class _ExpandableTextState extends State<_ExpandableText> {
+class _ExpandableTextState extends ConsumerState<_ExpandableText> {
   bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -483,7 +486,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
           GestureDetector(
             onTap: () => setState(() => _expanded = !_expanded),
             child: Text(
-              _expanded ? 'عرض أقل' : 'عرض المزيد',
+              _expanded ? s.showLess : s.showMore,
               style: const TextStyle(
                   fontFamily: 'Cairo',
                   color: AppColors.brandBlue,
@@ -495,14 +498,15 @@ class _ExpandableTextState extends State<_ExpandableText> {
   }
 }
 
-class _ErrorBody extends StatelessWidget {
+class _ErrorBody extends ConsumerWidget {
   final String message;
   final VoidCallback onRetry;
 
   const _ErrorBody({required this.message, required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -522,8 +526,8 @@ class _ErrorBody extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.brandBlue,
                   foregroundColor: Colors.white),
-              child: const Text('إعادة المحاولة',
-                  style: TextStyle(fontFamily: 'Cairo')),
+              child: Text(s.retry,
+                  style: const TextStyle(fontFamily: 'Cairo')),
             ),
           ],
         ),

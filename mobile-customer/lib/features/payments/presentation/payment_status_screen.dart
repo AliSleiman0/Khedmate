@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../data/payment_repository.dart';
 import '../../booking/presentation/booking_provider.dart';
 
@@ -43,7 +44,7 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'تعذّر تحميل بيانات الدفع';
+        _error = S.read(ref).payLoadError;
         _loading = false;
       });
     }
@@ -58,8 +59,8 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text('حالة الدفع',
-              style: TextStyle(
+          title: Text(S.of(ref).payStatusTitle,
+              style: const TextStyle(
                   fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
         ),
         body: _loading
@@ -75,12 +76,13 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
   }
 }
 
-class _TransactionBody extends StatelessWidget {
+class _TransactionBody extends ConsumerWidget {
   final Map<String, dynamic> tx;
   const _TransactionBody({required this.tx});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final status = tx['status'] as String? ?? '';
     final amount = (tx['grossAmount'] as num?)?.toDouble() ?? 0;
     final holdUntil = tx['holdUntil'] != null
@@ -102,7 +104,7 @@ class _TransactionBody extends StatelessWidget {
                 border: Border.all(color: _statusColor(status)),
               ),
               child: Text(
-                _statusLabel(status),
+                _statusLabel(status, s),
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
@@ -121,15 +123,14 @@ class _TransactionBody extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  _Row('المبلغ المدفوع', '\$${amount.toStringAsFixed(2)}'),
+                  _Row(s.payAmountPaid, '\$${amount.toStringAsFixed(2)}'),
                   const Divider(height: 20),
-                  _Row('رسوم الخدمة', 'شامل رسوم الخدمة (20%)'),
+                  _Row(s.payFees, s.payFeesIncl),
                   if (holdUntil != null) ...[
                     const Divider(height: 20),
                     _Row(
-                      'تاريخ الإفراج',
-                      'سيتم الإفراج عن الدفعة بتاريخ '
-                          '${holdUntil.day}/${holdUntil.month}/${holdUntil.year}',
+                      s.payReleaseDate,
+                      '${holdUntil.day}/${holdUntil.month}/${holdUntil.year}',
                     ),
                   ],
                 ],
@@ -141,13 +142,13 @@ class _TransactionBody extends StatelessWidget {
     );
   }
 
-  String _statusLabel(String status) => switch (status) {
-        'Pending' => 'في الانتظار',
-        'Paid' => 'مدفوع',
-        'Held' => 'محجوز (فترة النزاع)',
-        'Released' => 'تم التحويل',
-        'Disputed' => 'نزاع',
-        'Refunded' => 'مسترجع',
+  String _statusLabel(String status, S s) => switch (status) {
+        'Pending'  => s.statusPending,
+        'Paid'     => s.statusPaid,
+        'Held'     => s.statusOnHold,
+        'Released' => s.statusTransferred,
+        'Disputed' => s.statusDisputed,
+        'Refunded' => s.statusRefunded,
         _ => status,
       };
 
@@ -190,27 +191,28 @@ class _Row extends StatelessWidget {
   }
 }
 
-class _NotFoundView extends StatelessWidget {
+class _NotFoundView extends ConsumerWidget {
   const _NotFoundView();
 
   @override
-  Widget build(BuildContext context) {
-    return const Center(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Center(
       child: Text(
-        'لا توجد بيانات دفع لهذا الطلب',
-        style: TextStyle(fontFamily: 'Cairo', fontSize: 16, color: Colors.grey),
+        S.of(ref).payNoData,
+        style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, color: Colors.grey),
       ),
     );
   }
 }
 
-class _ErrorView extends StatelessWidget {
+class _ErrorView extends ConsumerWidget {
   final String message;
   final VoidCallback onRetry;
   const _ErrorView({required this.message, required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -223,8 +225,8 @@ class _ErrorView extends StatelessWidget {
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brandBlue,
                 foregroundColor: Colors.white),
-            child: const Text('إعادة المحاولة',
-                style: TextStyle(fontFamily: 'Cairo')),
+            child: Text(s.retry,
+                style: const TextStyle(fontFamily: 'Cairo')),
           ),
         ],
       ),

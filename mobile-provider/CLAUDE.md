@@ -20,7 +20,7 @@ lib/
 │   ├── router.dart       # Auth guard redirects to /jobs on login
 │   └── theme.dart
 ├── core/
-│   ├── api/api_client.dart           # Refresh endpoint: /providers/auth/refresh
+│   ├── api/api_client.dart           # Refresh endpoint: /auth/providers/refresh (matches AuthRepository)
 │   ├── services/signalr_service.dart # HubConnection with JWT token factory + auto-reconnect
 │   └── constants/colors.dart
 └── features/
@@ -74,6 +74,9 @@ lib/
     │       ├── analytics_provider.dart          # AnalyticsNotifier (AsyncNotifier<AnalyticsDashboardState>); setPeriod() refreshes all three sections in parallel via Future.wait
     │       └── analytics_screen.dart            # التحليلات — period chips, earnings line chart, job stats 2x2 grid + bar chart, rating breakdown + sparkline
     └── profile/
+        ├── presentation/
+        │   ├── profile_page.dart           # All tiles wired: Edit→/profile/edit, Verification→/onboarding, Payment→/payout-status, WorkHours/Notifications→Coming Soon snackbar, Help→url_launcher
+        │   └── edit_profile_screen.dart    # PATCH /api/providers/me — updates fullName, invalidates auth state
 ```
 
 ## Provider-specific auth differences
@@ -138,9 +141,10 @@ Unverified → PhoneVerified → IdVerified → SkillTested → Active
 | `/onboarding` | OnboardingHubScreen (3-step stepper) |
 | `/onboarding/id-upload` | IdUploadScreen |
 | `/onboarding/skill-test` | SkillTestScreen |
-| `/jobs` | JobFeedScreen (3 tabs) |
+| `/jobs` | JobFeedScreen (3 tabs: Available / Active / Completed) |
 | `/jobs/:id` | JobDetailScreen |
 | `/active-job/:jobId/after-photos` | UploadAfterPhotosScreen |
+| `/profile/edit` | EditProfileScreen |
 | `/payout-status` | PayoutStatusScreen |
 | `/subscription` | SubscriptionScreen |
 | `/analytics` | AnalyticsScreen |
@@ -156,8 +160,23 @@ Unverified → PhoneVerified → IdVerified → SkillTested → Active
 ## Locale / Language
 `lib/core/providers/locale_provider.dart` — `StateProvider<Locale>` defaulting to `Locale('en')`. Toggle between EN↔AR at runtime.
 - **Welcome screen**: language toggle button at top right
-- **Profile page**: Language tile (between ساعات العمل and الإشعارات) calls `ref.read(localeProvider.notifier).state = ...` to toggle; `ProfilePage` is a `ConsumerWidget`
-- `lib/core/l10n/app_strings.dart` — `S.of(ref)` type-safe string accessor
+- **Profile page**: Language tile calls `ref.read(localeProvider.notifier).state = ...` to toggle; shows real provider name/phone from `authNotifierProvider` (`(authState.valueOrNull as AuthAuthenticated).provider.fullName`)
+- `lib/core/l10n/app_strings.dart` — `S` class with 140+ getters + parametric methods; `S.of(ref)` for `build()`, `S.read(ref)` for async callbacks and `showDialog` builders
+- **All 21 provider screens fully localised** — every hardcoded Arabic UI string replaced with `s.<key>` calls
+- **Pattern**: `ConsumerWidget.build` → `final s = S.of(ref);`; private `StatelessWidget` helpers that render text are converted to `ConsumerWidget`; `StatefulWidget` becomes `ConsumerStatefulWidget`; `const` maps with translated labels are built as `final Map` inside `build()`
+- **`const` maps rule**: `_statusColors` can stay `const` (colors are compile-time constants); `_statusLabels` must be a `final` map built in `build()` using `s.statusXxx` — never `const` at class level
+- **Navigation page state**: Wired to `activeJobNotifierProvider(jobId)` — shows real customer `latitude`/`longitude` from `JobDetail`, real `job.district` address, provider live GPS pin via `Geolocator.getCurrentPosition()`; status advance calls `activeJobNotifierProvider.notifier.advanceStatus()`; `InProgress` button routes to after-photos screen instead of directly completing
+- **Notifier snackbars** (`_UploadAfterPhotosNotifier`): notifier uses `Ref` not `WidgetRef`; translated strings passed as required named params from the screen's `build()` call site
+- **`showDialog` callbacks**: `S.of(ref)` unavailable inside dialog builder; capture `final s = S.read(ref)` before calling `showDialog`. Applied in `skill_test_screen.dart` and `id_upload_screen.dart`
+- **Skill test categories**: `_categoryIds` is `static const List<String>` of keys; `s.categoryLabel(id)` resolves display name dynamically in `build()`
+- **`_NotificationCard._relativeTime`**: accepts `S s` parameter — `s.timeNow`, `s.timeMinutesAgo(n)`, `s.timeHoursAgo(n)`, `s.timeDaysAgo(n)`
+- **Chat widget localization**: `ChatMessageList` and `ChatInputBar` converted to `ConsumerWidget`/`ConsumerStatefulWidget` to access `S.of(ref)` for empty state, date labels (Today/Yesterday), and input hint text; `_DateSeparator` accepts `S s` param and uses bilingual month arrays for full dates
+- **Rating bottom sheet**: Submit and Skip buttons use `s.ratingSubmit` / `s.ratingSkip`; error is stored as code `'SEND_FAILED'` in notifier state and mapped to `s.ratingSubmitError` in UI
+- **Profile tiles**: all wired — Edit→`context.push('/profile/edit')`, Verification→`/onboarding`, Payment→`/payout-status`, WorkHours/Notifications→Coming Soon snackbar, Help→`url_launcher` opening `https://khudmati.app/#contact`
+- **Completed Jobs tab**: real API via `completedJobsProvider` (FutureProvider), `GET /api/providers/me/jobs?status=Paid`; shows category, district, referenceNumber, netAmount; legacy placeholder replaced
+- **Deleted legacy stubs**: `features/jobs/presentation/jobs_page.dart` and `features/job_detail/` folder removed
+- **Notifications pagination**: `NotificationsNotifier` tracks `_totalCount`; `notificationsHasMoreProvider` exposes `hasMore` bool for future "Load more" UI
+- **Converted private widgets**: `_JobCard` (job_feed), `_EmptyState`, `_ErrorState`, `_CompletedJobsTab`, `_ExpiredState`, `_JobDetailBody`, `_CountdownTimer`, `_Header`, `_RefBadge`, `_InfoCard`, `_CompletedView`, `_StripeBanner`, `_TransactionTile`, `_StatusChip`, `_ConnectedBanner`, `_OnboardingCard` all upgraded to `ConsumerWidget`
 
 ## Key dependencies
 | Package | Purpose |
@@ -174,6 +193,22 @@ Unverified → PhoneVerified → IdVerified → SkillTested → Active
 | `image_picker` | After-photo selection from gallery/camera (also used in onboarding ID upload) |
 | `url_launcher` | Open Stripe Connect Express onboarding URL in browser |
 | `fl_chart` | Line chart (earnings over time), bar chart (top categories), sparkline (rating trend) |
+| `flutter_stripe` | Stripe PaymentSheet for Power Provider subscription (`SubscriptionScreen`) |
+| `intl` | Number formatting (`NumberFormat('#,##0.##', locale)`) used in analytics and subscription screens |
+
+## ⚠️ Build requirement — Stripe publishable key
+`main.dart` reads the Stripe publishable key from `--dart-define`:
+```bash
+flutter build apk --release --dart-define=STRIPE_PUBLISHABLE_KEY=pk_live_<YOUR_KEY>
+```
+Without this flag the key falls back to `pk_test_REPLACE_WITH_YOUR_TEST_KEY` which will fail in production.
+
+## TextDirection conflict note
+`fl_chart` (or `flutter_stripe`) re-exports a `TextDirection` type that shadows Flutter’s `dart:ui.TextDirection`. Any screen that imports `fl_chart` and uses `TextDirection.rtl` **must** add:
+```dart
+import 'dart:ui' as ui;
+```
+and reference `ui.TextDirection.rtl` instead of `TextDirection.rtl`. Applied in `subscription_screen.dart` and `analytics_screen.dart`.
 
 ## Subscription (Feature #18)
 - **SubscriptionScreen** (`features/subscription/presentation/subscription_screen.dart`): hero amber gradient card, feature comparison table (Standard vs Power Provider), subscribe CTA opens Stripe PaymentSheet via existing `flutter_stripe` integration; subscribed state shows status card with next billing date + commission rate + cancel button

@@ -26,7 +26,7 @@ Dark theme by default (distinct from web-admin's light theme).
 Identical structure to web-admin client. Refresh token key in localStorage: `khudmati_superadmin_refresh_token`.
 
 ## API client
-`src/api/superadmin.ts` — all super admin API calls (`getDashboard`, `getAdmins`, `createAdmin`, `updateAdmin`, `revokeAdmin`, `getConfig`, `saveConfig`, `getFinancials`, `getAudit`). Uses `src/api/client.ts` Axios instance (do not modify `client.ts`).
+`src/api/superadmin.ts` — all super admin API calls: `getDashboard`, `getAdmins`, `createAdmin`, `updateAdmin`, `revokeAdmin`, `getConfig`, `saveConfig`, `getFinancials`, `getAudit`, `getSubscriptionPlans`, `updateSubscriptionPlan`. Uses `src/api/client.ts` Axios instance (do not modify `client.ts`).
 
 ## Routes
 | Path | Component | Notes |

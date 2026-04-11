@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../booking/presentation/booking_provider.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -89,16 +90,16 @@ class _RaiseDisputeScreenState extends ConsumerState<RaiseDisputeScreen> {
     super.dispose();
   }
 
-  String _errorMessage(String code) {
+  String _errorMessage(String code, S s) {
     switch (code) {
       case 'DISPUTE_WINDOW_CLOSED':
-        return 'انتهت مهلة رفع الشكوى. تم تحرير الدفعة للمزود.';
+        return s.disputeDeadline;
       case 'DISPUTE_ALREADY_EXISTS':
-        return 'تم رفع شكوى مسبقاً لهذا الطلب.';
+        return s.disputeAlreadyRaised;
       case 'DISPUTE_NOT_ALLOWED_IN_CURRENT_STATUS':
-        return 'لا يمكن رفع شكوى للطلبات بهذه الحالة.';
+        return s.disputeInvalidStatus;
       default:
-        return 'حدث خطأ. يرجى المحاولة مرة أخرى.';
+        return s.disputeGenericError;
     }
   }
 
@@ -111,6 +112,7 @@ class _RaiseDisputeScreenState extends ConsumerState<RaiseDisputeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     ref.listen(_raiseDisputeProvider(widget.jobId), (_, next) {
       if (next.success) {
         _showSuccessSheet(context);
@@ -118,7 +120,7 @@ class _RaiseDisputeScreenState extends ConsumerState<RaiseDisputeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              _errorMessage(next.errorCode!),
+              _errorMessage(next.errorCode!, S.read(ref)),
               style: const TextStyle(fontFamily: 'Cairo'),
             ),
             backgroundColor: AppColors.danger,
@@ -137,9 +139,9 @@ class _RaiseDisputeScreenState extends ConsumerState<RaiseDisputeScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'رفع شكوى',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.disputeTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
         ),
         body: SafeArea(
@@ -161,7 +163,7 @@ class _RaiseDisputeScreenState extends ConsumerState<RaiseDisputeScreen> {
                           color: AppColors.brandBlue.withOpacity(0.3)),
                     ),
                     child: Text(
-                      'رقم الطلب: ${widget.referenceNumber}',
+                      '${s.historyOrderNo}: ${widget.referenceNumber}',
                       style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 13,
@@ -355,9 +357,9 @@ class _RaiseDisputeScreenState extends ConsumerState<RaiseDisputeScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text(
-                    'حسناً',
-                    style: TextStyle(
+                  child: Text(
+                    S.read(ref).disputeOkay,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
                       color: Colors.white,

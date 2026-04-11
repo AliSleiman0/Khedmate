@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../providers/onboarding_providers.dart';
 
 class IdUploadScreen extends ConsumerStatefulWidget {
@@ -20,40 +21,41 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('رفع وثائق الهوية'),
+        title: Text(s.idUploadTitle),
         centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'ارفع صورة واضحة من بطاقة هويتك الوطنية أو جواز سفرك',
-            style: TextStyle(fontSize: 16),
+          Text(
+            s.idUploadInstruction,
+            style: const TextStyle(fontSize: 16),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          const Text(
-            'نوع الوثيقة',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Text(
+            s.idDocType,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             value: _documentType,
             decoration: const InputDecoration(border: OutlineInputBorder()),
-            items: const [
+            items: [
               DropdownMenuItem(
                 value: 'NationalId',
-                child: Text('بطاقة هوية وطنية'),
+                child: Text(s.idNationalId),
               ),
               DropdownMenuItem(
                 value: 'Passport',
-                child: Text('جواز سفر'),
+                child: Text(s.idPassport),
               ),
               DropdownMenuItem(
                 value: 'ResidencePermit',
-                child: Text('تصريح إقامة'),
+                child: Text(s.idResidencePermit),
               ),
             ],
             onChanged: (value) {
@@ -66,7 +68,8 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
           ),
           const SizedBox(height: 24),
           _buildImagePicker(
-            title: 'الوجه الأمامي',
+            title: s.idFrontSide,
+            tapHint: s.idTapToSelect,
             image: _frontImage,
             onPick: () => _pickImage(front: true),
             onRemove: () => setState(() => _frontImage = null),
@@ -74,7 +77,8 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
           if (_documentType != 'Passport') ...[
             const SizedBox(height: 16),
             _buildImagePicker(
-              title: 'الوجه الخلفي',
+              title: s.idBackSide,
+              tapHint: s.idTapToSelect,
               image: _backImage,
               onPick: () => _pickImage(front: false),
               onRemove: () => setState(() => _backImage = null),
@@ -88,7 +92,7 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
             ),
             child: _isSubmitting
                 ? const CircularProgressIndicator(color: Colors.white)
-                : const Text('إرسال للمراجعة', style: TextStyle(fontSize: 16)),
+                : Text(s.idSubmit, style: const TextStyle(fontSize: 16)),
           ),
         ],
       ),
@@ -97,6 +101,7 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
 
   Widget _buildImagePicker({
     required String title,
+    required String tapHint,
     required XFile? image,
     required VoidCallback onPick,
     required VoidCallback onRemove,
@@ -119,13 +124,13 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: image == null
-                ? const Column(
+                ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_photo_alternate,
+                      const Icon(Icons.add_photo_alternate,
                           size: 48, color: Colors.grey),
-                      SizedBox(height: 8),
-                      Text('اضغط لاختيار صورة'),
+                      const SizedBox(height: 8),
+                      Text(tapHint),
                     ],
                   )
                 : Stack(
@@ -159,20 +164,21 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
   }
 
   Future<void> _pickImage({required bool front}) async {
+    final s = S.read(ref);
     final source = await showDialog<ImageSource>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('اختر مصدر الصورة'),
+        title: Text(s.idChooseSource),
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.of(context).pop(ImageSource.camera),
             icon: const Icon(Icons.camera_alt),
-            label: const Text('الكاميرا'),
+            label: Text(s.camera),
           ),
           TextButton.icon(
             onPressed: () => Navigator.of(context).pop(ImageSource.gallery),
             icon: const Icon(Icons.photo_library),
-            label: const Text('المعرض'),
+            label: Text(s.gallery),
           ),
         ],
       ),
@@ -213,8 +219,8 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم إرسال وثائقك، سيتم المراجعة خلال 24 ساعة'),
+        SnackBar(
+          content: Text(S.read(ref).idSubmitSuccess),
           backgroundColor: Colors.green,
         ),
       );
@@ -226,7 +232,7 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('حدث خطأ: $e'),
+          content: Text(S.read(ref).onboardingError(e.toString())),
           backgroundColor: Colors.red,
         ),
       );

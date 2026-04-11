@@ -432,6 +432,76 @@ public class SuperAdminController : ControllerBase
         });
     }
 
+    // ── Subscription Plans ────────────────────────────────────────────────────
+
+    // GET /api/superadmin/subscription-plans
+    [HttpGet("subscription-plans")]
+    public async Task<IActionResult> GetSubscriptionPlans(CancellationToken ct)
+    {
+        var plans = await _context.Set<SubscriptionPlan>()
+            .OrderBy(p => p.CreatedAt)
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.MonthlyFee,
+                p.CommissionRate,
+                p.PriorityDelaySeconds,
+                p.IsActive,
+                p.StripePriceId,
+                p.UpdatedAt
+            })
+            .ToListAsync(ct);
+
+        return Ok(new { success = true, data = plans });
+    }
+
+    // PATCH /api/superadmin/subscription-plans/{id}
+    [HttpPatch("subscription-plans/{id:guid}")]
+    public async Task<IActionResult> UpdateSubscriptionPlan(Guid id, [FromBody] UpdateSubscriptionPlanRequest request, CancellationToken ct)
+    {
+        var plan = await _context.Set<SubscriptionPlan>().FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (plan is null)
+            return NotFound(new { success = false, error = "PLAN_NOT_FOUND" });
+
+        if (request.CommissionRate.HasValue && (request.CommissionRate < 0 || request.CommissionRate > 100))
+            return BadRequest(new { success = false, error = "INVALID_COMMISSION_RATE" });
+
+        if (request.MonthlyFee.HasValue && request.MonthlyFee < 0)
+            return BadRequest(new { success = false, error = "INVALID_MONTHLY_FEE" });
+
+        if (request.PriorityDelaySeconds.HasValue && (request.PriorityDelaySeconds < 0 || request.PriorityDelaySeconds > 300))
+            return BadRequest(new { success = false, error = "INVALID_PRIORITY_DELAY" });
+
+        plan.Update(request.MonthlyFee, request.CommissionRate, request.PriorityDelaySeconds, request.StripePriceId, request.IsActive);
+
+        var audit = AuditLogEntry.Create(
+            CallerAdminId,
+            "UPDATE_PLAN",
+            $"Updated subscription plan '{plan.Name}': fee={plan.MonthlyFee} SAR, commission={plan.CommissionRate}%, delay={plan.PriorityDelaySeconds}s",
+            "SubscriptionPlan",
+            id.ToString());
+        await _context.Set<AuditLogEntry>().AddAsync(audit, ct);
+
+        await _context.SaveChangesAsync(ct);
+
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                plan.Id,
+                plan.Name,
+                plan.MonthlyFee,
+                plan.CommissionRate,
+                plan.PriorityDelaySeconds,
+                plan.IsActive,
+                plan.StripePriceId,
+                plan.UpdatedAt
+            }
+        });
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static bool IsValidPassword(string password) =>
@@ -453,3 +523,10 @@ public record UpdateConfigRequest(
     int MaxProvidersPerArea,
     int MinRatingToRemain,
     int AutoRefundThresholdDays);
+
+public record UpdateSubscriptionPlanRequest(
+    decimal? MonthlyFee,
+    decimal? CommissionRate,
+    int? PriorityDelaySeconds,
+    string? StripePriceId,
+    bool? IsActive);

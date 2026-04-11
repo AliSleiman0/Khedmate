@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/signalr_service.dart';
 import '../../rating/presentation/provider_rating_bottom_sheet.dart';
 import '../../rating/presentation/provider_rating_provider.dart';
@@ -64,6 +65,7 @@ class ActiveJobsScreen extends ConsumerWidget {
     final asyncJobs = ref.watch(activeJobsStreamProvider);
     final pendingJobIds = ref.watch(pendingRatingJobIdsProvider).valueOrNull ?? {};
 
+    final s = S.of(ref);
     return asyncJobs.when(
       loading: () =>
           const Center(child: CircularProgressIndicator(color: AppColors.brandBlue)),
@@ -71,24 +73,24 @@ class ActiveJobsScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('تعذر تحميل الطلبات الجارية',
-                style: TextStyle(fontFamily: 'Cairo')),
+            Text(s.jobsActiveLoadError,
+                style: const TextStyle(fontFamily: 'Cairo')),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () => ref.read(activeJobsStreamProvider.notifier).refresh(),
               style:
                   ElevatedButton.styleFrom(backgroundColor: AppColors.brandBlue),
-              child: const Text('إعادة المحاولة',
-                  style: TextStyle(fontFamily: 'Cairo', color: Colors.white)),
+              child: Text(s.retry,
+                  style: const TextStyle(fontFamily: 'Cairo', color: Colors.white)),
             ),
           ],
         ),
       ),
       data: (jobs) => jobs.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
-                'لا توجد طلبات جارية',
-                style: TextStyle(
+                s.jobsActiveEmpty,
+                style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 16,
                   color: AppColors.textSecondary,
@@ -114,14 +116,6 @@ class ActiveJobsScreen extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 // Card — tappable, live status chip
 // ---------------------------------------------------------------------------
-const _statusLabels = {
-  'Accepted':    'مقبول',
-  'EnRoute':     'في الطريق',
-  'InProgress':  'جارٍ التنفيذ',
-  'Completed':   'مكتمل',
-  'Paid':        'مدفوع',
-};
-
 const _statusColors = {
   'Accepted':   AppColors.brandBlue,
   'EnRoute':    AppColors.amber,
@@ -138,7 +132,15 @@ class _ActiveJobCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statusLabel = _statusLabels[job.status] ?? job.status;
+    final s = S.of(ref);
+    final statusLabels = {
+      'Accepted':   s.statusAccepted,
+      'EnRoute':    s.statusEnRoute,
+      'InProgress': s.statusInProgress,
+      'Completed':  s.statusCompleted,
+      'Paid':       s.statusPaid,
+    };
+    final statusLabel = statusLabels[job.status] ?? job.status;
     final statusColor = _statusColors[job.status] ?? AppColors.brandBlue;
 
     return Directionality(
@@ -203,7 +205,7 @@ class _ActiveJobCard extends ConsumerWidget {
                     onTap: () => ProviderRatingBottomSheet.show(
                       context,
                       jobId: job.id,
-                      customerName: job.customerFirstName ?? 'العميل',
+                      customerName: job.customerFirstName ?? s.chatCustomer,
                     ).then((_) => ref.invalidate(pendingRatingJobIdsProvider)),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -213,15 +215,15 @@ class _ActiveJobCard extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: AppColors.amber),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.star_outline_rounded,
+                          const Icon(Icons.star_outline_rounded,
                               size: 14, color: AppColors.amber),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text(
-                            'قيّم العميل',
-                            style: TextStyle(
+                            s.rateCustomer,
+                            style: const TextStyle(
                               fontFamily: 'Cairo',
                               fontSize: 12,
                               color: AppColors.amber,

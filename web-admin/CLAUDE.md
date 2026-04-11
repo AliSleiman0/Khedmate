@@ -38,15 +38,30 @@ Hydrated from localStorage on app init. Persist key: `khudmati_admin_auth`.
 |---|---|---|
 | `/login` | `Login` | Public — inline error messages, no toast |
 | `/403` | `Forbidden` | Shown on role mismatch |
-| `/dashboard` | `Dashboard` | Default landing after login |
-| `/jobs` | `Jobs` | Job management |
-| `/providers` | `AllProviders` | Provider list with tier filtering |
-| `/providers/verification-queue` | `VerificationQueue` | Document review queue — table → modal with approve/reject |
-| `/customers` | `Customers` | Customer accounts |
-| `/disputes` | `Disputes` | Two-panel dispute queue with Accept/Reject Refund |
-| `/subscriptions` | `SubscriptionOverview` | Subscription stats — active subs table, MRR, churn |
-| `/reminder-rules` | `ReminderRulesPage` | Admin-managed reminder interval per service category |
-| `/settings` | `Settings` | Operational settings |
+| `/dashboard` | `Dashboard` | Live KPIs (activeJobs, openDisputes, todayRevenue, pendingVerifications) + recent jobs from `GET /api/admin/dashboard` |
+| `/jobs` | `Jobs` | Real API — paginated job list, search/status/date filters, detail drawer, force-cancel |
+| `/providers` | `Providers` | Two tabs: **All Providers** (tier filter, real API) + **Verification Queue** (approve/reject side drawer) |
+| `/customers` | `Customers` | Real API — search/isActive filter, pagination, Deactivate action |
+| `/disputes` | `Disputes` | Real API — two-panel queue, approve refund / reject |
+| `/subscriptions` | `Subscriptions` | Real API — provider subscriptions list with search/status filter + activeCount/pastDueCount stats |
+| `/reminder-rules` | `ReminderRules` | Real API — inline edit interval/active toggle, create new rule per category |
+| `/settings` | `Settings` | Read-only — displays live platform config from `GET /api/admin/platform-config`; changes require Super Admin |
+
+## API layer (`src/api/`)
+| File | Endpoints |
+|---|---|
+| `client.ts` | Axios instance with Bearer auth + refresh token retry |
+| `jobs.ts` | `GET /api/admin/jobs`, `GET /api/admin/jobs/{id}`, `POST .../force-cancel` |
+| `disputes.ts` | `GET /api/admin/disputes`, `GET .../{{id}}`, `POST .../resolve` |
+| `dashboard.ts` | `GET /api/admin/dashboard` |
+| `customers.ts` | `GET /api/customers`, `PATCH /api/customers/{id}/deactivate` |
+| `providers.ts` | `GET /api/admin/providers`, `GET /api/admin/providers/verification-queue`, `POST .../verify-documents` |
+| `subscriptions.ts` | `GET /api/admin/subscriptions` |
+| `reminderRules.ts` | `GET/POST /api/admin/reminder-rules`, `PUT .../{{id}}` |
+| `platformConfig.ts` | `GET /api/admin/platform-config` |
+
+## Before deploying
+> Run `backend/add-admin-features.sql` against the PostgreSQL database to create the `providers.provider_subscriptions` and `public.reminder_rules` tables before deploying the backend.
 
 ## Provider Verification (Feature #07)
 ### Verification Queue Page

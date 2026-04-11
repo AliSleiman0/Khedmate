@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../booking/presentation/booking_provider.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
 
@@ -81,17 +82,19 @@ class JobDetailPage extends ConsumerWidget {
 
   const JobDetailPage({super.key, required this.jobId});
 
-  static const Map<String, String> _categoryNames = {
-    'plumbing': 'سباكة',
-    'electrical': 'كهرباء',
-    'cleaning': 'تنظيف',
-    'carpentry': 'نجارة',
-    'painting': 'دهان',
-    'ac_maintenance': 'تكييف',
-  };
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+    final categoryNames = {
+      'plumbing':       s.catPlumbing,
+      'electrical':     s.catElectrical,
+      'cleaning':       s.catCleaning,
+      'carpentry':      s.catCarpentry,
+      'painting':       s.catPainting,
+      'ac_maintenance': s.catAC,
+      'moving':         s.catMoving,
+      'other':          s.catOther,
+    };
     final asyncDetail = ref.watch(jobDetailProvider(jobId));
 
     return Directionality(
@@ -101,9 +104,9 @@ class JobDetailPage extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'تفاصيل الطلب',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.historyDetailTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
         ),
         body: asyncDetail.when(
@@ -113,20 +116,20 @@ class JobDetailPage extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('تعذر تحميل تفاصيل الطلب',
-                    style: TextStyle(fontFamily: 'Cairo')),
+                Text(s.jobDetailLoadError,
+                    style: const TextStyle(fontFamily: 'Cairo')),
                 TextButton(
                   onPressed: () =>
                       ref.invalidate(jobDetailProvider(jobId)),
-                  child: const Text('إعادة المحاولة',
-                      style: TextStyle(fontFamily: 'Cairo')),
+                  child: Text(s.retry,
+                      style: const TextStyle(fontFamily: 'Cairo')),
                 ),
               ],
             ),
           ),
           data: (job) => _JobDetailBody(
             job: job,
-            categoryNames: _categoryNames,
+            categoryNames: categoryNames,
             onDisputeRaised: () => ref.invalidate(jobDetailProvider(jobId)),
           ),
         ),
@@ -137,7 +140,7 @@ class JobDetailPage extends ConsumerWidget {
 
 // ── Body ─────────────────────────────────────────────────────────────────────
 
-class _JobDetailBody extends StatelessWidget {
+class _JobDetailBody extends ConsumerWidget {
   final _JobDetail job;
   final Map<String, String> categoryNames;
   final VoidCallback onDisputeRaised;
@@ -149,7 +152,8 @@ class _JobDetailBody extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -177,12 +181,12 @@ class _JobDetailBody extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _InfoRow(
-                    label: 'الفئة',
-                    value: categoryNames[job.categoryId] ?? job.categoryId),
-                _InfoRow(label: 'العنوان', value: job.address),
-                _InfoRow(label: 'الوصف', value: job.description),
+                    label: s.jobDetailCategory,
+                    value: categoryNames[job.categoryId] ?? job.categoryId.replaceAll('_', ' ')),
+                _InfoRow(label: s.historyAddress, value: job.address),
+                _InfoRow(label: s.summaryDescription, value: job.description),
                 _InfoRow(
-                    label: 'تاريخ الطلب',
+                    label: s.jobDetailDate,
                     value: _formatDate(job.createdAt)),
               ],
             ),
@@ -201,12 +205,12 @@ class _JobDetailBody extends StatelessWidget {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.gavel_rounded, color: AppColors.amber, size: 20),
-                  SizedBox(width: 8),
+                children: [
+                  const Icon(Icons.gavel_rounded, color: AppColors.amber, size: 20),
+                  const SizedBox(width: 8),
                   Text(
-                    'الشكوى قيد المراجعة',
-                    style: TextStyle(
+                    s.jobDisputeUnderReview,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.w600,
                       color: AppColors.amber,
@@ -220,7 +224,7 @@ class _JobDetailBody extends StatelessWidget {
           // Before photos section
           if (job.beforePhotoUrls.isNotEmpty) ...[
             const SizedBox(height: 16),
-            _SectionHeader(title: 'صور قبل الخدمة'),
+            _SectionHeader(title: s.jobBeforePhotos),
             const SizedBox(height: 8),
             _PhotoGrid(urls: job.beforePhotoUrls),
           ],
@@ -228,7 +232,7 @@ class _JobDetailBody extends StatelessWidget {
           // After photos section
           if (job.afterPhotoUrls.isNotEmpty) ...[
             const SizedBox(height: 16),
-            _SectionHeader(title: 'صور بعد الخدمة'),
+            _SectionHeader(title: s.jobAfterPhotos),
             const SizedBox(height: 8),
             _PhotoGrid(urls: job.afterPhotoUrls),
           ],
@@ -253,9 +257,9 @@ class _JobDetailBody extends StatelessWidget {
                 },
                 icon: const Icon(Icons.report_problem_outlined,
                     color: AppColors.amber),
-                label: const Text(
-                  'رفع شكوى',
-                  style: TextStyle(
+                label: Text(
+                  s.jobRaiseDispute,
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,
                     color: AppColors.amber,
@@ -385,36 +389,46 @@ class _PhotoGrid extends StatelessWidget {
       );
 }
 
-class _StatusChip extends StatelessWidget {
+class _StatusChip extends ConsumerWidget {
   final String status;
   const _StatusChip({required this.status});
 
-  static const Map<String, Map<String, dynamic>> _styles = {
-    'Pending':    {'label': 'قيد الانتظار', 'bg': Color(0xFFFFF3CD), 'fg': Color(0xFF856404)},
-    'Accepted':   {'label': 'مقبول',        'bg': Color(0xFFD1ECF1), 'fg': Color(0xFF0C5460)},
-    'EnRoute':    {'label': 'في الطريق',    'bg': Color(0xFFCCE5FF), 'fg': Color(0xFF004085)},
-    'InProgress': {'label': 'جاري التنفيذ','bg': Color(0xFFD4EDDA), 'fg': Color(0xFF155724)},
-    'Completed':  {'label': 'مكتمل',        'bg': Color(0xFFD4EDDA), 'fg': Color(0xFF155724)},
-    'Paid':       {'label': 'مدفوع',        'bg': Color(0xFFD1C4E9), 'fg': Color(0xFF4527A0)},
-    'Expired':    {'label': 'منتهي',        'bg': Color(0xFFF8D7DA), 'fg': Color(0xFF721C24)},
+  static const Map<String, Map<String, dynamic>> _colorStyles = {
+    'Pending':    {'bg': Color(0xFFFFF3CD), 'fg': Color(0xFF856404)},
+    'Accepted':   {'bg': Color(0xFFD1ECF1), 'fg': Color(0xFF0C5460)},
+    'EnRoute':    {'bg': Color(0xFFCCE5FF), 'fg': Color(0xFF004085)},
+    'InProgress': {'bg': Color(0xFFD4EDDA), 'fg': Color(0xFF155724)},
+    'Completed':  {'bg': Color(0xFFD4EDDA), 'fg': Color(0xFF155724)},
+    'Paid':       {'bg': Color(0xFFD1C4E9), 'fg': Color(0xFF4527A0)},
+    'Expired':    {'bg': Color(0xFFF8D7DA), 'fg': Color(0xFF721C24)},
   };
 
   @override
-  Widget build(BuildContext context) {
-    final style = _styles[status] ?? _styles['Pending']!;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+    final labels = {
+      'Pending':    s.statusPending,
+      'Accepted':   s.statusAccepted,
+      'EnRoute':    s.statusEnRoute,
+      'InProgress': s.statusInProgress,
+      'Completed':  s.statusCompleted,
+      'Paid':       s.statusPaid,
+      'Expired':    s.statusExpired,
+    };
+    final colors = _colorStyles[status] ?? _colorStyles['Pending']!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: style['bg'] as Color,
+        color: colors['bg'] as Color,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        style['label'] as String,
+        labels[status] ?? status,
         style: TextStyle(
           fontFamily: 'Cairo',
           fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: style['fg'] as Color,
+          color: colors['fg'] as Color,
         ),
       ),
     );

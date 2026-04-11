@@ -3,12 +3,17 @@ import '../data/notifications_repository.dart';
 import '../domain/notification_model.dart';
 
 class NotificationsNotifier extends AsyncNotifier<List<NotificationModel>> {
+  int _totalCount = 0;
+
+  int get totalCount => _totalCount;
+
   @override
   Future<List<NotificationModel>> build() => _load();
 
   Future<List<NotificationModel>> _load() async {
     final repo = ref.read(notificationsRepositoryProvider);
     final page = await repo.getNotifications();
+    _totalCount = page.totalCount;
     return page.items;
   }
 
@@ -39,6 +44,14 @@ class NotificationsNotifier extends AsyncNotifier<List<NotificationModel>> {
 final notificationsNotifierProvider =
     AsyncNotifierProvider<NotificationsNotifier, List<NotificationModel>>(
         NotificationsNotifier.new);
+
+/// Whether there are more notifications beyond the first page.
+final notificationsHasMoreProvider = Provider<bool>((ref) {
+  final notifier = ref.watch(notificationsNotifierProvider.notifier);
+  final loaded = ref.watch(notificationsNotifierProvider).valueOrNull?.length ?? 0;
+  // TODO: implement a Load More button in notifications_screen.dart using this flag
+  return loaded < notifier.totalCount;
+});
 
 /// Unread count for badge display.
 final unreadCountProvider = Provider<int>((ref) {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../data/auth_repository.dart';
 import 'auth_provider.dart';
 
@@ -76,7 +77,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       await repo.resendOtp(widget.phone);
       _startTimer();
     } catch (_) {
-      setState(() => _errorMessage = 'تعذر إعادة إرسال الرمز. حاول مرة أخرى');
+      setState(() => _errorMessage = S.read(ref).otpResendError);
     }
   }
 
@@ -100,23 +101,24 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       },
       loading: () {},
       error: (err, _) {
-        String message = 'حدث خطأ. حاول مرة أخرى';
+        final s = S.read(ref);
+        String message = s.errorGeneric;
         bool enableResendImmediately = false;
 
         if (err is DioException) {
           final code = _extractErrorCode(err);
           switch (code) {
             case 'OTP_EXPIRED':
-              message = 'انتهت صلاحية الرمز';
+              message = s.otpExpired;
               enableResendImmediately = true;
               break;
             case 'MAX_ATTEMPTS_EXCEEDED':
-              message = 'يرجى طلب رمز جديد';
+              message = s.otpRequestNew;
               setState(() => _isLocked = true);
               enableResendImmediately = true;
               break;
             case 'INVALID_OTP':
-              message = 'الرمز غير صحيح';
+              message = s.otpInvalid;
               setState(() {
                 _remainingAttempts =
                     (_remainingAttempts - 1).clamp(0, _maxAttempts);
@@ -126,7 +128,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               if (err.type == DioExceptionType.connectionError ||
                   err.type == DioExceptionType.receiveTimeout ||
                   err.type == DioExceptionType.sendTimeout) {
-                message = 'تحقق من اتصالك بالإنترنت';
+                message = s.errorNetwork;
               }
           }
           if (enableResendImmediately) {
@@ -157,6 +159,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
 
@@ -199,9 +202,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'التحقق من الهاتف',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.otpTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
         ),
@@ -217,10 +220,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   color: AppColors.brandBlue,
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'أدخل الرمز المرسل إلى',
+                Text(
+                  s.otpSubtitle,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     color: AppColors.textSecondary,
                     fontFamily: 'Cairo',
@@ -277,7 +280,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 // Remaining attempts
                 if (!_isLocked && _remainingAttempts < _maxAttempts)
                   Text(
-                    'المحاولات المتبقية: $_remainingAttempts',
+                    s.otpAttemptsLeft(_remainingAttempts),
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontFamily: 'Cairo',
@@ -290,7 +293,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 // Countdown / Resend
                 if (!_canResend)
                   Text(
-                    'إعادة الإرسال بعد ${_remainingSeconds}s',
+                    s.otpResendIn(_remainingSeconds),
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontFamily: 'Cairo',
@@ -300,9 +303,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 else
                   TextButton(
                     onPressed: _resendOtp,
-                    child: const Text(
-                      'إعادة إرسال الرمز',
-                      style: TextStyle(
+                    child: Text(
+                      s.resendCode,
+                      style: const TextStyle(
                         color: AppColors.brandBlue,
                         fontFamily: 'Cairo',
                         fontSize: 16,

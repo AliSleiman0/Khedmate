@@ -7,6 +7,8 @@ import Providers from './pages/Providers/Providers'
 import Customers from './pages/Customers/Customers'
 import Disputes from './pages/Disputes/Disputes'
 import Settings from './pages/Settings/Settings'
+import Subscriptions from './pages/Subscriptions/Subscriptions'
+import ReminderRules from './pages/ReminderRules/ReminderRules'
 import Login from './pages/Login/Login'
 import Forbidden from './pages/Forbidden'
 import ProtectedRoute from './router/ProtectedRoute'
@@ -33,6 +35,8 @@ export default function App() {
             <Route path="/providers" element={<Providers />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/disputes" element={<Disputes />} />
+            <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/reminder-rules" element={<ReminderRules />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>

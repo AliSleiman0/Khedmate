@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../data/job_repository.dart';
 import '../../notifications/presentation/notifications_provider.dart';
 import 'job_feed_provider.dart';
 import 'active_jobs_screen.dart';
+import 'completed_jobs_provider.dart';
 
 const _categoryIcons = {
   'plumbing': Icons.plumbing,
@@ -41,6 +43,7 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen>
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final unreadCount = ref.watch(unreadCountProvider);
 
     return Directionality(
@@ -50,9 +53,9 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen>
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'الطلبات',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.jobsTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           automaticallyImplyLeading: false,
           actions: [
@@ -95,10 +98,10 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen>
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
             indicatorColor: AppColors.amber,
-            tabs: const [
-              Tab(text: 'المتاحة'),
-              Tab(text: 'الجارية'),
-              Tab(text: 'المنجزة'),
+            tabs: [
+              Tab(text: s.tabAvailable),
+              Tab(text: s.tabActive),
+              Tab(text: s.tabCompleted),
             ],
           ),
         ),
@@ -109,22 +112,6 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen>
             ActiveJobsScreen(),
             _CompletedJobsTab(),
           ],
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: 0,
-          selectedItemColor: AppColors.brandBlue,
-          items: const [
-            BottomNavigationBarItem(
-                icon: Icon(Icons.work_outline), label: 'الطلبات'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.attach_money), label: 'الأرباح'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline), label: 'الملف الشخصي'),
-          ],
-          onTap: (i) {
-            if (i == 1) context.go('/earnings');
-            if (i == 2) context.go('/profile');
-          },
         ),
       ),
     );
@@ -159,7 +146,7 @@ class _AvailableJobsTab extends ConsumerWidget {
   }
 }
 
-class _JobCard extends StatelessWidget {
+class _JobCard extends ConsumerWidget {
   final JobSummary job;
 
   const _JobCard({required this.job});
@@ -167,12 +154,13 @@ class _JobCard extends StatelessWidget {
   bool get _isNew => job.secondsRemaining > 100;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final icon = _categoryIcons[job.categoryId] ?? Icons.build;
     final minutesAgo =
         DateTime.now().difference(job.postedAt).inMinutes;
     final timeLabel =
-        minutesAgo < 1 ? 'الآن' : 'منذ $minutesAgo دقيقة';
+        minutesAgo < 1 ? s.timeNow : s.timeMinutesAgo(minutesAgo);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -226,7 +214,7 @@ class _JobCard extends StatelessWidget {
                         const Icon(Icons.location_on_outlined,
                             size: 14, color: AppColors.textSecondary),
                         Text(
-                          ' ${job.distanceKm} كم',
+                          ' ${s.distanceKm(job.distanceKm)}',
                           style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary),
@@ -308,11 +296,12 @@ class _PulsingDotState extends State<_PulsingDot>
   }
 }
 
-class _EmptyState extends StatelessWidget {
+class _EmptyState extends ConsumerWidget {
   const _EmptyState();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -320,9 +309,9 @@ class _EmptyState extends StatelessWidget {
           const Icon(Icons.inbox_outlined,
               size: 72, color: AppColors.textSecondary),
           const SizedBox(height: 16),
-          const Text(
-            'لا توجد طلبات متاحة حالياً',
-            style: TextStyle(
+          Text(
+            s.jobsEmpty,
+            style: const TextStyle(
               fontFamily: 'Cairo',
               fontSize: 17,
               color: AppColors.textSecondary,
@@ -330,7 +319,8 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           IconButton(
-            onPressed: null,
+            onPressed: () =>
+                ref.read(jobFeedNotifierProvider.notifier).refresh(),
             icon: const Icon(Icons.refresh, color: AppColors.brandBlue),
           ),
         ],
@@ -339,29 +329,29 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _ErrorState extends StatelessWidget {
+class _ErrorState extends ConsumerWidget {
   final VoidCallback onRefresh;
 
   const _ErrorState({required this.onRefresh});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.wifi_off, size: 64, color: AppColors.textSecondary),
           const SizedBox(height: 16),
-          const Text(
-            'تعذر تحميل الطلبات',
-            style: TextStyle(fontFamily: 'Cairo', fontSize: 16),
+          Text(
+            s.jobsLoadError,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 16),
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
             onPressed: onRefresh,
             icon: const Icon(Icons.refresh),
-            label: const Text('إعادة المحاولة',
-                style: TextStyle(fontFamily: 'Cairo')),
+            label: Text(s.retry, style: const TextStyle(fontFamily: 'Cairo')),
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brandBlue,
                 foregroundColor: Colors.white),
@@ -372,16 +362,64 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _CompletedJobsTab extends StatelessWidget {
+class _CompletedJobsTab extends ConsumerWidget {
   const _CompletedJobsTab();
 
   @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        'لا توجد طلبات منجزة',
-        style: TextStyle(fontFamily: 'Cairo', color: AppColors.textSecondary),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+    final async = ref.watch(completedJobsProvider);
+
+    return async.when(
+      loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.brandBlue)),
+      error: (_, __) => Center(
+          child: Text(s.tabCompletedError,
+              style: const TextStyle(fontFamily: 'Cairo'))),
+      data: (jobs) => jobs.isEmpty
+          ? Center(
+              child: Text(
+                s.tabCompletedEmpty,
+                style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    color: AppColors.textSecondary,
+                    fontSize: 16),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: jobs.length,
+              itemBuilder: (ctx, i) {
+                final job = jobs[i];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          AppColors.success.withOpacity(0.12),
+                      child: const Icon(Icons.check_circle,
+                          color: AppColors.success),
+                    ),
+                    title: Text(job.categoryName,
+                        style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.bold)),
+                    subtitle: Text(
+                        '${job.district} · ${job.referenceNumber}',
+                        style: const TextStyle(fontFamily: 'Cairo')),
+                    trailing: Text(
+                      'SAR ${job.netAmount.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.success),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

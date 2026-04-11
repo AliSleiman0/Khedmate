@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/signalr_service.dart';
 import '../../../shared/widgets/chat/chat_input_bar.dart';
 import '../../../shared/widgets/chat/chat_message_list.dart';
@@ -63,6 +64,7 @@ class _CustomerChatScreenState extends ConsumerState<CustomerChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final asyncChat = ref.watch(chatNotifierProvider(widget.jobId));
 
     // Auto-scroll when new messages arrive
@@ -91,16 +93,16 @@ class _CustomerChatScreenState extends ConsumerState<CustomerChatScreen> {
                   Text(
                     widget.otherPartyName.isNotEmpty
                         ? widget.otherPartyName
-                        : 'المزود',
+                        : s.chatProvider,
                     style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Text(
-                    'محادثة',
-                    style: TextStyle(
+                  Text(
+                    s.chatTitle,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 12,
                       color: Colors.white70,
@@ -122,9 +124,9 @@ class _CustomerChatScreenState extends ConsumerState<CustomerChatScreen> {
                 const Icon(Icons.error_outline,
                     color: AppColors.danger, size: 48),
                 const SizedBox(height: 12),
-                const Text(
-                  'تعذر تحميل المحادثة',
-                  style: TextStyle(fontFamily: 'Cairo', fontSize: 16),
+                Text(
+                  s.chatLoadError,
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 16),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -132,9 +134,9 @@ class _CustomerChatScreenState extends ConsumerState<CustomerChatScreen> {
                       ref.refresh(chatNotifierProvider(widget.jobId)),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.brandBlue),
-                  child: const Text('إعادة المحاولة',
+                  child: Text(s.retry,
                       style:
-                          TextStyle(fontFamily: 'Cairo', color: Colors.white)),
+                          const TextStyle(fontFamily: 'Cairo', color: Colors.white)),
                 ),
               ],
             ),

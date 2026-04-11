@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import 'referral_provider.dart';
 
 class ReferralScreen extends ConsumerWidget {
@@ -11,6 +12,7 @@ class ReferralScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final asyncState = ref.watch(referralNotifierProvider);
 
     return Directionality(
@@ -20,9 +22,9 @@ class ReferralScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'دعوة الأصدقاء',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.referralTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
         ),
         body: asyncState.when(
@@ -58,7 +60,6 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill from deep link if provided — auto-expand the code input
     if (widget.prefilledCode != null && widget.prefilledCode!.isNotEmpty) {
       _codeController.text = widget.prefilledCode!.toUpperCase();
       _showCodeInput = true;
@@ -73,6 +74,7 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final state = ref.watch(referralNotifierProvider).valueOrNull ?? widget.state;
     final info = state.info;
 
@@ -90,10 +92,10 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
             ),
             child: Column(
               children: [
-                const Text(
-                  'شارك كودك، كسب رصيداً',
+                Text(
+                  s.referralTagline,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -128,10 +130,10 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
                           if (info == null) return;
                           Clipboard.setData(ClipboardData(text: info.code));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('تم نسخ الكود',
-                                  style: TextStyle(fontFamily: 'Cairo')),
-                              duration: Duration(seconds: 2),
+                            SnackBar(
+                              content: Text(s.referralCopied,
+                                  style: const TextStyle(fontFamily: 'Cairo')),
+                              duration: const Duration(seconds: 2),
                             ),
                           );
                         },
@@ -148,9 +150,9 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
                         ? null
                         : () => _shareCode(context, info.shareUrl, info.code),
                     icon: const Icon(Icons.share),
-                    label: const Text(
-                      'مشاركة',
-                      style: TextStyle(
+                    label: Text(
+                      s.referralShare,
+                      style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 16,
                           fontWeight: FontWeight.bold),
@@ -179,9 +181,9 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'كيف يعمل البرنامج؟',
-                    style: TextStyle(
+                  Text(
+                    s.referralHowItWorks,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -192,19 +194,19 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
                   _RewardRow(
                     icon: Icons.percent,
                     color: AppColors.amber,
-                    text: 'صديقك يحصل على 15% خصم في أول حجز',
+                    text: s.referralFriendGets,
                   ),
                   const SizedBox(height: 8),
                   _RewardRow(
                     icon: Icons.account_balance_wallet_outlined,
                     color: AppColors.success,
-                    text: 'أنت تحصل على 20 ر.س رصيد في محفظتك',
+                    text: s.referralYouGet,
                   ),
                   const SizedBox(height: 8),
                   _RewardRow(
                     icon: Icons.check_circle_outline,
                     color: AppColors.brandBlue,
-                    text: 'الرصيد يُطبَّق تلقائياً في حجزك القادم',
+                    text: s.referralCreditAutoApplied,
                   ),
                 ],
               ),
@@ -230,7 +232,7 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'رصيدك الحالي: ${info.creditBalance.toStringAsFixed(2)} ر.س',
+                          s.referralCredits(info.creditBalance.toStringAsFixed(2)),
                           style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 16,
@@ -238,9 +240,9 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
                             color: AppColors.success,
                           ),
                         ),
-                        const Text(
-                          'يُطبَّق تلقائياً في حجزك القادم',
-                          style: TextStyle(
+                        Text(
+                          s.referralAutoApplied,
+                          style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -267,7 +269,7 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
                     const Icon(Icons.people_outline, color: AppColors.brandBlue),
                     const SizedBox(width: 12),
                     Text(
-                      'دعوت ${info.referralsCompleted} أصدقاء حتى الآن ✓',
+                      s.referralFriendsCount(info.referralsCompleted.toString()),
                       style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 14,
@@ -296,9 +298,9 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'هل لديك كود دعوة؟',
-                          style: TextStyle(
+                        Text(
+                          s.referralHasCode,
+                          style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -321,6 +323,7 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
                       isLoading: state.isApplyingCode,
                       error: state.applyError,
                       successMessage: state.applySuccessMessage,
+                      applyLabel: s.apply,
                       onSubmit: () => ref
                           .read(referralNotifierProvider.notifier)
                           .applyCode(_codeController.text),
@@ -337,7 +340,7 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
 
   Future<void> _shareCode(
       BuildContext context, String shareUrl, String code) async {
-    // Use url_launcher to attempt sharing via WhatsApp or fallback to copy
+    final s = S.read(ref);
     final message =
         'استخدم كودي $code على تطبيق خدمتي واحصل على خصم 15% في أول حجز! $shareUrl';
     final uri = Uri.parse(
@@ -346,14 +349,13 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
-      // Fallback: copy to clipboard
       await Clipboard.setData(ClipboardData(text: message));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'تم نسخ الرسالة — شاركها مع أصدقائك!',
-              style: TextStyle(fontFamily: 'Cairo'),
+              s.referralCopiedMsg,
+              style: const TextStyle(fontFamily: 'Cairo'),
             ),
           ),
         );
@@ -370,12 +372,14 @@ class _ApplyCodeSection extends StatelessWidget {
   final bool isLoading;
   final String? error;
   final String? successMessage;
+  final String applyLabel;
   final VoidCallback onSubmit;
 
   const _ApplyCodeSection({
     required this.controller,
     required this.isLoading,
     required this.onSubmit,
+    required this.applyLabel,
     this.error,
     this.successMessage,
   });
@@ -452,8 +456,8 @@ class _ApplyCodeSection extends StatelessWidget {
                       height: 20,
                       child:
                           CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('تطبيق',
-                      style: TextStyle(
+                  : Text(applyLabel,
+                      style: const TextStyle(
                           fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
             ),
           ],
@@ -491,30 +495,33 @@ class _RewardRow extends StatelessWidget {
       );
 }
 
-class _ErrorState extends StatelessWidget {
+class _ErrorState extends ConsumerWidget {
   final VoidCallback onRefresh;
   const _ErrorState({required this.onRefresh});
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.wifi_off, size: 64, color: AppColors.textSecondary),
-            const SizedBox(height: 16),
-            const Text('تعذر التحميل',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 16)),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: onRefresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('إعادة المحاولة',
-                  style: TextStyle(fontFamily: 'Cairo')),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.brandBlue,
-                  foregroundColor: Colors.white),
-            ),
-          ],
-        ),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.wifi_off, size: 64, color: AppColors.textSecondary),
+          const SizedBox(height: 16),
+          Text(s.referralLoadError,
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 16)),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: onRefresh,
+            icon: const Icon(Icons.refresh),
+            label: Text(s.retry,
+                style: const TextStyle(fontFamily: 'Cairo')),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandBlue,
+                foregroundColor: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
 }

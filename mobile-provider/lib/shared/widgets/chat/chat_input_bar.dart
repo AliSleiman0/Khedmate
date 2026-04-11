@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 
 // ---------------------------------------------------------------------------
 // Chat input bar — text field + send button
 // ---------------------------------------------------------------------------
-class ChatInputBar extends StatefulWidget {
+class ChatInputBar extends ConsumerStatefulWidget {
   final bool isSending;
   final ValueChanged<String> onSend;
 
@@ -15,10 +17,10 @@ class ChatInputBar extends StatefulWidget {
   });
 
   @override
-  State<ChatInputBar> createState() => _ChatInputBarState();
+  ConsumerState<ChatInputBar> createState() => _ChatInputBarState();
 }
 
-class _ChatInputBarState extends State<ChatInputBar> {
+class _ChatInputBarState extends ConsumerState<ChatInputBar> {
   final _controller = TextEditingController();
   bool _hasText = false;
 
@@ -77,7 +79,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                     fontSize: 14,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'اكتب رسالة...',
+                    hintText: S.of(ref).chatInputHint,
                     hintStyle: const TextStyle(
                       fontFamily: 'Cairo',
                       color: AppColors.textSecondary,

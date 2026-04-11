@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/constants/app_config.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import 'job_detail_provider.dart';
 import 'job_feed_provider.dart';
 
@@ -15,6 +16,7 @@ class JobDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final asyncState = ref.watch(jobDetailNotifierProvider(jobId));
 
     return Directionality(
@@ -24,9 +26,9 @@ class JobDetailScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'تفاصيل الطلب',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.jobDetailTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -78,7 +80,7 @@ class JobDetailScreen extends ConsumerWidget {
   }
 }
 
-class _JobDetailBody extends StatelessWidget {
+class _JobDetailBody extends ConsumerWidget {
   final JobDetailState state;
   final VoidCallback onAccept;
   final VoidCallback onReject;
@@ -90,7 +92,8 @@ class _JobDetailBody extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final job = state.job;
     final secs = state.secondsRemaining;
     final mins = secs ~/ 60;
@@ -117,6 +120,7 @@ class _JobDetailBody extends StatelessWidget {
             color: timerColor,
             totalSecs: secs,
             isExpired: state.isExpired,
+            timeLeftLabel: s.jobTimeLeft,
           ),
 
           const SizedBox(height: 20),
@@ -143,7 +147,7 @@ class _JobDetailBody extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'منذ ${DateTime.now().difference(job.postedAt).inMinutes} دقيقة',
+                      s.timeMinutesAgo(DateTime.now().difference(job.postedAt).inMinutes),
                       style: const TextStyle(
                           fontFamily: 'Cairo',
                           color: AppColors.textSecondary,
@@ -159,7 +163,7 @@ class _JobDetailBody extends StatelessWidget {
 
           // Description
           _SectionCard(
-            title: 'وصف الخدمة',
+            title: s.jobDescTitle,
             child: Text(
               job.description,
               style: const TextStyle(fontFamily: 'Cairo', fontSize: 14),
@@ -202,7 +206,7 @@ class _JobDetailBody extends StatelessWidget {
 
           // Location info
           _SectionCard(
-            title: 'الموقع',
+            title: s.jobLocation,
             child: Row(
               children: [
                 const Icon(Icons.location_on_outlined,
@@ -222,7 +226,7 @@ class _JobDetailBody extends StatelessWidget {
           if (job.beforePhotoUrls.isNotEmpty) ...[
             const SizedBox(height: 12),
             _SectionCard(
-              title: 'صور قبل العمل',
+              title: s.jobBeforePhotos,
               child: SizedBox(
                 height: 80,
                 child: ListView(
@@ -256,10 +260,10 @@ class _JobDetailBody extends StatelessWidget {
                 color: AppColors.danger.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
-                  'انتهت مدة القبول',
-                  style: TextStyle(
+                  s.jobExpired,
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
                     color: AppColors.danger,
                     fontWeight: FontWeight.bold,
@@ -280,9 +284,9 @@ class _JobDetailBody extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text(
-                'قبول الطلب',
-                style: TextStyle(
+              child: Text(
+                s.jobAccept,
+                style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -300,9 +304,9 @@ class _JobDetailBody extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text(
-                'رفض',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 17),
+              child: Text(
+                s.jobReject,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 17),
               ),
             ),
           ],
@@ -320,6 +324,7 @@ class _CountdownTimer extends StatelessWidget {
   final Color color;
   final int totalSecs;
   final bool isExpired;
+  final String timeLeftLabel;
 
   const _CountdownTimer({
     required this.mins,
@@ -327,6 +332,7 @@ class _CountdownTimer extends StatelessWidget {
     required this.color,
     required this.totalSecs,
     required this.isExpired,
+    required this.timeLeftLabel,
   });
 
   @override
@@ -366,7 +372,7 @@ class _CountdownTimer extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'الوقت المتبقي للقبول',
+          timeLeftLabel,
           style: TextStyle(
             fontFamily: 'Cairo',
             color: color,
@@ -411,13 +417,14 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _ExpiredState extends StatelessWidget {
+class _ExpiredState extends ConsumerWidget {
   final VoidCallback onBack;
 
   const _ExpiredState({required this.onBack});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -427,9 +434,9 @@ class _ExpiredState extends StatelessWidget {
             const Icon(Icons.timer_off_outlined,
                 size: 64, color: AppColors.danger),
             const SizedBox(height: 16),
-            const Text(
-              'الطلب لم يعد متاحاً',
-              style: TextStyle(
+            Text(
+              s.jobNotAvailable,
+              style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -441,8 +448,8 @@ class _ExpiredState extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.brandBlue,
                   foregroundColor: Colors.white),
-              child: const Text('العودة للطلبات',
-                  style: TextStyle(fontFamily: 'Cairo')),
+              child: Text(s.backToJobs,
+                  style: const TextStyle(fontFamily: 'Cairo')),
             ),
           ],
         ),

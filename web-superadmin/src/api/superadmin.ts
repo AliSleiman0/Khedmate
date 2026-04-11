@@ -72,6 +72,17 @@ export interface AuditPage {
   pageSize: number
 }
 
+export interface SubscriptionPlan {
+  id: string
+  name: string
+  monthlyFee: number
+  commissionRate: number
+  priorityDelaySeconds: number
+  isActive: boolean
+  stripePriceId: string | null
+  updatedAt: string | null
+}
+
 export const superAdminApi = {
   getDashboard: (): Promise<DashboardData> =>
     client.get('/superadmin/dashboard').then((r: { data: { data: DashboardData } }) => r.data.data),
@@ -99,4 +110,13 @@ export const superAdminApi = {
 
   getAudit: (params: { from: string; to: string; page: number; actionType?: string }): Promise<AuditPage> =>
     client.get('/superadmin/audit', { params: { ...params, pageSize: 20 } }).then((r: { data: { data: AuditPage } }) => r.data.data),
+
+  getSubscriptionPlans: (): Promise<SubscriptionPlan[]> =>
+    client.get('/superadmin/subscription-plans').then((r: { data: { data: SubscriptionPlan[] } }) => r.data.data),
+
+  updateSubscriptionPlan: (
+    id: string,
+    body: { monthlyFee?: number; commissionRate?: number; priorityDelaySeconds?: number; stripePriceId?: string; isActive?: boolean }
+  ): Promise<SubscriptionPlan> =>
+    client.patch(`/superadmin/subscription-plans/${id}`, body).then((r: { data: { data: SubscriptionPlan } }) => r.data.data),
 }

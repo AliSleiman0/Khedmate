@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import 'earnings_provider.dart';
 
 class EarningsPage extends ConsumerWidget {
@@ -9,6 +10,7 @@ class EarningsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final summaryAsync = ref.watch(earningsSummaryProvider);
     final txAsync = ref.watch(earningsTransactionsProvider);
 
@@ -19,14 +21,14 @@ class EarningsPage extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'الأرباح',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.earningsTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.account_balance_wallet_outlined),
-              tooltip: 'حساب الدفع',
+              tooltip: s.payoutAccount,
               onPressed: () => context.push('/payout-status'),
             ),
           ],
@@ -40,7 +42,7 @@ class EarningsPage extends ConsumerWidget {
             loading: () =>
                 const Center(child: CircularProgressIndicator(color: AppColors.brandBlue)),
             error: (e, _) => Center(
-              child: Text('تعذّر تحميل الأرباح',
+              child: Text(s.earningsLoadError,
                   style: const TextStyle(fontFamily: 'Cairo', fontSize: 16)),
             ),
             data: (summary) => ListView(
@@ -51,7 +53,7 @@ class EarningsPage extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: _SummaryCard(
-                        label: 'هذا الشهر',
+                        label: s.earningsThisMonth,
                         value: _fmt(summary.totalEarnedThisMonth, summary.currency),
                         icon: Icons.calendar_month,
                         color: AppColors.brandBlue,
@@ -60,7 +62,7 @@ class EarningsPage extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _SummaryCard(
-                        label: 'في الانتظار',
+                        label: s.earningsPending,
                         value: _fmt(summary.pendingBalance, summary.currency),
                         icon: Icons.hourglass_top,
                         color: AppColors.amber,
@@ -70,7 +72,7 @@ class EarningsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 _SummaryCard(
-                  label: 'إجمالي الأرباح',
+                  label: s.earningsTotal,
                   value: _fmt(summary.totalEarnedAllTime, summary.currency),
                   icon: Icons.account_balance_wallet,
                   color: AppColors.success,
@@ -83,9 +85,9 @@ class EarningsPage extends ConsumerWidget {
                 ],
 
                 const SizedBox(height: 24),
-                const Text(
-                  'آخر المعاملات',
-                  style: TextStyle(
+                Text(
+                  s.recentTransactions,
+                  style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -98,12 +100,12 @@ class EarningsPage extends ConsumerWidget {
                       const Center(child: CircularProgressIndicator(color: AppColors.brandBlue)),
                   error: (_, __) => const SizedBox.shrink(),
                   data: (transactions) => transactions.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 32),
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 32),
                           child: Center(
                             child: Text(
-                              'لا توجد معاملات بعد',
-                              style: TextStyle(
+                              s.noTransactions,
+                              style: const TextStyle(
                                   fontFamily: 'Cairo',
                                   fontSize: 15,
                                   color: Colors.grey),
@@ -172,12 +174,13 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _StripeBanner extends StatelessWidget {
+class _StripeBanner extends ConsumerWidget {
   final String status;
   const _StripeBanner({required this.status});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Card(
       color: AppColors.amber.withOpacity(0.1),
       shape: RoundedRectangleBorder(
@@ -194,18 +197,18 @@ class _StripeBanner extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'ربط حساب الدفع',
-                    style: TextStyle(
+                  Text(
+                    s.stripeLink,
+                    style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                         color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'يرجى ربط حساب Stripe لاستلام أرباحك',
-                    style: TextStyle(
+                  Text(
+                    s.stripeLinkSub,
+                    style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 12,
                         color: Colors.grey),
@@ -215,8 +218,8 @@ class _StripeBanner extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => context.push('/payout-status'),
-              child: const Text('ربط',
-                  style: TextStyle(
+              child: Text(s.stripeConnect,
+                  style: const TextStyle(
                       fontFamily: 'Cairo', color: AppColors.amber)),
             ),
           ],
@@ -226,12 +229,13 @@ class _StripeBanner extends StatelessWidget {
   }
 }
 
-class _TransactionTile extends StatelessWidget {
+class _TransactionTile extends ConsumerWidget {
   final Map<String, dynamic> tx;
   const _TransactionTile({required this.tx});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final status = tx['status'] as String? ?? '';
     final gross = (tx['grossAmount'] as num?)?.toDouble() ?? 0;
     final commission = (tx['commissionAmount'] as num?)?.toDouble() ?? 0;
@@ -269,12 +273,12 @@ class _TransactionTile extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('إجمالي: \$${gross.toStringAsFixed(2)}',
+                    Text('${s.txGross}: \$${gross.toStringAsFixed(2)}',
                         style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 13,
                             color: Colors.grey)),
-                    Text('رسوم: \$${commission.toStringAsFixed(2)}',
+                    Text('${s.txFee}: \$${commission.toStringAsFixed(2)}',
                         style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 12,
@@ -298,19 +302,20 @@ class _TransactionTile extends StatelessWidget {
   }
 }
 
-class _StatusChip extends StatelessWidget {
+class _StatusChip extends ConsumerWidget {
   final String status;
   const _StatusChip({required this.status});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final label = switch (status) {
-      'Held' => 'محجوز',
-      'Released' => 'محوّل',
-      'Disputed' => 'نزاع',
-      'Paid' => 'مدفوع',
-      'Refunded' => 'مسترجع',
-      _ => status,
+      'Held'     => s.txHeld,
+      'Released' => s.txReleased,
+      'Disputed' => s.txDisputed,
+      'Paid'     => s.txPaid,
+      'Refunded' => s.txRefunded,
+      _          => status,
     };
     final color = switch (status) {
       'Released' => AppColors.success,

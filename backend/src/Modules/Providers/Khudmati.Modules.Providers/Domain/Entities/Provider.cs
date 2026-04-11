@@ -54,4 +54,12 @@ public class Provider : AuditableEntity
         IsOnline = online;
         SetUpdated();
     }
+
+    public void UpdateFullName(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName) || fullName.Length < 2)
+            throw new ArgumentException("Full name must be at least 2 characters.", nameof(fullName));
+        FullName = fullName.Trim();
+        SetUpdated();
+    }
 }

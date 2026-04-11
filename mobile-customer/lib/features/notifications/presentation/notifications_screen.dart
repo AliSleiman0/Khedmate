@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../domain/notification_model.dart';
 import 'notifications_provider.dart';
 
@@ -16,13 +18,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    // Eager load
     Future.microtask(
         () => ref.read(notificationsNotifierProvider.notifier).refresh());
   }
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final notificationsAsync = ref.watch(notificationsNotifierProvider);
 
     return Scaffold(
@@ -30,19 +32,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.brandBlue,
         foregroundColor: Colors.white,
-        title: const Text(
-          'الإشعارات',
-          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+        title: Text(
+          s.notifTitle,
+          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
         ),
       ),
       body: notificationsAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text('حدث خطأ'),
+          child: Text(s.notifError,
+              style: const TextStyle(fontFamily: 'Cairo')),
         ),
         data: (items) => items.isEmpty
-            ? _buildEmpty()
+            ? _buildEmpty(s)
             : RefreshIndicator(
                 onRefresh: () => ref
                     .read(notificationsNotifierProvider.notifier)
@@ -59,17 +62,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty(S s) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.notifications_off_outlined,
+        children: [
+          const Icon(Icons.notifications_off_outlined,
               size: 64, color: AppColors.textSecondary),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
-            'لا توجد إشعارات بعد',
-            style: TextStyle(
+            s.notifEmpty,
+            style: const TextStyle(
               fontFamily: 'Cairo',
               fontSize: 16,
               color: AppColors.textSecondary,
@@ -88,11 +91,26 @@ class _NotificationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return InkWell(
       onTap: () {
         ref
             .read(notificationsNotifierProvider.notifier)
             .markRead(notification.id);
+
+        // Show a snackbar with "View Job" action after marking read
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              notification.title,
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+            action: SnackBarAction(
+              label: s.notifViewJob,
+              onPressed: () => context.push('/history'),
+            ),
+          ),
+        );
       },
       child: Container(
         color: notification.isRead ? null : AppColors.brandBlue.withOpacity(0.04),
@@ -100,7 +118,6 @@ class _NotificationCard extends ConsumerWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Unread blue dot
             if (!notification.isRead)
               Padding(
                 padding: const EdgeInsetsDirectional.only(end: 10, top: 6),
@@ -141,7 +158,7 @@ class _NotificationCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _relativeTime(notification.createdAt),
+                    _relativeTime(notification.createdAt, s),
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textSecondary,
@@ -156,12 +173,12 @@ class _NotificationCard extends ConsumerWidget {
     );
   }
 
-  String _relativeTime(DateTime dt) {
+  String _relativeTime(DateTime dt, S s) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'الآن';
-    if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} دقيقة';
-    if (diff.inHours < 24) return 'منذ ${diff.inHours} ساعة';
-    if (diff.inDays < 7) return 'منذ ${diff.inDays} أيام';
+    if (diff.inMinutes < 1) return s.timeNow;
+    if (diff.inMinutes < 60) return s.timeMinutesAgo(diff.inMinutes);
+    if (diff.inHours < 24) return s.timeHoursAgo(diff.inHours);
+    if (diff.inDays < 7) return s.timeDaysAgo(diff.inDays);
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 }

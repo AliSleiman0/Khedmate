@@ -22,6 +22,9 @@ import '../features/payments/presentation/payment_status_screen.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/referral/presentation/referral_screen.dart';
+import '../features/reminders/presentation/reminders_screen.dart';
+import '../features/profile/presentation/edit_profile_screen.dart';
+import '../widgets/main_scaffold.dart';
 
 /// Routes accessible without authentication.
 const _authRoutes = {'/welcome', '/login', '/register'};
@@ -83,10 +86,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // Main app routes
-      GoRoute(
-        path: '/home',
-        builder: (_, __) => const HomePage(),
+      // Main shell — persistent bottom nav across Home, Bookings, Notifications, Profile
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, shell) =>
+            MainScaffold(navigationShell: shell),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/home', builder: (_, __) => const HomePage()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/history', builder: (_, __) => const HistoryPage()),
+            GoRoute(
+              path: '/history/:jobId',
+              builder: (_, s) =>
+                  JobDetailPage(jobId: s.pathParameters['jobId']!),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/notifications',
+                builder: (_, __) => const NotificationsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
+          ]),
+        ],
       ),
 
       // Booking flow (sub-routes share BookingNotifier state)
@@ -165,6 +189,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           final code = state.uri.queryParameters['ref'];
           return ReferralScreen(prefilledCode: code);
         },
+      ),
+      GoRoute(
+        path: '/reminders',
+        builder: (_, __) => const RemindersScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (_, __) => const EditProfileScreen(),
       ),
     ],
   );

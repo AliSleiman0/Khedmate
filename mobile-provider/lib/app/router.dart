@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/presentation/auth_provider.dart';
 import '../features/auth/presentation/welcome_screen.dart';
+import '../features/onboarding/presentation/onboarding_hub_screen.dart';
+import '../features/onboarding/presentation/id_upload_screen.dart';
+import '../features/onboarding/presentation/skill_test_screen.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/otp_screen.dart';
@@ -14,8 +17,12 @@ import '../features/navigation/presentation/navigation_page.dart';
 import '../features/earnings/presentation/earnings_page.dart';
 import '../features/earnings/presentation/payout_status_screen.dart';
 import '../features/profile/presentation/profile_page.dart';
+import '../features/profile/presentation/edit_profile_screen.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
+import '../features/subscription/presentation/subscription_screen.dart';
+import '../features/analytics/presentation/analytics_screen.dart';
+import '../widgets/main_scaffold.dart';
 
 /// Routes accessible without authentication.
 const _authRoutes = {'/welcome', '/login', '/register'};
@@ -62,10 +69,29 @@ final routerProvider = Provider<GoRouter>((ref) {
           return OtpScreen(phone: phone);
         },
       ),
-      GoRoute(
-        path: '/jobs',
-        builder: (_, __) => const JobFeedScreen(),
+      // Main shell — persistent bottom nav across Jobs, Earnings, Notifications, Profile
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, shell) =>
+            MainScaffold(navigationShell: shell),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/jobs', builder: (_, __) => const JobFeedScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/earnings', builder: (_, __) => const EarningsPage()),
+            GoRoute(path: '/payout-status', builder: (_, __) => const PayoutStatusScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
+            GoRoute(path: '/profile/edit', builder: (_, __) => const EditProfileScreen()),
+          ]),
+        ],
       ),
+
+      // Job detail & flow routes (no nav bar)
       GoRoute(
         path: '/job-detail/:jobId',
         builder: (_, state) =>
@@ -86,9 +112,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) =>
             NavigationPage(jobId: state.pathParameters['jobId']!),
       ),
-      GoRoute(path: '/earnings', builder: (_, __) => const EarningsPage()),
-      GoRoute(path: '/payout-status', builder: (_, __) => const PayoutStatusScreen()),
-      GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
       GoRoute(
         path: '/chat/:jobId',
         builder: (_, state) => ProviderChatScreen(
@@ -97,8 +120,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: '/notifications',
-        builder: (_, __) => const NotificationsScreen(),
+        path: '/onboarding',
+        builder: (_, __) => const OnboardingHubScreen(),
+      ),
+      GoRoute(
+        path: '/subscription',
+        builder: (_, __) => const SubscriptionScreen(),
+      ),
+      GoRoute(
+        path: '/analytics',
+        builder: (_, __) => const AnalyticsScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/id-upload',
+        builder: (_, __) => const IdUploadScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/skill-test',
+        builder: (_, __) => const SkillTestScreen(),
       ),
     ],
   );

@@ -8,6 +8,7 @@ const navItems = [
   { to: '/financials', label: 'Financials', icon: '💰' },
   { to: '/audit', label: 'Audit Log', icon: '📋' },
   { to: '/config', label: 'Platform Config', icon: '⚙️' },
+  { to: '/plans', label: 'Subscription Plans', icon: '💎' },
 ]
 
 export default function SuperAdminLayout() {

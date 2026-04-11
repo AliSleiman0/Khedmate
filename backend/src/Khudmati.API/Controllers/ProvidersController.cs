@@ -21,25 +21,51 @@ public class ProvidersController : ControllerBase
         _providersRepo = providersRepo;
     }
 
-    [HttpGet]
-    [Authorize(Policy = "AdminOnly")]
-    public IActionResult GetAll() =>
-        Ok(new { message = "List providers — TODO: wire MediatR query" });
+    // PATCH /api/providers/me — update own profile (provider only)
+    [HttpPatch("me")]
+    [Authorize(Policy = "ProviderOnly")]
+    public async Task<IActionResult> UpdateMe([FromBody] UpdateProviderProfileRequest request, CancellationToken ct)
+    {
+        var providerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var provider = await _providersRepo.GetByIdAsync(providerId, ct);
+        if (provider is null)
+            return NotFound(new { success = false, error = "PROVIDER_NOT_FOUND" });
 
+        if (string.IsNullOrWhiteSpace(request.FullName) || request.FullName.Trim().Length < 2)
+            return BadRequest(new { success = false, error = "INVALID_FULL_NAME" });
+
+        provider.UpdateFullName(request.FullName);
+        await _providersRepo.UpdateAsync(provider, ct);
+        await _providersRepo.SaveChangesAsync(ct);
+
+        return Ok(new { success = true });
+    }
+
+    // GET /api/providers/{id} — public provider profile (any authenticated user)
     [HttpGet("{id:guid}")]
     [Authorize]
-    public IActionResult GetById(Guid id) =>
-        Ok(new { message = $"Get provider {id} — TODO: wire MediatR query" });
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        var provider = await _providersRepo.GetByIdAsync(id, ct);
+        if (provider is null)
+            return NotFound(new { success = false, error = "PROVIDER_NOT_FOUND" });
 
-    [HttpPatch("{id:guid}/tier")]
-    [Authorize(Policy = "AdminOnly")]
-    public IActionResult UpgradeTier(Guid id, [FromBody] int newTier) =>
-        Ok(new { message = $"Upgrade provider {id} to tier {newTier} — TODO: wire MediatR command" });
-
-    [HttpPatch("{id:guid}/online")]
-    [Authorize(Policy = "CustomerOrProvider")]
-    public IActionResult SetOnline(Guid id, [FromBody] bool online) =>
-        Ok(new { message = $"Set provider {id} online={online} — TODO: wire MediatR command" });
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                provider.Id,
+                provider.FullName,
+                provider.Phone,
+                provider.Tier,
+                provider.ServiceCategories,
+                provider.Rating,
+                provider.JobsCompleted,
+                provider.CreatedAt
+            }
+        });
+    }
 
     // GET /api/providers/earnings/summary
     [HttpGet("earnings/summary")]
@@ -71,3 +97,5 @@ public class ProvidersController : ControllerBase
         return Ok(new { success = true, data = new { onboardingUrl = result.Data!.OnboardingUrl } });
     }
 }
+
+public record UpdateProviderProfileRequest(string FullName);

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 
 // ---------------------------------------------------------------------------
 // Chat message model
@@ -39,7 +41,7 @@ class ChatMessage {
 // ---------------------------------------------------------------------------
 // Chat message list widget
 // ---------------------------------------------------------------------------
-class ChatMessageList extends StatelessWidget {
+class ChatMessageList extends ConsumerWidget {
   final String selfSenderType;
   final List<ChatMessage> messages;
   final ScrollController scrollController;
@@ -52,13 +54,15 @@ class ChatMessageList extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+
     if (messages.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'لا توجد رسائل بعد\nابدأ المحادثة الآن',
+          s.chatNoMessages,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'Cairo',
             color: AppColors.textSecondary,
             fontSize: 14,
@@ -82,7 +86,7 @@ class ChatMessageList extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (showDateSeparator) _DateSeparator(date: msg.sentAt),
+            if (showDateSeparator) _DateSeparator(date: msg.sentAt, s: s),
             _MessageBubble(message: msg, isSelf: isSelf),
           ],
         );
@@ -165,8 +169,9 @@ class _MessageBubble extends StatelessWidget {
 
 class _DateSeparator extends StatelessWidget {
   final DateTime date;
+  final S s;
 
-  const _DateSeparator({required this.date});
+  const _DateSeparator({required this.date, required this.s});
 
   @override
   Widget build(BuildContext context) {
@@ -204,13 +209,21 @@ class _DateSeparator extends StatelessWidget {
     final yesterday = today.subtract(const Duration(days: 1));
     final dateOnly = DateTime(dt.year, dt.month, dt.day);
 
-    if (dateOnly == today) return 'اليوم';
-    if (dateOnly == yesterday) return 'أمس';
+    if (dateOnly == today) return s.chatToday;
+    if (dateOnly == yesterday) return s.chatYesterday;
 
-    const months = [
-      '', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
-    ];
-    return '${dt.day} ${months[dt.month]} ${dt.year}';
+    if (s.isAr) {
+      const arMonths = [
+        '', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      ];
+      return '${dt.day} ${arMonths[dt.month]} ${dt.year}';
+    } else {
+      const enMonths = [
+        '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      return '${enMonths[dt.month]} ${dt.day}, ${dt.year}';
+    }
   }
 }

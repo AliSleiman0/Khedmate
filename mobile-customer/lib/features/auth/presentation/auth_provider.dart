@@ -74,9 +74,14 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         data['accessToken'] as String,
         data['refreshToken'] as String,
       );
-      // No customer object returned from refresh — mark authenticated with
-      // minimal info; the home screen should fetch full profile separately.
-      return AuthAuthenticated(CustomerUser(id: '', fullName: '', phone: ''));
+      // Fetch the full profile to populate CustomerUser fields.
+      try {
+        final meResult = await repo.fetchMe();
+        final meData = meResult['data'] as Map<String, dynamic>? ?? {};
+        return AuthAuthenticated(CustomerUser.fromJson(meData));
+      } catch (_) {
+        return AuthAuthenticated(CustomerUser(id: '', fullName: '', phone: ''));
+      }
     }
     return AuthUnauthenticated();
   }

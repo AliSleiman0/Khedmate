@@ -1,4 +1,7 @@
 import { useTranslation } from 'react-i18next'
+import { motion } from 'framer-motion'
+import AnimatedSection from '../ui/AnimatedSection'
+import { fadeInUp } from '../../animations/variants'
 
 function ShieldIcon() {
   return (
@@ -58,28 +61,41 @@ export default function TrustBadges() {
       background: 'linear-gradient(135deg, var(--brown-primary) 0%, var(--brown-mid) 100%)',
       textAlign: 'center',
     }}>
-      <h2 style={{ fontSize: 28, fontWeight: 700, color: 'white', marginBottom: 40 }}>
+      <motion.h2
+        variants={fadeInUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        style={{ fontSize: 28, fontWeight: 700, color: 'white', marginBottom: 40 }}
+      >
         {t('trust_title')}
-      </h2>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap', maxWidth: 1000, margin: '0 auto' }}>
+      </motion.h2>
+      <AnimatedSection stagger="fast" style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap', maxWidth: 1000, margin: '0 auto' }}>
         {BADGES.map(({ icon, key, subKey }) => (
-          <div key={key} style={{
-            background: 'rgba(255,255,255,0.10)',
-            borderRadius: 16,
-            padding: '28px 28px',
-            textAlign: 'center',
-            minWidth: 150,
-            border: '1px solid rgba(255,255,255,0.18)',
-            backdropFilter: 'blur(8px)',
-            flex: '1 1 140px',
-            maxWidth: 180,
-          }}>
+          <motion.div
+            key={key}
+            variants={fadeInUp}
+            whileHover={{ scale: 1.06, filter: 'brightness(1.15)' }}
+            whileTap={{ scale: 0.96 }}
+            style={{
+              background: 'rgba(255,255,255,0.10)',
+              borderRadius: 16,
+              padding: '28px 28px',
+              textAlign: 'center',
+              minWidth: 150,
+              border: '1px solid rgba(255,255,255,0.18)',
+              backdropFilter: 'blur(8px)',
+              flex: '1 1 140px',
+              maxWidth: 180,
+              cursor: 'default',
+            }}
+          >
             <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}>{icon}</div>
             <p style={{ color: 'white', fontWeight: 700, fontSize: 15, margin: 0 }}>{t(key)}</p>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 6 }}>{t(subKey)}</p>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </AnimatedSection>
     </section>
   )
 }

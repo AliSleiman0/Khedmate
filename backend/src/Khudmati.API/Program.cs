@@ -178,6 +178,16 @@ AppDbContext.AdditionalModelConfiguration = modelBuilder =>
         e.HasIndex(x => x.ChangedAt).IsDescending();
     });
 
+    // Subscription plans (providers schema)
+    modelBuilder.Entity<SubscriptionPlan>(e =>
+    {
+        e.ToTable("subscription_plans", "providers");
+        e.Property(x => x.Name).HasMaxLength(50).IsRequired();
+        e.Property(x => x.MonthlyFee).HasColumnType("decimal(10,2)");
+        e.Property(x => x.CommissionRate).HasColumnType("decimal(5,2)");
+        e.Property(x => x.StripePriceId).HasMaxLength(100);
+    });
+
     // Bookings schema
     modelBuilder.Entity<Job>(e =>
     {
@@ -319,6 +329,26 @@ AppDbContext.AdditionalModelConfiguration = modelBuilder =>
         e.Property(d => d.Status).HasMaxLength(20).IsRequired();
         e.HasIndex(d => d.JobId);
         e.HasIndex(d => d.Status);
+    });
+
+    // Provider subscriptions (providers schema — Feature #18)
+    modelBuilder.Entity<ProviderSubscription>(e =>
+    {
+        e.ToTable("provider_subscriptions", "providers");
+        e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        e.Property(x => x.StripeSubscriptionId).HasMaxLength(100);
+        e.Property(x => x.StripeCustomerId).HasMaxLength(100);
+        e.HasIndex(x => x.ProviderId);
+        e.HasIndex(x => x.Status);
+        e.HasIndex(x => x.StripeSubscriptionId).IsUnique().HasFilter("\"StripeSubscriptionId\" IS NOT NULL");
+    });
+
+    // Reminder rules (public schema — Feature #19)
+    modelBuilder.Entity<ReminderRule>(e =>
+    {
+        e.ToTable("reminder_rules", "public");
+        e.Property(x => x.Category).HasMaxLength(50).IsRequired();
+        e.HasIndex(x => x.Category).IsUnique();
     });
 
     // Ensure the bookings schema and sequence exist (idempotent raw SQL via migration)

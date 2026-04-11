@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../chat/presentation/chat_provider.dart';
 import 'active_job_provider.dart';
 import 'upload_after_photos_screen.dart';
@@ -76,28 +77,33 @@ class ActiveJobDetailScreen extends ConsumerWidget {
             error: (e, _) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline,
-                        color: AppColors.danger, size: 48),
-                    const SizedBox(height: 12),
-                    Text('تعذر تحميل الطلب',
-                        style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 16,
-                            color: AppColors.textPrimary)),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => ref
-                          .refresh(activeJobNotifierProvider(jobId)),
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.brandBlue),
-                      child: const Text('إعادة المحاولة',
-                          style: TextStyle(
-                              fontFamily: 'Cairo', color: Colors.white)),
-                    ),
-                  ],
+                child: Builder(
+                  builder: (context) {
+                    final s = S.of(ref);
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline,
+                            color: AppColors.danger, size: 48),
+                        const SizedBox(height: 12),
+                        Text(s.jobLoadError,
+                            style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 16,
+                                color: AppColors.textPrimary)),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => ref
+                              .refresh(activeJobNotifierProvider(jobId)),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.brandBlue),
+                          child: Text(s.retry,
+                              style: const TextStyle(
+                                  fontFamily: 'Cairo', color: Colors.white)),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -148,14 +154,21 @@ class _JobBody extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 // Header with status chip
 // ---------------------------------------------------------------------------
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   final dynamic job;
 
   const _Header({required this.job});
 
   @override
-  Widget build(BuildContext context) {
-    final statusLabel = _statusLabel(job.status);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+    final statusLabel = switch (job.status) {
+      'Accepted'   => s.statusAccepted,
+      'EnRoute'    => s.statusEnRoute,
+      'InProgress' => s.statusInProgress,
+      'Completed'  => s.statusCompleted,
+      _            => job.status as String,
+    };
     final statusColor = _statusColor(job.status);
 
     return Container(
@@ -199,14 +212,6 @@ class _Header extends StatelessWidget {
     );
   }
 
-  String _statusLabel(String status) => switch (status) {
-        'Accepted'   => 'مقبول',
-        'EnRoute'    => 'في الطريق',
-        'InProgress' => 'جاري العمل',
-        'Completed'  => 'مكتمل',
-        _            => status,
-      };
-
   Color _statusColor(String status) => switch (status) {
         'Accepted'   => AppColors.brandBlue,
         'EnRoute'    => AppColors.amber,
@@ -219,13 +224,14 @@ class _Header extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Reference number badge
 // ---------------------------------------------------------------------------
-class _RefBadge extends StatelessWidget {
+class _RefBadge extends ConsumerWidget {
   final String referenceNumber;
 
   const _RefBadge({required this.referenceNumber});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -237,8 +243,8 @@ class _RefBadge extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('رقم الطلب: ',
-              style: TextStyle(fontFamily: 'Cairo', color: AppColors.textSecondary)),
+          Text('${s.jobRefNo}: ',
+              style: const TextStyle(fontFamily: 'Cairo', color: AppColors.textSecondary)),
           Text(referenceNumber,
               style: const TextStyle(
                 fontFamily: 'Inter',
@@ -255,13 +261,14 @@ class _RefBadge extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Info card — shared across statuses
 // ---------------------------------------------------------------------------
-class _InfoCard extends StatelessWidget {
+class _InfoCard extends ConsumerWidget {
   final dynamic job;
 
   const _InfoCard({required this.job});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -271,25 +278,25 @@ class _InfoCard extends StatelessWidget {
           children: [
             _InfoRow(
                 icon: Icons.home_repair_service,
-                label: 'الخدمة',
+                label: s.jobServiceLabel,
                 value: job.categoryName),
             const SizedBox(height: 10),
             _InfoRow(
                 icon: Icons.location_on,
-                label: 'الموقع',
+                label: s.jobLocation,
                 value: job.district),
             if (job.description.isNotEmpty) ...[
               const SizedBox(height: 10),
               _InfoRow(
                   icon: Icons.description,
-                  label: 'الوصف',
+                  label: s.jobDescLabel,
                   value: job.description),
             ],
             if (job.customerFirstName != null) ...[
               const SizedBox(height: 10),
               _InfoRow(
                   icon: Icons.person,
-                  label: 'العميل',
+                  label: s.jobCustomerLabel,
                   value: job.customerFirstName!),
             ],
           ],
@@ -360,8 +367,9 @@ class _AcceptedActions extends ConsumerWidget {
     final isLoading =
         ref.watch(activeJobNotifierProvider(jobId)).isLoading;
 
+    final s = S.of(ref);
     return _PrimaryButton(
-      label: 'في الطريق',
+      label: s.statusEnRoute,
       icon: Icons.directions_car,
       color: AppColors.brandBlue,
       isLoading: isLoading,
@@ -379,6 +387,7 @@ class _EnRouteActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final isLoading =
         ref.watch(activeJobNotifierProvider(jobId)).isLoading;
 
@@ -400,7 +409,7 @@ class _EnRouteActions extends ConsumerWidget {
             ),
           ),
         _PrimaryButton(
-          label: 'وصلت، بدء العمل',
+          label: s.jobArriveStart,
           icon: Icons.play_circle_outline,
           color: AppColors.brandBlue,
           isLoading: isLoading,
@@ -424,8 +433,9 @@ class _InProgressActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return _PrimaryButton(
-      label: 'إنهاء العمل',
+      label: s.jobFinish,
       icon: Icons.check_circle_outline,
       color: Colors.green,
       isLoading: false,
@@ -448,11 +458,12 @@ class _InProgressActions extends ConsumerWidget {
   }
 }
 
-class _CompletedView extends StatelessWidget {
+class _CompletedView extends ConsumerWidget {
   const _CompletedView();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -460,14 +471,14 @@ class _CompletedView extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.green.shade200),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.check_circle_rounded, color: Colors.green, size: 32),
-          SizedBox(width: 12),
+          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 32),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'تم إنهاء العمل بنجاح، في انتظار تأكيد الدفع',
-              style: TextStyle(
+              s.jobCompletedAwaitPay,
+              style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 14,
                   color: Colors.green,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../providers/onboarding_providers.dart';
 import '../domain/skill_test.dart';
 
@@ -18,24 +19,25 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
   bool _isLoading = false;
   bool _isSubmitting = false;
 
-  final List<Map<String, String>> _categories = [
-    {'id': 'plumbing', 'name': 'سباكة'},
-    {'id': 'electrical', 'name': 'كهرباء'},
-    {'id': 'cleaning', 'name': 'تنظيف'},
-    {'id': 'carpentry', 'name': 'نجارة'},
-    {'id': 'painting', 'name': 'دهان'},
-    {'id': 'ac_maintenance', 'name': 'تكييف'},
+  static const _categoryIds = [
+    'plumbing',
+    'electrical',
+    'cleaning',
+    'carpentry',
+    'painting',
+    'ac_maintenance',
   ];
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     if (_test != null) {
-      return _buildTestScreen();
+      return _buildTestScreen(s);
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('اختبار المهارة'),
+        title: Text(s.skillTestTitle),
         centerTitle: true,
       ),
       body: _isLoading
@@ -45,25 +47,25 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'اختر الفئة لبدء الاختبار',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Text(
+                    s.skillTestSelectCategory,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
                   Expanded(
                     child: ListView.builder(
-                      itemCount: _categories.length,
+                      itemCount: _categoryIds.length,
                       itemBuilder: (context, index) {
-                        final category = _categories[index];
+                        final categoryId = _categoryIds[index];
                         return Card(
                           child: ListTile(
                             title: Text(
-                              category['name']!,
+                              s.categoryLabel(categoryId),
                               style: const TextStyle(fontSize: 16),
                             ),
                             trailing: const Icon(Icons.arrow_forward_ios),
-                            onTap: () => _startTest(category['id']!),
+                            onTap: () => _startTest(categoryId),
                           ),
                         );
                       },
@@ -75,14 +77,14 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
     );
   }
 
-  Widget _buildTestScreen() {
+  Widget _buildTestScreen(S s) {
     final question = _test!.questions[_currentQuestionIndex];
     final progress = (_currentQuestionIndex + 1) / _test!.questions.length;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'السؤال ${_currentQuestionIndex + 1} من ${_test!.questions.length}',
+          s.skillTestQuestion(_currentQuestionIndex + 1, _test!.questions.length),
         ),
         centerTitle: true,
       ),
@@ -157,8 +159,8 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
                   ? const CircularProgressIndicator(color: Colors.white)
                   : Text(
                       _currentQuestionIndex < _test!.questions.length - 1
-                          ? 'التالي'
-                          : 'إنهاء الاختبار',
+                          ? s.next
+                          : s.skillTestFinish,
                       style: const TextStyle(fontSize: 16),
                     ),
             ),
@@ -184,7 +186,7 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('حدث خطأ: $e'),
+          content: Text(S.read(ref).onboardingError(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -216,12 +218,13 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
 
       if (!mounted) return;
 
+      final s = S.read(ref);
       await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
           title: Text(
-            result.passed ? 'أحسنت! اجتزت الاختبار' : 'لم تجتز الاختبار',
+            result.passed ? s.skillTestPassed : s.skillTestFailed,
             textAlign: TextAlign.center,
           ),
           content: Column(
@@ -234,12 +237,12 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'النتيجة: ${result.score}/${result.totalQuestions}',
+                s.skillTestScore(result.score, result.totalQuestions),
                 style: const TextStyle(fontSize: 18),
               ),
               if (!result.passed && result.nextRetryAt != null) ...[
                 const SizedBox(height: 8),
-                Text('يمكنك إعادة المحاولة بعد 24 ساعة'),
+                Text(s.skillTestRetry),
               ],
             ],
           ),
@@ -250,7 +253,7 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
                 ref.invalidate(onboardingStatusProvider);
                 Navigator.of(context).popUntil((route) => route.isFirst);
               },
-              child: const Text('حسناً'),
+              child: Text(s.okay),
             ),
           ],
         ),
@@ -259,7 +262,7 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('حدث خطأ: $e'),
+          content: Text(S.read(ref).onboardingError(e.toString())),
           backgroundColor: Colors.red,
         ),
       );

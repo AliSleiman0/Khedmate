@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../data/ai_repository.dart';
 import 'booking_provider.dart';
 
@@ -55,10 +56,10 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'تعذر تحسين النص، حاول مجدداً',
-            style: TextStyle(fontFamily: 'Cairo'),
+            S.read(ref).descAiError,
+            style: const TextStyle(fontFamily: 'Cairo'),
           ),
           backgroundColor: Colors.red,
         ),
@@ -69,6 +70,7 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
   }
 
   void _showAiPreviewSheet(String improved) {
+    final s = S.read(ref);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -102,9 +104,9 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
                   const Icon(Icons.auto_awesome,
                       color: AppColors.amber, size: 20),
                   const SizedBox(width: 8),
-                  const Text(
-                    'الوصف المحسّن بالذكاء الاصطناعي',
-                    style: TextStyle(
+                  Text(
+                    s.descAiImproved,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -143,9 +145,9 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: const Text(
-                        'تجاهل',
-                        style: TextStyle(
+                      child: Text(
+                        s.descAiDismiss,
+                        style: const TextStyle(
                             fontFamily: 'Cairo',
                             color: AppColors.brandBlue),
                       ),
@@ -168,9 +170,9 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: const Text(
-                        'استخدم هذا الوصف',
-                        style: TextStyle(fontFamily: 'Cairo'),
+                      child: Text(
+                        s.descAiUse,
+                        style: const TextStyle(fontFamily: 'Cairo'),
                       ),
                     ),
                   ),
@@ -199,6 +201,7 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final booking = ref.watch(bookingNotifierProvider).valueOrNull;
     final photos = booking?.photos ?? [];
     final categoryName = booking?.categoryName ?? '';
@@ -211,9 +214,9 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'تفاصيل الخدمة',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.descScreenTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -247,7 +250,7 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
                 maxLength: 500,
                 textDirection: TextDirection.rtl,
                 decoration: InputDecoration(
-                  hintText: 'صِف المشكلة أو الخدمة المطلوبة',
+                  hintText: s.descHint,
                   hintStyle: const TextStyle(fontFamily: 'Cairo'),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -269,8 +272,8 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (!_isValid && charCount > 0)
-                    const Text(
-                      'الوصف قصير جداً، أضف تفاصيل أكثر',
+                    Text(
+                      s.descTooShort,
                       style: TextStyle(
                         fontFamily: 'Cairo',
                         color: Colors.red,
@@ -313,7 +316,7 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
                       : const Icon(Icons.auto_awesome,
                           color: AppColors.amber, size: 18),
                   label: Text(
-                    _isImprovingWithAi ? 'جارٍ التحسين...' : 'تحسين بالذكاء الاصطناعي',
+                    _isImprovingWithAi ? s.descAiImproving : s.descAiButton,
                     style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 13,
@@ -335,8 +338,8 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
               // Photo upload
               Row(
                 children: [
-                  const Text(
-                    'صور (اختياري)',
+                  Text(
+                    s.descPhotos,
                     style: TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
@@ -436,9 +439,9 @@ class _JobDescriptionScreenState extends ConsumerState<JobDescriptionScreen> {
                         borderRadius: BorderRadius.circular(12)),
                     disabledBackgroundColor: Colors.grey[300],
                   ),
-                  child: const Text(
-                    'التالي',
-                    style: TextStyle(
+                  child: Text(
+                    s.next,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 17,
                       fontWeight: FontWeight.bold,

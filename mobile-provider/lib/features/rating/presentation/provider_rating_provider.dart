@@ -71,10 +71,10 @@ class ProviderRatingNotifier extends StateNotifier<ProviderRatingState> {
         state = state.copyWith(isSubmitting: false, isSubmitted: true);
         _ref.invalidate(pendingRatingJobIdsProvider);
       } else {
-        state = state.copyWith(isSubmitting: false, error: 'فشل الإرسال');
+        state = state.copyWith(isSubmitting: false, error: 'SEND_FAILED');
       }
     } catch (_) {
-      state = state.copyWith(isSubmitting: false, error: 'فشل الإرسال');
+      state = state.copyWith(isSubmitting: false, error: 'SEND_FAILED');
     }
   }
 }

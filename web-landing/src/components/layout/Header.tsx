@@ -45,7 +45,9 @@ export default function Header() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
       >
-        <img src="/logo.png" alt="خدمتي" style={{ height: 44, filter: 'brightness(0) invert(1)' }} />
+        <div style={{ background: 'white', borderRadius: 10, padding: '4px 6px', display: 'flex', alignItems: 'center' }}>
+          <img src="/logo.png" alt="خدمتي" style={{ height: 36 }} />
+        </div>
         <span style={{ color: 'var(--amber)', fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}>
           خدمتي
         </span>

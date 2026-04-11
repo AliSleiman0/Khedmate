@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import 'provider_rating_provider.dart';
 
-// Provider tags (positive only)
-const _providerTags = [
-  ('easy_to_deal_with',           'سهل التعامل'),
-  ('described_problem_accurately', 'وصف المشكلة بدقة'),
-  ('paid_promptly',               'دفع فوري'),
+// Tag keys only — labels are built dynamically from S in build()
+const _providerTagKeys = [
+  'easy_to_deal_with',
+  'described_problem_accurately',
+  'paid_promptly',
 ];
 
 class ProviderRatingBottomSheet extends ConsumerWidget {
@@ -38,6 +39,12 @@ class ProviderRatingBottomSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+    final tagLabels = {
+      'easy_to_deal_with':           s.ratingEasyDeal,
+      'described_problem_accurately': s.ratingAccurateDesc,
+      'paid_promptly':               s.ratingPromptPay,
+    };
     final state = ref.watch(providerRatingNotifierProvider(jobId));
     final notifier = ref.read(providerRatingNotifierProvider(jobId).notifier);
 
@@ -77,7 +84,7 @@ class ProviderRatingBottomSheet extends ConsumerWidget {
 
               // Question
               Text(
-                'كيف كان تعامل العميل؟',
+                s.ratingCustomerQuestion,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontFamily: 'Cairo',
@@ -93,7 +100,7 @@ class ProviderRatingBottomSheet extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: _ThumbButton(
-                      label: 'ممتاز',
+                      label: s.ratingGood,
                       icon: Icons.thumb_up_rounded,
                       isSelected: state.isPositive == true,
                       selectedColor: AppColors.brandBlue,
@@ -103,7 +110,7 @@ class ProviderRatingBottomSheet extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _ThumbButton(
-                      label: 'سيء',
+                      label: s.ratingBad,
                       icon: Icons.thumb_down_rounded,
                       isSelected: state.isPositive == false,
                       selectedColor: Colors.red.shade600,
@@ -116,11 +123,11 @@ class ProviderRatingBottomSheet extends ConsumerWidget {
               // Tags (only for thumbs up)
               if (state.isPositive == true) ...[
                 const SizedBox(height: 20),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'أخبرنا أكثر',
-                    style: TextStyle(
+                    s.ratingTellMore,
+                    style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary,
@@ -131,13 +138,13 @@ class ProviderRatingBottomSheet extends ConsumerWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _providerTags.map((tag) {
-                    final isSelected = state.selectedTags.contains(tag.$1);
+                  children: _providerTagKeys.map((key) {
+                    final isSelected = state.selectedTags.contains(key);
                     return GestureDetector(
-                      onTap: () => notifier.toggleTag(tag.$1),
+                      onTap: () => notifier.toggleTag(key),
                       child: Chip(
                         label: Text(
-                          tag.$2,
+                          tagLabels[key] ?? key,
                           style: TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 13,
@@ -156,7 +163,7 @@ class ProviderRatingBottomSheet extends ConsumerWidget {
               if (state.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
-                  state.error!,
+                  s.ratingSubmitError,
                   style: const TextStyle(
                     fontFamily: 'Cairo',
                     color: AppColors.danger,
@@ -188,9 +195,9 @@ class ProviderRatingBottomSheet extends ConsumerWidget {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : const Text(
-                          'إرسال التقييم',
-                          style: TextStyle(
+                      : Text(
+                          s.ratingSubmit,
+                          style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -204,9 +211,9 @@ class ProviderRatingBottomSheet extends ConsumerWidget {
               // Skip link
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text(
-                  'تخطي',
-                  style: TextStyle(
+                child: Text(
+                  s.ratingSkip,
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
                     color: AppColors.textSecondary,
                     fontSize: 14,

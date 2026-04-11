@@ -20,7 +20,23 @@
       "Bash(cp \"C:/Users/AliSleiman/Downloads/logowithoutbg.png\" \"C:/Khedmate - ANJU_Context/mobile-customer/assets/images/logo.png\")",
       "Bash(npx tsc:*)",
       "Bash(npm install:*)",
-      "Bash(node -e \"require\\('framer-motion'\\); console.log\\('framer-motion OK', require\\('./node_modules/framer-motion/package.json'\\).version\\)\")"
+      "Bash(node -e \"require\\('framer-motion'\\); console.log\\('framer-motion OK', require\\('./node_modules/framer-motion/package.json'\\).version\\)\")",
+      "Bash(find \"/c/Khedmate - ANJU_Context/mobile-customer/android/app/src/main/res/drawable\"* -type f)",
+      "Bash(find \"/c/Khedmate - ANJU_Context/mobile-provider/android/app/src/main/res/drawable\"* -type f)",
+      "Bash(cp \"C:/Users/AliSleiman/Downloads/logowithoutbg.png\" \"C:/Khedmate - ANJU_Context/mobile-provider/assets/images/logo.png\")",
+      "Bash(cp \"C:/Users/AliSleiman/Downloads/logowithoutbg.png\" \"C:/Khedmate - ANJU_Context/mobile-customer/android/app/src/main/res/drawable/splash_logo.png\")",
+      "Bash(cp \"C:/Users/AliSleiman/Downloads/logowithoutbg.png\" \"C:/Khedmate - ANJU_Context/mobile-provider/android/app/src/main/res/drawable/splash_logo.png\")",
+      "Bash(flutter devices:*)",
+      "Bash(flutter run:*)",
+      "Bash(where java:*)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files/Android/Android Studio/jbr/**)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" flutter run -d R3CT90MEVFM)",
+      "Bash(flutter doctor:*)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Microsoft/jdk-21.0.10.7-hotspot\" flutter run -d R3CT90MEVFM)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Microsoft/jdk-21.0.10.7-hotspot\" flutter analyze lib/widgets/main_scaffold.dart lib/app/router.dart lib/features/home/presentation/home_page.dart)",
+      "Bash(flutter analyze:*)",
+      "Bash(python3 -c ':*)"
     ]
   }
 }

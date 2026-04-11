@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../booking/presentation/booking_provider.dart';
 
 class PaymentReceiptScreen extends ConsumerWidget {
@@ -9,6 +10,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final booking = ref.read(bookingNotifierProvider).valueOrNull;
 
     return Directionality(
@@ -37,9 +39,9 @@ class PaymentReceiptScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
 
-                const Text(
-                  'تم الدفع بنجاح!',
-                  style: TextStyle(
+                Text(
+                  s.receiptSuccessTitle,
+                  style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -47,8 +49,8 @@ class PaymentReceiptScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'طلبك قيد المعالجة، سيتم إخطارك عند قبول المزود',
+                Text(
+                  s.receiptProcessing,
                   style: TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 14,
@@ -68,9 +70,9 @@ class PaymentReceiptScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         _ReceiptRow(
-                          label: 'المبلغ المدفوع',
+                          label: s.receiptAmountPaid,
                           value:
-                              '\$${booking?.agreedAmount?.toStringAsFixed(2) ?? '-'}',
+                              '${(booking?.chargedAmount ?? booking?.agreedAmount)?.toStringAsFixed(2) ?? '-'} SAR',
                           valueStyle: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 20,
@@ -78,20 +80,48 @@ class PaymentReceiptScreen extends ConsumerWidget {
                             color: AppColors.brandBlue,
                           ),
                         ),
+                        if (booking?.referralDiscountAmount != null &&
+                            (booking!.referralDiscountAmount ?? 0) > 0) ...[
+                          const Divider(height: 16),
+                          _ReceiptRow(
+                            label: s.receiptReferralDiscount,
+                            value:
+                                '-${booking.referralDiscountAmount!.toStringAsFixed(2)} SAR',
+                            valueStyle: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
+                        if (booking?.creditApplied != null &&
+                            (booking!.creditApplied ?? 0) > 0) ...[
+                          const Divider(height: 16),
+                          _ReceiptRow(
+                            label: s.receiptCreditApplied,
+                            value:
+                                '-${booking.creditApplied!.toStringAsFixed(2)} SAR',
+                            valueStyle: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
                         const Divider(height: 24),
                         _ReceiptRow(
-                          label: 'رقم الطلب',
+                          label: s.receiptOrderNo,
                           value: booking?.referenceNumber ?? '-',
                         ),
                         const Divider(height: 16),
                         _ReceiptRow(
-                          label: 'طريقة الدفع',
+                          label: s.receiptPaymentMethod,
                           value: 'Stripe',
                         ),
                         const Divider(height: 16),
                         _ReceiptRow(
-                          label: 'الحالة',
-                          value: 'مدفوع',
+                          label: s.receiptStatusLabel,
+                          value: s.statusPaid,
                           valueStyle: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 14,
@@ -123,8 +153,8 @@ class PaymentReceiptScreen extends ConsumerWidget {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text(
-                      'عرض الطلب',
+                    child: Text(
+                      s.receiptViewOrder,
                       style: TextStyle(
                           fontFamily: 'Cairo',
                           fontSize: 18,
@@ -138,9 +168,9 @@ class PaymentReceiptScreen extends ConsumerWidget {
                     ref.read(bookingNotifierProvider.notifier).reset();
                     context.go('/home');
                   },
-                  child: const Text(
-                    'العودة للرئيسية',
-                    style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+                  child: Text(
+                    s.backHome,
+                    style: const TextStyle(fontFamily: 'Cairo', color: Colors.grey),
                   ),
                 ),
               ],

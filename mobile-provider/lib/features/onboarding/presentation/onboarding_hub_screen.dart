@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../providers/onboarding_providers.dart';
 import '../domain/onboarding_status.dart';
 import 'id_upload_screen.dart';
@@ -10,15 +11,16 @@ class OnboardingHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final statusAsync = ref.watch(onboardingStatusProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('أكمل ملفك الشخصي'),
+        title: Text(s.onboardingTitle),
         centerTitle: true,
       ),
       body: statusAsync.when(
-        data: (status) => _buildContent(context, status),
+        data: (status) => _buildContent(context, status, s),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
           child: Column(
@@ -26,11 +28,11 @@ class OnboardingHubScreen extends ConsumerWidget {
             children: [
               const Icon(Icons.error, color: Colors.red, size: 48),
               const SizedBox(height: 16),
-              Text('حدث خطأ: $error'),
+              Text(s.onboardingError(error.toString())),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => ref.refresh(onboardingStatusProvider),
-                child: const Text('إعادة المحاولة'),
+                child: Text(s.retry),
               ),
             ],
           ),
@@ -39,7 +41,7 @@ class OnboardingHubScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, OnboardingStatus status) {
+  Widget _buildContent(BuildContext context, OnboardingStatus status, S s) {
     if (status.canAcceptJobs) {
       return Center(
         child: Column(
@@ -47,19 +49,19 @@ class OnboardingHubScreen extends ConsumerWidget {
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 80),
             const SizedBox(height: 24),
-            const Text(
-              '🎉 حسابك جاهز!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              s.onboardingDone,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'يمكنك الآن قبول الطلبات',
-              style: TextStyle(fontSize: 18),
+            Text(
+              s.onboardingCanAccept,
+              style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('انتقل إلى قائمة الطلبات'),
+              child: Text(s.onboardingGoToJobs),
             ),
           ],
         ),
@@ -69,30 +71,30 @@ class OnboardingHubScreen extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text(
-          'أكمل الخطوات التالية للتحقق من حسابك',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          s.onboardingInstructions,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
         _buildStep(
-          context,
-          title: 'تحقق من الهوية',
+          context, s,
+          title: s.onboardingIdVerify,
           step: status.steps.idVerified,
           onTap: () => _navigateToIdUpload(context),
         ),
         const SizedBox(height: 16),
         _buildStep(
-          context,
-          title: 'اختبار المهارة',
+          context, s,
+          title: s.onboardingSkillTest,
           step: status.steps.skillTested,
           onTap: () => _navigateToSkillTest(context),
           enabled: status.steps.idVerified.isComplete,
         ),
         const SizedBox(height: 16),
         _buildStep(
-          context,
-          title: 'التحقق من الهاتف',
+          context, s,
+          title: s.onboardingPhoneVerify,
           step: status.steps.phoneVerified,
           onTap: null, // Auto-marked
         ),
@@ -101,7 +103,8 @@ class OnboardingHubScreen extends ConsumerWidget {
   }
 
   Widget _buildStep(
-    BuildContext context, {
+    BuildContext context,
+    S s, {
     required String title,
     required OnboardingStep step,
     VoidCallback? onTap,
@@ -114,19 +117,19 @@ class OnboardingHubScreen extends ConsumerWidget {
     if (step.isComplete) {
       icon = Icons.check_circle;
       color = Colors.green;
-      statusText = 'مكتمل';
+      statusText = s.onboardingStepComplete;
     } else if (step.isPending) {
       icon = Icons.pending;
       color = Colors.amber;
-      statusText = 'في الانتظار';
+      statusText = s.onboardingStepPending;
     } else if (step.isRejected) {
       icon = Icons.cancel;
       color = Colors.red;
-      statusText = 'مرفوض';
+      statusText = s.onboardingStepRejected;
     } else {
       icon = Icons.radio_button_unchecked;
       color = Colors.grey;
-      statusText = 'مطلوب';
+      statusText = s.onboardingStepRequired;
     }
 
     return Card(
@@ -144,7 +147,7 @@ class OnboardingHubScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
-                  'السبب: ${step.rejectionReason}',
+                  '${s.onboardingReason}: ${step.rejectionReason}',
                   style: const TextStyle(color: Colors.red),
                 ),
               ),

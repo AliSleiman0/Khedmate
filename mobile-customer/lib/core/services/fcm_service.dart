@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../api/api_client.dart';
+import 'notification_handler.dart';
 
 final _localNotifications = FlutterLocalNotificationsPlugin();
 
@@ -87,7 +88,25 @@ void setupFcmListeners({
 
   // 2. Tapped from background/terminated → deep-link
   FirebaseMessaging.onMessageOpenedApp.listen((message) {
-    _navigateFromMessage(message, router);
+    final data = message.data;
+    final type = data['type'] as String?;
+    if (type == 'MAINTENANCE_REMINDER') {
+      handleNotificationTap(data, router);
+    } else {
+      _navigateFromMessage(message, router);
+    }
+  });
+
+  // 3a. App launched from terminated by tapping a notification
+  FirebaseMessaging.instance.getInitialMessage().then((message) {
+    if (message == null) return;
+    final data = message.data;
+    final type = data['type'] as String?;
+    if (type == 'MAINTENANCE_REMINDER') {
+      handleNotificationTap(data, router);
+    } else {
+      _navigateFromMessage(message, router);
+    }
   });
 
   // 3. Token refresh → re-register

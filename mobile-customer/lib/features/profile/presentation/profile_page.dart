@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/providers/locale_provider.dart';
+import '../../auth/presentation/auth_provider.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final locale = ref.watch(localeProvider);
+    final authState = ref.watch(authNotifierProvider).valueOrNull;
+    final user = authState is AuthAuthenticated ? (authState as AuthAuthenticated).customer : null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('الملف الشخصي')),
+      appBar: AppBar(title: Text(s.profileTitle,
+          style: const TextStyle(fontFamily: 'Cairo'))),
       body: ListView(
         children: [
           Container(
@@ -25,41 +33,66 @@ class ProfilePage extends ConsumerWidget {
                   child: Icon(Icons.person, size: 44, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('أحمد محمد',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold)),
-                    SizedBox(height: 4),
-                    Text('+966 50 000 0000',
-                        style: TextStyle(color: Colors.white70)),
+                    Text(
+                      user?.fullName ?? '—',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(
+                      user?.phone ?? '—',
+                      style: const TextStyle(color: Colors.white70)),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 8),
-          _tile(Icons.edit, 'تعديل البيانات', () {}),
-          _tile(Icons.location_on, 'عناويني المحفوظة', () {}),
-          _tile(Icons.payment, 'طرق الدفع', () {}),
-          _tile(Icons.card_giftcard, 'دعوة الأصدقاء', () => context.push('/referral')),
-          _tile(Icons.language, locale.languageCode == 'ar' ? 'English' : 'عربي', () {
+          _tile(Icons.edit, s.profileEdit, () => context.push('/profile/edit')),
+          _tile(Icons.location_on, s.profileAddresses,
+              () => _comingSoon(context, s)),
+          _tile(Icons.payment, s.profilePayment,
+              () => _comingSoon(context, s)),
+          _tile(Icons.card_giftcard, s.profileReferral,
+              () => context.push('/referral')),
+          _tile(Icons.language, s.langToggle, () {
             ref.read(localeProvider.notifier).state =
-                locale.languageCode == 'ar' ? const Locale('en') : const Locale('ar');
+                locale.languageCode == 'ar'
+                    ? const Locale('en')
+                    : const Locale('ar');
           }),
-          _tile(Icons.notifications, 'الإشعارات', () {}),
-          _tile(Icons.help_outline, 'المساعدة والدعم', () {}),
+          _tile(Icons.notifications, s.profileNotifs,
+              () => _comingSoon(context, s)),
+          _tile(Icons.help_outline, s.profileHelp, () async {
+            final uri = Uri.parse('https://khudmati.app/#contact');
+            if (await canLaunchUrl(uri)) {
+              launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          }),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: AppColors.danger),
-            title: const Text('تسجيل الخروج',
-                style: TextStyle(color: AppColors.danger)),
-            onTap: () => context.go('/login'),
+            title: Text(s.profileLogout,
+                style: const TextStyle(color: AppColors.danger)),
+            onTap: () async {
+              await ref.read(authNotifierProvider.notifier).logout();
+              if (context.mounted) context.go('/welcome');
+            },
           ),
         ],
+      ),
+    );
+  }
+
+  static void _comingSoon(BuildContext context, S s) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(s.comingSoon,
+            style: const TextStyle(fontFamily: 'Cairo')),
       ),
     );
   }
@@ -72,3 +105,4 @@ class ProfilePage extends ConsumerWidget {
         onTap: onTap,
       );
 }
+

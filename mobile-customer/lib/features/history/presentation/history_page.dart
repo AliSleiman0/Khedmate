@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/constants/app_config.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 
 // ---------------------------------------------------------------------------
 // Model
@@ -32,19 +33,11 @@ class _JobHistoryItem {
   });
 
   factory _JobHistoryItem.fromJson(Map<String, dynamic> json) {
-    final categoryMap = {
-      'plumbing': 'سباكة',
-      'electrical': 'كهرباء',
-      'cleaning': 'تنظيف',
-      'carpentry': 'نجارة',
-      'painting': 'دهان',
-      'ac_maintenance': 'تكييف',
-    };
     final categoryId = json['categoryId'] as String? ?? '';
     return _JobHistoryItem(
       id: (json['jobId'] ?? json['id'] ?? '').toString(),
       referenceNumber: json['referenceNumber'] as String? ?? '',
-      categoryName: categoryMap[categoryId] ?? categoryId,
+      categoryName: categoryId, // resolved to translated label in the widget layer
       status: json['status'] as String? ?? '',
       address: json['address'] as String? ?? '',
       createdAt: json['createdAt'] != null
@@ -84,28 +77,29 @@ class HistoryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final asyncHistory = ref.watch(_historyProvider);
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('سجل الطلبات',
-              style: TextStyle(fontFamily: 'Cairo')),
+          title: Text(s.historyTitle,
+              style: const TextStyle(fontFamily: 'Cairo')),
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
         ),
         body: asyncHistory.when(
           loading: () => const Center(
               child: CircularProgressIndicator(color: AppColors.brandBlue)),
-          error: (_, __) => const Center(
-            child: Text('تعذر تحميل السجل',
-                style: TextStyle(fontFamily: 'Cairo')),
+          error: (_, __) => Center(
+            child: Text(s.historyLoadError,
+                style: const TextStyle(fontFamily: 'Cairo')),
           ),
           data: (jobs) => jobs.isEmpty
-              ? const Center(
-                  child: Text('لا توجد طلبات سابقة',
-                      style: TextStyle(fontFamily: 'Cairo', fontSize: 16)),
+              ? Center(
+                  child: Text(s.historyEmpty,
+                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 16)),
                 )
               : RefreshIndicator(
                   onRefresh: () => ref.refresh(_historyProvider.future),
@@ -124,16 +118,6 @@ class HistoryPage extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
-const _statusLabels = {
-  'Pending':    'معلّق',
-  'Accepted':   'مقبول',
-  'EnRoute':    'في الطريق',
-  'InProgress': 'جاري التنفيذ',
-  'Completed':  'مكتمل',
-  'Paid':       'مدفوع',
-  'Expired':    'منتهي',
-};
-
 const _statusColors = {
   'Pending':    AppColors.amber,
   'Accepted':   AppColors.brandBlue,
@@ -144,14 +128,35 @@ const _statusColors = {
   'Expired':    AppColors.danger,
 };
 
-class _HistoryCard extends StatelessWidget {
+class _HistoryCard extends ConsumerWidget {
   final _JobHistoryItem job;
 
   const _HistoryCard({required this.job});
 
   @override
-  Widget build(BuildContext context) {
-    final label = _statusLabels[job.status] ?? job.status;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+    final categoryNames = {
+      'plumbing':       s.catPlumbing,
+      'electrical':     s.catElectrical,
+      'cleaning':       s.catCleaning,
+      'carpentry':      s.catCarpentry,
+      'painting':       s.catPainting,
+      'ac_maintenance': s.catAC,
+      'moving':         s.catMoving,
+      'other':          s.catOther,
+    };
+    final statusLabels = {
+      'Pending':    s.statusPending,
+      'Accepted':   s.statusAccepted,
+      'EnRoute':    s.statusEnRoute,
+      'InProgress': s.statusInProgress,
+      'Completed':  s.statusCompleted,
+      'Paid':       s.statusPaid,
+      'Expired':    s.statusExpired,
+    };
+    final displayName = categoryNames[job.categoryName] ?? job.categoryName.replaceAll('_', ' ');
+    final label = statusLabels[job.status] ?? job.status;
     final color = _statusColors[job.status] ?? AppColors.textSecondary;
     final isCompleted =
         job.status == 'Completed' || job.status == 'Paid';
@@ -177,7 +182,7 @@ class _HistoryCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(job.categoryName,
+                    Text(displayName,
                         style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontWeight: FontWeight.bold)),
@@ -229,30 +234,30 @@ class _HistoryCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('تفاصيل الطلب',
-                      style: TextStyle(
+                  Text(s.historyDetailTitle,
+                      style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontWeight: FontWeight.bold,
                           fontSize: 18)),
                   const SizedBox(height: 16),
-                  _DetailRow(label: 'رقم الطلب', value: job.referenceNumber),
-                  _DetailRow(label: 'الخدمة', value: job.categoryName),
+                  _DetailRow(label: s.historyOrderNo, value: job.referenceNumber),
+                  _DetailRow(label: s.historyService, value: displayName),
                   _DetailRow(
-                    label: 'التاريخ',
+                    label: s.historyDate,
                     value:
                         '${job.createdAt.year}-${job.createdAt.month.toString().padLeft(2, '0')}-${job.createdAt.day.toString().padLeft(2, '0')}',
                   ),
                   if (job.address.isNotEmpty)
-                    _DetailRow(label: 'العنوان', value: job.address),
+                    _DetailRow(label: s.historyAddress, value: job.address),
                   if (job.providerName != null && job.providerName!.isNotEmpty)
-                    _DetailRow(label: 'المزود', value: job.providerName!),
+                    _DetailRow(label: s.historyProvider, value: job.providerName!),
                   const SizedBox(height: 16),
 
                   // Before photos
                   if (job.beforePhotoUrls.isNotEmpty) ...[
-                    const Text(
-                      'صور قبل العمل',
-                      style: TextStyle(
+                    Text(
+                      s.historyBefore,
+                      style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -266,9 +271,9 @@ class _HistoryCard extends StatelessWidget {
                   // After photos (only when completed/paid)
                   if (job.afterPhotoUrls.isNotEmpty &&
                       (job.status == 'Completed' || job.status == 'Paid')) ...[
-                    const Text(
-                      'صور بعد العمل',
-                      style: TextStyle(
+                    Text(
+                      s.historyAfter,
+                      style: const TextStyle(
                           fontFamily: 'Cairo',
                           fontWeight: FontWeight.bold,
                           fontSize: 15,

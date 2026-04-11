@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/signalr_service.dart';
 import 'booking_provider.dart';
 
@@ -163,14 +164,15 @@ class _SearchingBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _AnimatedCheckmark(),
         const SizedBox(height: 32),
-        const Text(
-          'تم تأكيد حجزك!',
-          style: TextStyle(
+        Text(
+          s.confirmTitle,
+          style: const TextStyle(
             fontFamily: 'Cairo',
             fontSize: 26,
             fontWeight: FontWeight.bold,
@@ -189,9 +191,9 @@ class _SearchingBody extends ConsumerWidget {
                   strokeWidth: 2, color: AppColors.brandBlue),
             ),
             const SizedBox(width: 10),
-            const Text(
-              'جاري البحث عن أقرب مزود خدمة متاح',
-              style: TextStyle(
+            Text(
+              s.confirmSearching,
+              style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 14,
                 color: Colors.grey,
@@ -214,8 +216,8 @@ class _SearchingBody extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('عرض تفاصيل الطلب',
-                  style: TextStyle(
+              child: Text(s.confirmViewDetails,
+                  style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 17,
                       fontWeight: FontWeight.bold)),
@@ -236,8 +238,8 @@ class _SearchingBody extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('العودة للرئيسية',
-                style: TextStyle(
+            child: Text(s.backHome,
+                style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 17,
                     fontWeight: FontWeight.bold)),
@@ -264,15 +266,16 @@ class _AcceptedBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Icon(Icons.check_circle_rounded,
             color: Colors.green, size: 90),
         const SizedBox(height: 20),
-        const Text(
-          'تم قبول طلبك!',
-          style: TextStyle(
+        Text(
+          s.confirmAcceptedTitle,
+          style: const TextStyle(
             fontFamily: 'Cairo',
             fontSize: 26,
             fontWeight: FontWeight.bold,
@@ -318,8 +321,8 @@ class _AcceptedBody extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('تتبع المزود',
-                style: TextStyle(
+            child: Text(s.confirmTrackProvider,
+                style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 17,
                     fontWeight: FontWeight.bold)),
@@ -340,8 +343,8 @@ class _AcceptedBody extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('العودة للرئيسية',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 17)),
+            child: Text(s.backHome,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 17)),
           ),
         ),
       ],
@@ -352,22 +355,23 @@ class _AcceptedBody extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 // Expired state
 // ---------------------------------------------------------------------------
-class _ExpiredBody extends StatelessWidget {
+class _ExpiredBody extends ConsumerWidget {
   final VoidCallback onRetry;
 
   const _ExpiredBody({required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Icon(Icons.timer_off_outlined,
             size: 90, color: AppColors.danger),
         const SizedBox(height: 20),
-        const Text(
-          'لم يتم قبول طلبك',
-          style: TextStyle(
+        Text(
+          s.confirmExpiredTitle,
+          style: const TextStyle(
             fontFamily: 'Cairo',
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -376,9 +380,9 @@ class _ExpiredBody extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
-        const Text(
-          'لم يتم قبول طلبك، يرجى المحاولة مرة أخرى',
-          style: TextStyle(
+        Text(
+          s.confirmExpiredSub,
+          style: const TextStyle(
               fontFamily: 'Cairo', fontSize: 14, color: Colors.grey),
           textAlign: TextAlign.center,
         ),
@@ -394,8 +398,8 @@ class _ExpiredBody extends StatelessWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('إعادة المحاولة',
-                style: TextStyle(
+            child: Text(s.retry,
+                style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 17,
                     fontWeight: FontWeight.bold)),
@@ -409,13 +413,14 @@ class _ExpiredBody extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Shared widgets
 // ---------------------------------------------------------------------------
-class _RefBadge extends StatelessWidget {
+class _RefBadge extends ConsumerWidget {
   final String refNumber;
 
   const _RefBadge({required this.refNumber});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
@@ -425,9 +430,9 @@ class _RefBadge extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            'رقم الطلب',
-            style: TextStyle(
+          Text(
+            s.receiptOrderNo,
+            style: const TextStyle(
               fontFamily: 'Cairo',
               fontSize: 13,
               color: Colors.grey,

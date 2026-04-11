@@ -92,19 +92,20 @@ void setupFcmListeners({
 }
 
 void _navigateFromMessage(RemoteMessage message, GoRouter router) {
-  final data = message.data;
-  final type = data['type'] as String?;
-  final jobId = data['jobId'] as String?;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final data = message.data;
+    final type = data['type'] as String?;
 
-  switch (type) {
-    case 'payment_released':
-      router.push('/payout-status');
-    case 'new_job':
-      router.push('/jobs');
-    case 'verification_approved':
-    case 'verification_rejected':
-      router.push('/onboarding');
-    default:
-      router.push('/notifications');
-  }
+    switch (type) {
+      case 'payment_released':
+        router.push('/payout-status');
+      case 'new_job':
+        router.push('/jobs');
+      case 'verification_approved':
+      case 'verification_rejected':
+        router.push('/onboarding');
+      default:
+        router.push('/notifications');
+    }
+  });
 }

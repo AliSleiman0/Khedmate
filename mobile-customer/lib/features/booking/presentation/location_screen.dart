@@ -5,6 +5,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import 'booking_provider.dart';
 
 class LocationScreen extends ConsumerStatefulWidget {
@@ -18,7 +19,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   final _mapController = MapController();
   final _addressController = TextEditingController();
 
-  LatLng _center = const LatLng(24.7136, 46.6753); // Riyadh default
+  LatLng _center = const LatLng(33.8938, 35.5018); // Beirut default
   bool _locationConfirmed = false;
   bool _isGeocodingLoading = false;
 
@@ -30,6 +31,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       _center = LatLng(booking!.latitude!, booking.longitude!);
       _addressController.text = booking.address ?? '';
       _locationConfirmed = true;
+    } else {
+      // Auto-geocode the default Riyadh center so the Next button is enabled immediately
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reverseGeocode(_center));
     }
   }
 
@@ -63,6 +67,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -70,9 +75,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'حدد موقع الخدمة',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.locTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -123,9 +128,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                     child: ElevatedButton.icon(
                       onPressed: () => _reverseGeocode(_center),
                       icon: const Icon(Icons.check_circle_outline),
-                      label: const Text(
-                        'تأكيد الموقع',
-                        style: TextStyle(fontFamily: 'Cairo'),
+                      label: Text(
+                        s.locConfirm,
+                        style: const TextStyle(fontFamily: 'Cairo'),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.brandBlue,
@@ -153,7 +158,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                         controller: _addressController,
                         textDirection: TextDirection.rtl,
                         decoration: InputDecoration(
-                          labelText: 'العنوان',
+                          labelText: s.locAddress,
                           labelStyle: const TextStyle(fontFamily: 'Cairo'),
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
@@ -193,9 +198,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                               borderRadius: BorderRadius.circular(12)),
                           disabledBackgroundColor: Colors.grey[300],
                         ),
-                        child: const Text(
-                          'التالي',
-                          style: TextStyle(
+                        child: Text(
+                          s.next,
+                          style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 17,
                             fontWeight: FontWeight.bold,

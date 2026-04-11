@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../data/earnings_repository.dart';
 import 'earnings_provider.dart';
 
@@ -30,9 +31,9 @@ class _PayoutStatusScreenState extends ConsumerState<PayoutStatusScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تعذّر فتح صفحة التسجيل، يرجى المحاولة مرة أخرى',
-                style: TextStyle(fontFamily: 'Cairo')),
+          SnackBar(
+            content: Text(S.read(ref).payoutOnboardingError,
+                style: const TextStyle(fontFamily: 'Cairo')),
           ),
         );
       }
@@ -43,6 +44,7 @@ class _PayoutStatusScreenState extends ConsumerState<PayoutStatusScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final summaryAsync = ref.watch(earningsSummaryProvider);
 
     return Directionality(
@@ -52,17 +54,17 @@ class _PayoutStatusScreenState extends ConsumerState<PayoutStatusScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'حساب الدفع',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.payoutTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
         ),
         body: summaryAsync.when(
           loading: () =>
               const Center(child: CircularProgressIndicator(color: AppColors.brandBlue)),
-          error: (_, __) => const Center(
-            child: Text('تعذّر تحميل البيانات',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 16)),
+          error: (_, __) => Center(
+            child: Text(s.payoutLoadError,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 16)),
           ),
           data: (summary) => SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -74,9 +76,9 @@ class _PayoutStatusScreenState extends ConsumerState<PayoutStatusScreen> {
                   children: [
                     Expanded(
                       child: _BalanceCard(
-                        label: 'الرصيد المعلّق',
+                        label: s.pendingBalance,
                         value: _fmt(summary.pendingBalance, summary.currency),
-                        subtitle: 'طلبات مكتملة في فترة الانتظار',
+                        subtitle: s.pendingBalanceSub,
                         color: AppColors.amber,
                         icon: Icons.hourglass_top,
                       ),
@@ -84,9 +86,9 @@ class _PayoutStatusScreenState extends ConsumerState<PayoutStatusScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _BalanceCard(
-                        label: 'الرصيد المتاح',
+                        label: s.availableBalance,
                         value: _fmt(summary.availableBalance, summary.currency),
-                        subtitle: 'جاهز للتحويل',
+                        subtitle: s.availableBalanceSub,
                         color: AppColors.success,
                         icon: Icons.check_circle_outline,
                       ),
@@ -97,9 +99,9 @@ class _PayoutStatusScreenState extends ConsumerState<PayoutStatusScreen> {
                 const SizedBox(height: 24),
 
                 // Stripe Connect section
-                const Text(
-                  'حساب Stripe Connect',
-                  style: TextStyle(
+                Text(
+                  s.stripeConnectTitle,
+                  style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -179,37 +181,38 @@ class _BalanceCard extends StatelessWidget {
   }
 }
 
-class _ConnectedBanner extends StatelessWidget {
+class _ConnectedBanner extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Card(
       color: AppColors.success.withOpacity(0.08),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: AppColors.success),
       ),
-      child: const Padding(
-        padding: EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(Icons.check_circle, color: AppColors.success, size: 28),
-            SizedBox(width: 16),
+            const Icon(Icons.check_circle, color: AppColors.success, size: 28),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'تم ربط حساب Stripe',
-                    style: TextStyle(
+                    s.stripeConnected,
+                    style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                         color: AppColors.success),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'ستستلم أرباحك تلقائياً بعد انتهاء فترة الانتظار',
-                    style: TextStyle(
+                    s.stripeConnectedSub,
+                    style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 12,
                         color: Colors.grey),
@@ -224,7 +227,7 @@ class _ConnectedBanner extends StatelessWidget {
   }
 }
 
-class _OnboardingCard extends StatelessWidget {
+class _OnboardingCard extends ConsumerWidget {
   final String status;
   final bool loading;
   final VoidCallback onTap;
@@ -236,7 +239,8 @@ class _OnboardingCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -246,19 +250,18 @@ class _OnboardingCard extends StatelessWidget {
           children: [
             const Icon(Icons.account_balance, color: AppColors.brandBlue, size: 40),
             const SizedBox(height: 16),
-            const Text(
-              'ربط حساب الدفع',
-              style: TextStyle(
+            Text(
+              s.payoutLinkTitle,
+              style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                   color: AppColors.textPrimary),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'لاستلام أرباحك، يرجى ربط حسابك المصرفي عبر Stripe Connect. '
-              'العملية آمنة وتستغرق بضع دقائق فقط.',
-              style: TextStyle(
+            Text(
+              s.payoutLinkDesc,
+              style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 13,
                   color: Colors.grey),
@@ -282,9 +285,9 @@ class _OnboardingCard extends StatelessWidget {
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2),
                       )
-                    : const Text(
-                        'ربط حساب الدفع',
-                        style: TextStyle(
+                    : Text(
+                        s.payoutLinkBtn,
+                        style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 16,
                             fontWeight: FontWeight.bold),

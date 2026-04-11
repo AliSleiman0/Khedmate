@@ -26,7 +26,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   String? _errorMessage;
-  String _dialCode = '+966';
+  String _dialCode = '+961';
 
   @override
   void dispose() {

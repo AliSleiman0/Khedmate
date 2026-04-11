@@ -82,4 +82,18 @@ class AuthRepository {
 
   Future<String?> getAccessToken() => _storage.read(key: 'access_token');
   Future<String?> getRefreshToken() => _storage.read(key: 'refresh_token');
+
+  Future<Map<String, dynamic>> fetchMe() async {
+    final res = await _dio.get('/customers/me');
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<void> updateProfile({
+    required String fullName,
+    String? email,
+  }) async {
+    final body = <String, dynamic>{'fullName': fullName};
+    if (email != null) body['email'] = email;
+    await _dio.patch('/customers/me', data: body);
+  }
 }

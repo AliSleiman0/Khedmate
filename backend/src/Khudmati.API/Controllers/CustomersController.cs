@@ -25,18 +25,55 @@ public class CustomersController : ControllerBase
 
     [HttpGet]
     [Authorize(Policy = "AdminOnly")]
-    public IActionResult GetAll() =>
-        Ok(new { message = "List customers — TODO: wire MediatR query" });
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? search,
+        [FromQuery] bool? isActive,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetAllCustomersQuery(search, isActive, page, pageSize), ct);
+        if (!result.Success)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                customers = result.Data.Customers,
+                total = result.Data.Total,
+                page,
+                pageSize
+            }
+        });
+    }
 
     [HttpGet("{id:guid}")]
     [Authorize(Policy = "AdminOnly")]
-    public IActionResult GetById(Guid id) =>
-        Ok(new { message = $"Get customer {id} — TODO: wire MediatR query" });
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetCustomerByIdQuery(id), ct);
+        if (!result.Success)
+            return result.Error == "CUSTOMER_NOT_FOUND"
+                ? NotFound(new { success = false, error = result.Error })
+                : BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true, data = result.Data });
+    }
 
     [HttpPatch("{id:guid}/deactivate")]
     [Authorize(Policy = "AdminOnly")]
-    public IActionResult Deactivate(Guid id) =>
-        Ok(new { message = $"Deactivate customer {id} — TODO: wire MediatR command" });
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new DeactivateCustomerCommand(id), ct);
+        if (!result.Success)
+            return result.Error == "CUSTOMER_NOT_FOUND"
+                ? NotFound(new { success = false, error = result.Error })
+                : BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true });
+    }
 
     // ── Customer referral endpoints ────────────────────────────────────────
 

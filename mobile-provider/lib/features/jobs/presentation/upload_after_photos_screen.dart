@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../data/job_repository.dart';
 import 'active_job_provider.dart';
 
@@ -38,7 +39,8 @@ class _UploadAfterPhotosNotifier
   _UploadAfterPhotosState build(String arg) =>
       const _UploadAfterPhotosState();
 
-  Future<void> pickPhoto(BuildContext context, ImageSource source) async {
+  Future<void> pickPhoto(BuildContext context, ImageSource source,
+      {required String tooLargeMessage}) async {
     if (state.selectedPhotos.length >= _maxPhotos) return;
 
     final picker = ImagePicker();
@@ -49,10 +51,10 @@ class _UploadAfterPhotosNotifier
     if (bytes > _maxSizeBytes) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'الصورة أكبر من 5 ميغابايت',
-              style: TextStyle(fontFamily: 'Cairo'),
+              tooLargeMessage,
+              style: const TextStyle(fontFamily: 'Cairo'),
             ),
           ),
         );
@@ -70,7 +72,8 @@ class _UploadAfterPhotosNotifier
     state = state.copyWith(selectedPhotos: updated);
   }
 
-  Future<void> uploadAndComplete(BuildContext context, WidgetRef ref) async {
+  Future<void> uploadAndComplete(BuildContext context, WidgetRef ref,
+      {required String uploadFailedMessage}) async {
     if (state.selectedPhotos.isEmpty || state.isUploading) return;
 
     state = state.copyWith(isUploading: true);
@@ -88,10 +91,10 @@ class _UploadAfterPhotosNotifier
       state = state.copyWith(isUploading: false);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'فشل في رفع الصور، حاول مرة أخرى',
-              style: TextStyle(fontFamily: 'Cairo'),
+              uploadFailedMessage,
+              style: const TextStyle(fontFamily: 'Cairo'),
             ),
           ),
         );
@@ -115,6 +118,7 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     final state = ref.watch(_uploadAfterPhotosProvider(jobId));
     final notifier = ref.read(_uploadAfterPhotosProvider(jobId).notifier);
 
@@ -125,9 +129,9 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'صور إنجاز العمل',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.uploadAfterTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
         ),
         body: Padding(
@@ -144,9 +148,9 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
                   border: Border.all(
                       color: AppColors.brandBlue.withOpacity(0.3)),
                 ),
-                child: const Text(
-                  'الرجاء رفع صور توضح إنجاز العمل قبل إنهاء الخدمة. يجب رفع صورة واحدة على الأقل.',
-                  style: TextStyle(
+                child: Text(
+                  s.uploadAfterInstruction,
+                  style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 14,
                       color: AppColors.textPrimary),
@@ -160,7 +164,7 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
                 child: _PhotoGrid(
                   photos: state.selectedPhotos,
                   maxPhotos: 5,
-                  onAdd: () => _showSourceSheet(context, notifier),
+                  onAdd: () => _showSourceSheet(context, ref, notifier),
                   onRemove: notifier.removePhoto,
                 ),
               ),
@@ -169,7 +173,7 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
 
               // Counter
               Text(
-                '${state.selectedPhotos.length} / 5 صور',
+                s.photoCountOf5(state.selectedPhotos.length),
                 style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 13,
@@ -184,8 +188,11 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: state.selectedPhotos.isEmpty || state.isUploading
                       ? null
-                      : () =>
-                          notifier.uploadAndComplete(context, ref),
+                      : () => notifier.uploadAndComplete(
+                            context,
+                            ref,
+                            uploadFailedMessage: s.uploadFailed,
+                          ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.amber,
                     disabledBackgroundColor:
@@ -202,9 +209,9 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text(
-                          'رفع الصور وإنهاء الخدمة',
-                          style: TextStyle(
+                      : Text(
+                          s.uploadAndFinish,
+                          style: const TextStyle(
                             fontFamily: 'Cairo',
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -220,8 +227,9 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
     );
   }
 
-  void _showSourceSheet(
-      BuildContext context, _UploadAfterPhotosNotifier notifier) {
+  void _showSourceSheet(BuildContext context, WidgetRef ref,
+      _UploadAfterPhotosNotifier notifier) {
+    final s = S.read(ref);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -242,9 +250,9 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'إضافة صورة',
-                style: TextStyle(
+              Text(
+                s.addPhoto,
+                style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 16,
                     fontWeight: FontWeight.bold),
@@ -253,21 +261,23 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
               ListTile(
                 leading:
                     const Icon(Icons.camera_alt, color: AppColors.brandBlue),
-                title: const Text('الكاميرا',
-                    style: TextStyle(fontFamily: 'Cairo')),
+                title: Text(s.camera,
+                    style: const TextStyle(fontFamily: 'Cairo')),
                 onTap: () {
                   Navigator.pop(ctx);
-                  notifier.pickPhoto(context, ImageSource.camera);
+                  notifier.pickPhoto(context, ImageSource.camera,
+                      tooLargeMessage: s.photoTooLarge);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library,
                     color: AppColors.brandBlue),
-                title: const Text('معرض الصور',
-                    style: TextStyle(fontFamily: 'Cairo')),
+                title: Text(s.gallery,
+                    style: const TextStyle(fontFamily: 'Cairo')),
                 onTap: () {
                   Navigator.pop(ctx);
-                  notifier.pickPhoto(context, ImageSource.gallery);
+                  notifier.pickPhoto(context, ImageSource.gallery,
+                      tooLargeMessage: s.photoTooLarge);
                 },
               ),
               const SizedBox(height: 8),

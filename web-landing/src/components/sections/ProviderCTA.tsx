@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { motion } from 'framer-motion'
+import { fadeInUp, staggerContainer, getDirectionalVariants } from '../../animations/variants'
 
 function HouseIllustration() {
   return (
@@ -38,9 +40,10 @@ function HouseIllustration() {
 }
 
 export default function ProviderCTA() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [btnHovered, setBtnHovered] = useState(false)
+  const dir = i18n.language === 'ar' ? 'rtl' : 'ltr'
+  const dv = getDirectionalVariants(dir)
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768)
@@ -68,7 +71,13 @@ export default function ProviderCTA() {
         flexDirection: isMobile ? 'column' : 'row',
       }}>
         {/* Text side */}
-        <div style={{ flex: 1 }}>
+        <motion.div
+          variants={dv.slideInStart}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          style={{ flex: 1 }}
+        >
           <h2 style={{ fontSize: 38, fontWeight: 700, marginBottom: 16, lineHeight: 1.2 }}>
             {t('join_provider')}
           </h2>
@@ -76,20 +85,28 @@ export default function ProviderCTA() {
             {t('join_provider_desc')}
           </p>
 
-          <div style={{ display: 'flex', gap: 40, marginTop: 36, marginBottom: 44, flexWrap: 'wrap' }}>
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            style={{ display: 'flex', gap: 40, marginTop: 36, marginBottom: 44, flexWrap: 'wrap' }}
+          >
             {stats.map((s, i) => (
-              <div key={i} style={{
+              <motion.div key={i} variants={fadeInUp} style={{
                 textAlign: 'center',
                 borderInlineEnd: i < stats.length - 1 ? '1px solid rgba(255,255,255,0.25)' : 'none',
                 paddingInlineEnd: i < stats.length - 1 ? 40 : 0,
               }}>
                 <div style={{ fontSize: 36, fontWeight: 700, color: 'white', lineHeight: 1.1 }}>{s.val}</div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 6 }}>{s.label}</div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
 
-          <button
+          <motion.button
+            whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
             style={{
               background: 'white',
               color: 'var(--brown-primary)',
@@ -100,22 +117,23 @@ export default function ProviderCTA() {
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
-              transition: 'box-shadow var(--transition-base), transform var(--transition-base)',
-              boxShadow: btnHovered ? '0 8px 24px rgba(0,0,0,0.25)' : 'none',
-              transform: btnHovered ? 'translateY(-2px)' : 'none',
             }}
-            onMouseEnter={() => setBtnHovered(true)}
-            onMouseLeave={() => setBtnHovered(false)}
           >
             {t('join_provider')} →
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
         {/* Decorative illustration */}
         {!isMobile && (
-          <div style={{ flexShrink: 0 }}>
+          <motion.div
+            variants={dv.slideInEnd}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            style={{ flexShrink: 0 }}
+          >
             <HouseIllustration />
-          </div>
+          </motion.div>
         )}
       </div>
     </section>

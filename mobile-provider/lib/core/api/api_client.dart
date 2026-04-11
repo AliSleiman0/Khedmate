@@ -43,7 +43,7 @@ class ApiClient {
 
               // Attempt the token refresh.
               final refreshResponse = await dio.post(
-                '/providers/auth/refresh',
+                '/auth/providers/refresh',
                 data: {'refreshToken': refreshToken},
                 options: Options(
                   // Skip the interceptor for this request to avoid recursion.

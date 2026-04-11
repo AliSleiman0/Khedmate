@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../data/auth_repository.dart';
 import '../../referral/data/referral_repository.dart';
 import 'auth_provider.dart';
@@ -77,7 +78,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       await repo.resendOtp(widget.phone);
       _startTimer();
     } catch (_) {
-      setState(() => _errorMessage = 'تعذر إعادة إرسال الرمز. حاول مرة أخرى');
+      setState(() => _errorMessage = S.read(ref).otpResendError);
     }
   }
 
@@ -96,30 +97,30 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     authState.when(
       data: (state) async {
         if (state is AuthAuthenticated) {
-          // Show optional referral code prompt then navigate home
           await _showReferralPromptIfNeeded();
           if (mounted) context.go('/home');
         }
       },
       loading: () {},
       error: (err, _) {
-        String message = 'حدث خطأ. حاول مرة أخرى';
+        final s = S.read(ref);
+        String message = s.errorGeneric;
         bool enableResendImmediately = false;
 
         if (err is DioException) {
           final code = _extractErrorCode(err);
           switch (code) {
             case 'OTP_EXPIRED':
-              message = 'انتهت صلاحية الرمز';
+              message = s.otpExpired;
               enableResendImmediately = true;
               break;
             case 'MAX_ATTEMPTS_EXCEEDED':
-              message = 'يرجى طلب رمز جديد';
+              message = s.otpRequestNew;
               setState(() => _isLocked = true);
               enableResendImmediately = true;
               break;
             case 'INVALID_OTP':
-              message = 'الرمز غير صحيح';
+              message = s.otpInvalid;
               setState(() {
                 _remainingAttempts =
                     (_remainingAttempts - 1).clamp(0, _maxAttempts);
@@ -129,7 +130,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               if (err.type == DioExceptionType.connectionError ||
                   err.type == DioExceptionType.receiveTimeout ||
                   err.type == DioExceptionType.sendTimeout) {
-                message = 'تحقق من اتصالك بالإنترنت';
+                message = s.errorNetwork;
               }
           }
           if (enableResendImmediately) {
@@ -158,8 +159,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     return '';
   }
 
-  /// Shows a bottom sheet asking the new customer if they have a referral code.
-  /// Safe to dismiss — the result doesn't block navigation.
   Future<void> _showReferralPromptIfNeeded() async {
     if (!mounted) return;
     await showModalBottomSheet<void>(
@@ -176,6 +175,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
 
@@ -218,9 +218,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'التحقق من الهاتف',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.otpTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
         ),
@@ -236,10 +236,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   color: AppColors.brandBlue,
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'أدخل الرمز المرسل إلى',
+                Text(
+                  s.otpSubtitle,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     color: AppColors.textSecondary,
                     fontFamily: 'Cairo',
@@ -273,11 +273,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Loading indicator
                 if (isLoading)
                   const CircularProgressIndicator(color: AppColors.brandBlue),
 
-                // Error message
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -293,10 +291,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
                 const SizedBox(height: 16),
 
-                // Remaining attempts
                 if (!_isLocked && _remainingAttempts < _maxAttempts)
                   Text(
-                    'المحاولات المتبقية: $_remainingAttempts',
+                    s.otpAttemptsLeft(_remainingAttempts),
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontFamily: 'Cairo',
@@ -306,10 +303,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
                 const SizedBox(height: 24),
 
-                // Countdown / Resend
                 if (!_canResend)
                   Text(
-                    'إعادة الإرسال بعد ${_remainingSeconds}s',
+                    s.otpResendIn(_remainingSeconds),
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontFamily: 'Cairo',
@@ -319,9 +315,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 else
                   TextButton(
                     onPressed: _resendOtp,
-                    child: const Text(
-                      'إعادة إرسال الرمز',
-                      style: TextStyle(
+                    child: Text(
+                      s.resendCode,
+                      style: const TextStyle(
                         color: AppColors.brandBlue,
                         fontFamily: 'Cairo',
                         fontSize: 16,
@@ -341,16 +337,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 // ---------------------------------------------------------------------------
 // Bottom-sheet: optional referral code entry shown after successful signup
 // ---------------------------------------------------------------------------
-class _ReferralCodeSheet extends StatefulWidget {
+class _ReferralCodeSheet extends ConsumerStatefulWidget {
   final ReferralRepository referralRepo;
 
   const _ReferralCodeSheet({required this.referralRepo});
 
   @override
-  State<_ReferralCodeSheet> createState() => _ReferralCodeSheetState();
+  ConsumerState<_ReferralCodeSheet> createState() => _ReferralCodeSheetState();
 }
 
-class _ReferralCodeSheetState extends State<_ReferralCodeSheet> {
+class _ReferralCodeSheetState extends ConsumerState<_ReferralCodeSheet> {
   final _controller = TextEditingController();
   bool _isLoading = false;
   String? _error;
@@ -379,7 +375,7 @@ class _ReferralCodeSheetState extends State<_ReferralCodeSheet> {
       await widget.referralRepo.applyReferralCode(code);
       setState(() {
         _isLoading = false;
-        _success = 'تم تطبيق الخصم! ستحصل على 15% خصم في حجزك الأول 🎉';
+        _success = S.read(ref).referralSuccess;
       });
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) Navigator.of(context).pop();
@@ -391,25 +387,27 @@ class _ReferralCodeSheetState extends State<_ReferralCodeSheet> {
         } catch (_) {}
         return '';
       }();
+      final s = S.read(ref);
       setState(() {
         _isLoading = false;
         _error = switch (errorCode) {
-          'REFERRAL_CODE_NOT_FOUND' => 'الكود غير موجود',
-          'REFERRAL_ALREADY_USED'   => 'لقد طبّقت كود دعوة مسبقاً',
-          'REFERRAL_SELF_REFERRAL'  => 'لا يمكنك استخدام كودك الخاص',
-          _                         => 'حدث خطأ. حاول مرة أخرى',
+          'REFERRAL_CODE_NOT_FOUND' => s.referralNotFound,
+          'REFERRAL_ALREADY_USED'   => s.referralAlreadyUsed,
+          'REFERRAL_SELF_REFERRAL'  => s.referralSelfReferral,
+          _                         => s.disputeGenericError,
         };
       });
     } catch (_) {
       setState(() {
         _isLoading = false;
-        _error = 'حدث خطأ. حاول مرة أخرى';
+        _error = S.read(ref).disputeGenericError;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Padding(
@@ -423,9 +421,9 @@ class _ReferralCodeSheetState extends State<_ReferralCodeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'هل لديك كود دعوة؟',
-              style: TextStyle(
+            Text(
+              s.referralHasCode,
+              style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -433,9 +431,9 @@ class _ReferralCodeSheetState extends State<_ReferralCodeSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'أدخل كود صديقك للحصول على خصم 15% في أول حجز',
-              style: TextStyle(
+            Text(
+              s.referralEnterCode,
+              style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -497,8 +495,8 @@ class _ReferralCodeSheetState extends State<_ReferralCodeSheet> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: const Text('تخطي',
-                          style: TextStyle(
+                      child: Text(s.skip,
+                          style: const TextStyle(
                               fontFamily: 'Cairo',
                               color: AppColors.textSecondary)),
                     ),
@@ -520,8 +518,8 @@ class _ReferralCodeSheetState extends State<_ReferralCodeSheet> {
                               height: 20,
                               child: CircularProgressIndicator(
                                   color: Colors.white, strokeWidth: 2))
-                          : const Text('تطبيق',
-                              style: TextStyle(
+                          : Text(s.apply,
+                              style: const TextStyle(
                                   fontFamily: 'Cairo',
                                   fontWeight: FontWeight.bold)),
                     ),

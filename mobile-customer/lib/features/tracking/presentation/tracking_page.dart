@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/services/signalr_service.dart';
 import '../../chat/presentation/chat_provider.dart';
 import '../../rating/presentation/rating_bottom_sheet.dart';
@@ -167,13 +168,14 @@ class _TrackingBody extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Status banner — animates on change
 // ---------------------------------------------------------------------------
-class _StatusBanner extends StatelessWidget {
+class _StatusBanner extends ConsumerWidget {
   final String status;
 
   const _StatusBanner({required this.status});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
       child: Container(
@@ -185,7 +187,7 @@ class _StatusBanner extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _bannerText(status),
+              _bannerText(status, s),
               style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 22,
@@ -195,7 +197,7 @@ class _StatusBanner extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              _bannerSubtitle(status),
+              _bannerSubtitle(status, s),
               style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 14,
@@ -217,21 +219,21 @@ class _StatusBanner extends StatelessWidget {
         _            => AppColors.brandBlue,
       };
 
-  String _bannerText(String status) => switch (status) {
-        'Accepted'   => 'تم قبول طلبك',
-        'EnRoute'    => 'المزود في الطريق إليك',
-        'InProgress' => 'جاري تنفيذ الخدمة',
-        'Completed'  => 'تم إنجاز الخدمة!',
-        'Paid'       => 'تمت عملية الدفع!',
-        _            => 'جاري المتابعة...',
+  String _bannerText(String status, S s) => switch (status) {
+        'Accepted'   => s.trackAccepted,
+        'EnRoute'    => s.trackEnRoute,
+        'InProgress' => s.trackInProgress,
+        'Completed'  => s.trackCompleted,
+        'Paid'       => s.trackPaid,
+        _            => s.trackDefault,
       };
 
-  String _bannerSubtitle(String status) => switch (status) {
-        'Accepted'   => 'المزود يستعد للتوجه إليك',
-        'EnRoute'    => 'يتوقع الوصول قريباً',
-        'InProgress' => 'يُرجى البقاء متاحاً',
-        'Completed'  => 'شكراً لاستخدامك خدمتي',
-        'Paid'       => 'قيّم تجربتك مع المزود',
+  String _bannerSubtitle(String status, S s) => switch (status) {
+        'Accepted'   => s.trackAcceptedSub,
+        'EnRoute'    => s.trackEnRouteSub,
+        'InProgress' => s.trackInProgSub,
+        'Completed'  => s.trackCompletedSub,
+        'Paid'       => s.trackPaidSub,
         _            => '',
       };
 }
@@ -239,13 +241,14 @@ class _StatusBanner extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Reference badge
 // ---------------------------------------------------------------------------
-class _RefBadge extends StatelessWidget {
+class _RefBadge extends ConsumerWidget {
   final String referenceNumber;
 
   const _RefBadge({required this.referenceNumber});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -257,8 +260,8 @@ class _RefBadge extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('رقم الطلب: ',
-              style: TextStyle(
+          Text(s.trackOrderNo,
+              style: const TextStyle(
                   fontFamily: 'Cairo', color: AppColors.textSecondary)),
           Text(referenceNumber,
               style: const TextStyle(
@@ -276,14 +279,15 @@ class _RefBadge extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Provider card
 // ---------------------------------------------------------------------------
-class _ProviderCard extends StatelessWidget {
+class _ProviderCard extends ConsumerWidget {
   final String providerName;
   final String category;
 
   const _ProviderCard({required this.providerName, required this.category});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -300,7 +304,7 @@ class _ProviderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  providerName.isNotEmpty ? providerName : 'مزود الخدمة',
+                  providerName.isNotEmpty ? providerName : s.trackProvider,
                   style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,
@@ -392,16 +396,16 @@ class _PulseIndicatorState extends State<_PulseIndicator>
 // ---------------------------------------------------------------------------
 // Live tracking map (EnRoute status)
 // ---------------------------------------------------------------------------
-class _LiveTrackingMap extends StatefulWidget {
+class _LiveTrackingMap extends ConsumerStatefulWidget {
   final JobTrackingState tracking;
 
   const _LiveTrackingMap({required this.tracking});
 
   @override
-  State<_LiveTrackingMap> createState() => _LiveTrackingMapState();
+  ConsumerState<_LiveTrackingMap> createState() => _LiveTrackingMapState();
 }
 
-class _LiveTrackingMapState extends State<_LiveTrackingMap>
+class _LiveTrackingMapState extends ConsumerState<_LiveTrackingMap>
     with SingleTickerProviderStateMixin {
   late MapController _mapController;
   LatLng? _animatedProviderPosition;
@@ -508,11 +512,12 @@ class _LiveTrackingMapState extends State<_LiveTrackingMap>
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(ref);
     final customerPos = LatLng(
       widget.tracking.customerLatitude,
       widget.tracking.customerLongitude,
     );
-    
+
     // Check if location updates timed out (> 15 seconds)
     final isLocationStale = widget.tracking.lastLocationUpdate != null &&
         DateTime.now().difference(widget.tracking.lastLocationUpdate!) >
@@ -556,9 +561,9 @@ class _LiveTrackingMapState extends State<_LiveTrackingMap>
                                   color: AppColors.brandBlue,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text(
-                                  'موقعك',
-                                  style: TextStyle(
+                                child: Text(
+                                  s.trackYourLocation,
+                                  style: const TextStyle(
                                     fontFamily: 'Cairo',
                                     fontSize: 11,
                                     color: Colors.white,
@@ -624,9 +629,9 @@ class _LiveTrackingMapState extends State<_LiveTrackingMap>
                           color: Colors.black.withOpacity(0.7),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
-                          'يتم تحديث الموقع...',
-                          style: TextStyle(
+                        child: Text(
+                          s.trackLocationUpdating,
+                          style: const TextStyle(
                             fontFamily: 'Cairo',
                             color: Colors.white,
                             fontSize: 12,
@@ -654,7 +659,7 @@ class _LiveTrackingMapState extends State<_LiveTrackingMap>
                     color: Color(0xFFB7770D), size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'المسافة المتبقية: ${widget.tracking.distanceKm!.toStringAsFixed(1)} كم',
+                  s.trackDistanceLeft(widget.tracking.distanceKm!.toStringAsFixed(1)),
                   style: const TextStyle(
                     fontFamily: 'Cairo',
                     color: Color(0xFFB7770D),
@@ -673,13 +678,14 @@ class _LiveTrackingMapState extends State<_LiveTrackingMap>
 // ---------------------------------------------------------------------------
 // InProgress map (frozen at last known location)
 // ---------------------------------------------------------------------------
-class _InProgressMap extends StatelessWidget {
+class _InProgressMap extends ConsumerWidget {
   final JobTrackingState tracking;
 
   const _InProgressMap({required this.tracking});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     if (tracking.providerLatitude == null ||
         tracking.providerLongitude == null) {
       // No location data - show simple message
@@ -689,13 +695,13 @@ class _InProgressMap extends StatelessWidget {
           color: AppColors.amber.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.construction, color: AppColors.amber, size: 22),
-            SizedBox(width: 10),
+            const Icon(Icons.construction, color: AppColors.amber, size: 22),
+            const SizedBox(width: 10),
             Text(
-              'المزود يعمل على إنجاز طلبك',
-              style: TextStyle(
+              s.trackProviderWorking,
+              style: const TextStyle(
                   fontFamily: 'Cairo',
                   color: AppColors.amber,
                   fontWeight: FontWeight.w600),
@@ -758,14 +764,14 @@ class _InProgressMap extends StatelessWidget {
             color: AppColors.amber.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.check_circle, color: AppColors.amber, size: 22),
-              SizedBox(width: 10),
+              const Icon(Icons.check_circle, color: AppColors.amber, size: 22),
+              const SizedBox(width: 10),
               Text(
-                'وصل المزود! جاري تنفيذ الخدمة',
-                style: TextStyle(
+                s.trackProviderArrived,
+                style: const TextStyle(
                     fontFamily: 'Cairo',
                     color: AppColors.amber,
                     fontWeight: FontWeight.w600),
@@ -782,7 +788,7 @@ class _InProgressMap extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Bottom actions — change by status
 // ---------------------------------------------------------------------------
-class _BottomActions extends StatelessWidget {
+class _BottomActions extends ConsumerWidget {
   final String status;
   final String jobId;
   final String providerName;
@@ -794,7 +800,8 @@ class _BottomActions extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     if (status == 'Paid') {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -811,8 +818,8 @@ class _BottomActions extends StatelessWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('قيّم تجربتك',
-                style: TextStyle(
+            child: Text(s.trackRateExperience,
+                style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
@@ -828,8 +835,8 @@ class _BottomActions extends StatelessWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('العودة للرئيسية',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 17)),
+            child: Text(s.backHome,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 17)),
           ),
         ],
       );
@@ -844,8 +851,8 @@ class _BottomActions extends StatelessWidget {
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: const Text('العودة للرئيسية',
-          style: TextStyle(fontFamily: 'Cairo', fontSize: 17)),
+      child: Text(s.backHome,
+          style: const TextStyle(fontFamily: 'Cairo', fontSize: 17)),
     );
   }
 }
@@ -853,13 +860,14 @@ class _BottomActions extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Error view
 // ---------------------------------------------------------------------------
-class _ErrorView extends StatelessWidget {
+class _ErrorView extends ConsumerWidget {
   final VoidCallback onRetry;
 
   const _ErrorView({required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -868,15 +876,15 @@ class _ErrorView extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, color: AppColors.danger, size: 48),
             const SizedBox(height: 12),
-            const Text('تعذر تحميل حالة الطلب',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 16)),
+            Text(s.trackLoadError,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 16)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: onRetry,
               style:
                   ElevatedButton.styleFrom(backgroundColor: AppColors.brandBlue),
-              child: const Text('إعادة المحاولة',
-                  style: TextStyle(fontFamily: 'Cairo', color: Colors.white)),
+              child: Text(s.retry,
+                  style: const TextStyle(fontFamily: 'Cairo', color: Colors.white)),
             ),
           ],
         ),

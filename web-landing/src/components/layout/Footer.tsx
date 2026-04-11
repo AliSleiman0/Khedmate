@@ -1,4 +1,7 @@
 import { useTranslation } from 'react-i18next'
+import { motion } from 'framer-motion'
+import AnimatedSection from '../ui/AnimatedSection'
+import { fadeInUp, getDirectionalVariants } from '../../animations/variants'
 
 function EnvelopeIcon() {
   return (
@@ -54,7 +57,9 @@ function LinkedInIcon() {
 }
 
 export default function Footer() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const dir = i18n.language === 'ar' ? 'rtl' : 'ltr'
+  const dv = getDirectionalVariants(dir)
   const services = ['cleaning', 'plumbing', 'electrical', 'moving', 'painting', 'ac']
   const contactRows = [
     { icon: <EnvelopeIcon />, text: t('footer_email') },
@@ -70,7 +75,7 @@ export default function Footer() {
   return (
     <footer style={{ background: 'var(--brown-primary)', color: 'rgba(255,255,255,0.85)' }}>
       {/* Main grid */}
-      <div style={{
+      <AnimatedSection stagger="slow" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: 48,
@@ -79,9 +84,11 @@ export default function Footer() {
         padding: '64px 32px 48px',
       }}>
         {/* Col 1 — About */}
-        <div>
+        <motion.div variants={fadeInUp}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <img src="/logo.png" alt="خدمتي" style={{ height: 44, filter: 'brightness(0) invert(1)' }} />
+            <div style={{ background: 'white', borderRadius: 10, padding: '4px 6px', display: 'flex', alignItems: 'center' }}>
+              <img src="/logo.png" alt="خدمتي" style={{ height: 36 }} />
+            </div>
             <span style={{ color: 'var(--amber)', fontWeight: 700, fontSize: 22 }}>خدمتي</span>
           </div>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', lineHeight: 1.8 }}>
@@ -89,9 +96,12 @@ export default function Footer() {
           </p>
           <div style={{ display: 'flex', gap: 14, marginTop: 20 }}>
             {socialLinks.map((s, i) => (
-              <a
+              <motion.a
                 key={i}
                 href={s.href}
+                whileHover={{ scale: 1.2, background: 'rgba(255,255,255,0.22)' }}
+                whileTap={{ scale: 0.88 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 14 }}
                 style={{
                   width: 36, height: 36,
                   borderRadius: '50%',
@@ -99,37 +109,33 @@ export default function Footer() {
                   border: '1px solid rgba(255,255,255,0.18)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'background var(--transition-base)',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.22)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.10)')}
               >
                 {s.icon}
-              </a>
+              </motion.a>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Col 2 — Services */}
-        <div>
+        <motion.div variants={fadeInUp}>
           <h4 style={{ color: 'var(--amber)', fontWeight: 700, fontSize: 16, marginBottom: 20 }}>
             {t('services')}
           </h4>
           {services.map(s => (
-            <a
+            <motion.a
               key={s}
               href="#services"
-              style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 12, cursor: 'pointer', transition: 'color var(--transition-base)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'white')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
+              whileHover={{ color: 'white', x: dir === 'rtl' ? -3 : 3 }}
+              style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 12, cursor: 'pointer' }}
             >
               {t(s)}
-            </a>
+            </motion.a>
           ))}
-        </div>
+        </motion.div>
 
         {/* Col 3 — Contact */}
-        <div>
+        <motion.div variants={fadeInUp}>
           <h4 style={{ color: 'var(--amber)', fontWeight: 700, fontSize: 16, marginBottom: 20 }}>
             {t('contact_us')}
           </h4>
@@ -139,44 +145,50 @@ export default function Footer() {
               <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)' }}>{row.text}</span>
             </div>
           ))}
-          <a
+          <motion.a
             href="#contact"
+            whileHover={{ color: 'var(--amber)' }}
             style={{ display: 'inline-block', marginTop: 8, color: 'var(--amber)', fontSize: 14, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
           >
             {t('contact_us')} →
-          </a>
-        </div>
-      </div>
+          </motion.a>
+        </motion.div>
+      </AnimatedSection>
 
       {/* Copyright bar */}
-      <div style={{
-        borderTop: '1px solid rgba(255,255,255,0.12)',
-        maxWidth: 1100,
-        margin: '0 auto',
-        padding: '20px 32px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 12,
-      }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.3 }}
+        style={{
+          borderTop: '1px solid rgba(255,255,255,0.12)',
+          maxWidth: 1100,
+          margin: '0 auto',
+          padding: '20px 32px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
           © {new Date().getFullYear()} خدمتي. {t('footer_rights')}.
         </p>
         <div style={{ display: 'flex', gap: 20 }}>
           {[{ key: 'footer_privacy' }, { key: 'footer_terms' }].map(({ key }) => (
-            <a
+            <motion.a
               key={key}
               href="#"
-              style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'color var(--transition-base)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.85)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
+              whileHover={{ color: 'rgba(255,255,255,0.85)' }}
+              style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
             >
               {t(key)}
-            </a>
+            </motion.a>
           ))}
         </div>
-      </div>
+      </motion.div>
     </footer>
   )
 }

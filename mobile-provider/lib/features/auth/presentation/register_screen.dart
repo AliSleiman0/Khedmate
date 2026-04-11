@@ -36,7 +36,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscureConfirm = true;
   String? _errorMessage;
   final Set<String> _selectedCategories = {};
-  String _dialCode = '+966';
+  String _dialCode = '+961';
 
   @override
   void dispose() {

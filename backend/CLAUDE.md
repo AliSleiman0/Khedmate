@@ -48,6 +48,13 @@ New admin endpoints: `GET /api/admin/reminder-rules`, `PUT /api/admin/reminder-r
 New customer endpoints: `GET /api/customers/me/reminders`, `PATCH /api/customers/me/reminders/{id}`
 Duplicate suppression: skip scheduling if customer was reminded for same category within last 14 days
 
+## New controllers (Feature #26)
+Provider-facing subscription and analytics controllers added to `Khudmati.API/Controllers/Providers/`:
+- `ProviderSubscriptionController.cs` — GET / GET setup-intent / POST / DELETE on `api/providers/me/subscription`; creates Stripe Customer on first call, stores `StripeCustomerId` on entity; fires SignalR events to `provider-{userId}` group
+- `ProviderAnalyticsController.cs` — GET earnings / jobs / ratings on `api/providers/me/analytics/*`; all set `Cache-Control: max-age=300`; never return 404 (zero-safe)
+
+Entity extended: `ProviderSubscription` gains `StripeCustomerId`, `CancelsAtPeriodEnd`, `CancelledAt`, `Create()`, `SetStatus()`, `SetCancelsAtPeriodEnd()`, `UpdatePeriod()` methods.
+
 ## New queries (Feature #20)
 Analytics endpoints — no new DB tables; queries aggregate existing data:
 - `GET /api/providers/me/analytics/earnings?period=` — aggregates `payments.transactions` (status=Released) by day/week/month; returns `currentPeriodEarnings`, `previousPeriodEarnings`, `changePercent` (nullable), `pendingEarnings` (Held txns), `chartDataPoints`
@@ -64,6 +71,36 @@ CREATE INDEX idx_transactions_provider_status_date ON payments.transactions(job_
 CREATE INDEX idx_jobs_provider_status_date ON bookings.jobs(provider_id, status, created_at);
 CREATE INDEX idx_ratings_provider_created ON bookings.ratings(provider_id, created_at DESC);
 ```
+
+## Admin panel wiring (web-admin complete API integration)
+New controllers added to `Khudmati.API/Controllers/` — all `[Authorize(Policy = "AdminOnly")]`:
+
+| Controller | Endpoints | Notes |
+|---|---|---|
+| `AdminDashboardController` | `GET /api/admin/dashboard` | Live KPIs: totalJobs, pendingJobs, activeJobs, openDisputes, pendingVerifications, todayRevenue, recentJobs (last 5) |
+| `AdminDashboardController` | `GET /api/admin/platform-config` | Read-only view of `admins.platform_config` for admin role |
+| `AdminSubscriptionsController` | `GET /api/admin/subscriptions` | Joins provider_subscriptions + providers + subscription_plans; search/status/pagination |
+| `AdminReminderRulesController` | `GET/POST /api/admin/reminder-rules` | List all rules; create new rule (blocks duplicate category) |
+| `AdminReminderRulesController` | `PUT /api/admin/reminder-rules/{id}` | Update intervalDays + isActive |
+
+New domain classes (API-local, not in modules):
+- `Khudmati.API/Domain/ProviderSubscription.cs` — maps to `providers.provider_subscriptions`
+- `Khudmati.API/Domain/ReminderRule.cs` — maps to `public.reminder_rules`
+
+### ⚠️ Before deploying
+Run these SQL scripts against PostgreSQL **in order** before deploying the backend:
+
+1. `backend/add-admin-features.sql` — creates:
+   - `providers.provider_subscriptions` table (needed by `AdminSubscriptionsController`)
+   - `public.reminder_rules` table (needed by `AdminReminderRulesController`)
+
+2. `backend/add-subscription-screen.sql` (Feature #26) — adds columns to `providers.provider_subscriptions`:
+   - `stripe_customer_id VARCHAR(100)` — Stripe Customer object ID for reusing SetupIntents
+   - `cancels_at_period_end BOOLEAN NOT NULL DEFAULT FALSE` — tracks scheduled cancellation
+   - `cancelled_at TIMESTAMPTZ` — when the provider initiated cancellation
+
+Without migration #1 the subscription and reminder-rules endpoints will throw on first request.
+Without migration #2 the provider-facing `ProviderSubscriptionController` will fail to read/write subscription state.
 
 ## Grok AI — Job Description Helper (Feature #21)
 New files — no DB migration required:
@@ -205,6 +242,8 @@ Authorization policies registered in Program.cs:
 | `ALREADY_SUBSCRIBED` | 409 |
 | `PAYMENT_METHOD_INVALID` | 422 |
 | `STRIPE_ERROR` | 502 |
+| `CUSTOMER_NOT_FOUND` | 404 |
+| `CUSTOMER_ALREADY_INACTIVE` | 400 |
 
 ## OTP flow
 1. Register → 6-digit OTP generated, BCrypt-hashed, stored in `*.otp_verifications` with 10-min expiry
@@ -222,6 +261,16 @@ Authorization policies registered in Program.cs:
 | POST | `auth/resend-otp` | None | Resend OTP |
 | POST | `auth/login` | None | Login → JWT |
 | POST | `auth/refresh` | None | Refresh access token |
+
+### Admin Customer Management — `/api/customers/` (AdminOnly)
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/customers` | AdminOnly | Paginated customer list (query: `search`, `isActive`, `page`, `pageSize=20`) → `{ customers, total, page, pageSize }` |
+| GET | `/api/customers/{id}` | AdminOnly | Get customer by ID → `CustomerDto`; 404 on `CUSTOMER_NOT_FOUND` |
+| PATCH | `/api/customers/{id}/deactivate` | AdminOnly | Deactivate customer account (sets `IsActive = false`); 404 on `CUSTOMER_NOT_FOUND`, 400 on `CUSTOMER_ALREADY_INACTIVE` |
+
+MediatR handlers: `GetAllCustomersQuery`, `GetCustomerByIdQuery`, `DeactivateCustomerCommand`  
+All live in `Modules/Customers/Khudmati.Modules.Customers/Application/`
 
 ### Bookings — `/api/bookings/` (CustomerOnly)
 | Method | Route | Description |
@@ -262,12 +311,15 @@ Authorization policies registered in Program.cs:
 | POST | `auth/resend-otp` | None | Resend OTP |
 | POST | `auth/login` | None | Login → JWT |
 | POST | `auth/refresh` | None | Refresh access token |
+| GET | `{id:guid}` | Authorize | Public provider profile (id, fullName, phone, tier, serviceCategories, rating, jobsCompleted, createdAt); 404 on `PROVIDER_NOT_FOUND` |
+| PATCH | `me` | ProviderOnly | Update own profile (`{ fullName }`) — 400 on `INVALID_FULL_NAME`; calls `provider.UpdateFullName()` then saves |
 | GET | `earnings/summary` | ProviderOnly | Pending/available balance + Stripe Connect status |
 | POST | `stripe/onboard` | ProviderOnly | Generate Stripe Connect Express onboarding URL |
 | GET | `onboarding/status` | ProviderOnly | Get provider onboarding/verification status |
 | POST | `onboarding/documents` | ProviderOnly | Submit ID documents (multipart/form-data) |
 | GET | `onboarding/skill-test/{categoryId}` | ProviderOnly | Start skill test (10 questions) |
 | POST | `onboarding/skill-test/{categoryId}/submit` | ProviderOnly | Submit skill test answers |
+| GET | `me/jobs?status=Paid&page=1&pageSize=20` | ProviderOnly | Provider's completed/paid jobs; left-joins `payments.transactions` for netAmount; returns items+total+hasNextPage |
 
 ### Payments — `/api/payments/`
 | Method | Route | Auth | Description |
@@ -276,12 +328,13 @@ Authorization policies registered in Program.cs:
 | POST | `confirm` | CustomerOnly | Link PaymentIntent to job after PaymentSheet completes |
 | GET | `my-transactions` | CustomerOrProvider | Paged transaction history (routed by JWT `aud`) |
 
-### Provider Subscription — `/api/providers/me/subscription`
+### Provider Subscription — `/api/providers/me/subscription` (Feature #26 — `ProviderSubscriptionController.cs`)
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| GET | `me/subscription` | ProviderOnly | Current subscription state (null if not subscribed) |
-| POST | `me/subscription` | ProviderOnly | Subscribe to Power Provider (`{ paymentMethodId }`) |
-| DELETE | `me/subscription` | ProviderOnly | Cancel at period end |
+| GET | `me/subscription` | ProviderOnly | Current subscription state (null/404 if not subscribed) |
+| GET | `me/subscription/setup-intent` | ProviderOnly | Create (or reuse) Stripe Customer + SetupIntent → returns `{ clientSecret }` for PaymentSheet |
+| POST | `me/subscription` | ProviderOnly | Subscribe to Power Provider — resolves PaymentMethod from SetupIntent, creates Stripe Subscription, fires `SubscriptionActivated` SignalR |
+| DELETE | `me/subscription` | ProviderOnly | Cancel at period end — sets `CancelAtPeriodEnd=true` on Stripe, fires `SubscriptionCancelled` SignalR |
 
 ### Stripe Webhooks — `/api/webhooks/stripe`
 | Method | Route | Auth | Description |

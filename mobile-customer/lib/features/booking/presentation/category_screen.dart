@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import 'booking_provider.dart';
 
 class _Category {
@@ -12,20 +13,21 @@ class _Category {
   const _Category(this.id, this.label, this.icon);
 }
 
-const _categories = [
-  _Category('plumbing', 'سباكة', Icons.plumbing),
-  _Category('electrical', 'كهرباء', Icons.electric_bolt),
-  _Category('cleaning', 'تنظيف', Icons.cleaning_services),
-  _Category('carpentry', 'نجارة', Icons.carpenter),
-  _Category('painting', 'دهان', Icons.format_paint),
-  _Category('ac_maintenance', 'تكييف', Icons.ac_unit),
-];
-
 class CategoryScreen extends ConsumerWidget {
   const CategoryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+    final categories = [
+      _Category('plumbing',       s.catPlumbing,   Icons.plumbing),
+      _Category('electrical',     s.catElectrical, Icons.electric_bolt),
+      _Category('cleaning',       s.catCleaning,   Icons.cleaning_services),
+      _Category('carpentry',      s.catCarpentry,  Icons.carpenter),
+      _Category('painting',       s.catPainting,   Icons.format_paint),
+      _Category('ac_maintenance', s.catAC,         Icons.ac_unit),
+    ];
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -33,9 +35,9 @@ class CategoryScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          title: const Text(
-            'احجز خدمة',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          title: Text(
+            s.catScreenTitle,
+            style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
           automaticallyImplyLeading: false,
           leading: IconButton(
@@ -49,9 +51,9 @@ class CategoryScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              const Text(
-                'اختر نوع الخدمة',
-                style: TextStyle(
+              Text(
+                s.catSelectType,
+                style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -67,9 +69,9 @@ class CategoryScreen extends ConsumerWidget {
                     mainAxisSpacing: 12,
                     childAspectRatio: 1.1,
                   ),
-                  itemCount: _categories.length,
+                  itemCount: categories.length,
                   itemBuilder: (context, i) {
-                    final cat = _categories[i];
+                    final cat = categories[i];
                     return _CategoryCard(
                       category: cat,
                       onTap: () {

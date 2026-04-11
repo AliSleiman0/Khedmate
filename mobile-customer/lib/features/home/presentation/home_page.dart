@@ -2,33 +2,54 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../notifications/presentation/notifications_provider.dart';
 import '../../rating/presentation/rating_bottom_sheet.dart';
 import '../../rating/presentation/rating_provider.dart';
+import '../../booking/presentation/booking_provider.dart';
+
+/// Holds the home search query string.
+final _searchQueryProvider = StateProvider<String>((ref) => '');
+
+/// Category IDs matching the backend enum order.
+const _categoryIds = [
+  'cleaning', 'plumbing', 'electrical', 'moving',
+  'painting', 'ac_maintenance', 'carpentry', 'other',
+];
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
-  static const _categories = [
-    ('تنظيف', Icons.cleaning_services),
-    ('سباكة', Icons.plumbing),
-    ('كهرباء', Icons.electric_bolt),
-    ('نقل عفش', Icons.local_shipping),
-    ('دهانات', Icons.format_paint),
-    ('تكييف', Icons.ac_unit),
-    ('نجارة', Icons.carpenter),
-    ('أخرى', Icons.more_horiz),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = S.of(ref);
+    final allCategories = [
+      (s.catCleaning,   Icons.cleaning_services),
+      (s.catPlumbing,   Icons.plumbing),
+      (s.catElectrical, Icons.electric_bolt),
+      (s.catMoving,     Icons.local_shipping),
+      (s.catPainting,   Icons.format_paint),
+      (s.catAC,         Icons.ac_unit),
+      (s.catCarpentry,  Icons.carpenter),
+      (s.catOther,      Icons.more_horiz),
+    ];
     final pendingAsync = ref.watch(pendingRatingsProvider);
     final unreadCount = ref.watch(unreadCountProvider);
+    final query = ref.watch(_searchQueryProvider);
+
+    // Filter categories based on search query
+    final indexedCategories = allCategories.asMap().entries.toList();
+    final filtered = query.isEmpty
+        ? indexedCategories
+        : indexedCategories
+            .where((e) =>
+                e.value.$1.toLowerCase().contains(query.toLowerCase()))
+            .toList();
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('خدمتي'),
+        title: Text(s.homeTitle),
         actions: [
           Stack(
             children: [
@@ -82,6 +103,8 @@ class HomePage extends ConsumerWidget {
               return _PendingRatingBanner(
                 providerName: first.rateTarget,
                 jobId: first.jobId,
+                pendingLabel: s.homePendingRating,
+                rateNowLabel: s.homeRateNow,
                 onRate: () async {
                   await RatingBottomSheet.show(
                     context,
@@ -98,19 +121,21 @@ class HomePage extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
+              onChanged: (v) =>
+                  ref.read(_searchQueryProvider.notifier).state = v,
               decoration: InputDecoration(
-                hintText: 'ماذا تحتاج؟',
+                hintText: s.homeSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'اختر الخدمة',
-              style: TextStyle(
+              s.homeSelectService,
+              style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary),
@@ -118,57 +143,60 @@ class HomePage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.2,
-              ),
-              itemCount: _categories.length,
-              itemBuilder: (context, i) {
-                final (label, icon) = _categories[i];
-                return InkWell(
-                  onTap: () => context.go('/booking/category'),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(icon, size: 44, color: AppColors.brandBlue),
-                        const SizedBox(height: 10),
-                        Text(
-                          label,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                      ],
+            child: filtered.isEmpty
+                ? Center(
+                    child: Text(
+                      s.homeNoResults,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 16,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
+                  )
+                : GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.2,
+                    ),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, i) {
+                      final originalIndex = filtered[i].key;
+                      final (label, icon) = filtered[i].value;
+                      final categoryId = _categoryIds[originalIndex];
+                      return InkWell(
+                        onTap: () {
+                          ref
+                              .read(bookingNotifierProvider.notifier)
+                              .setCategory(categoryId, label);
+                          context.go('/booking/description');
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Card(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(icon, size: 44, color: AppColors.brandBlue),
+                              const SizedBox(height: 10),
+                              Text(
+                                label,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        selectedItemColor: AppColors.brandBlue,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.history), label: 'السجل'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person), label: 'الملف الشخصي'),
-        ],
-        onTap: (i) {
-          if (i == 1) context.go('/history');
-          if (i == 2) context.go('/profile');
-        },
       ),
     );
   }
@@ -177,12 +205,16 @@ class HomePage extends ConsumerWidget {
 class _PendingRatingBanner extends StatelessWidget {
   final String providerName;
   final String jobId;
+  final String pendingLabel;
+  final String rateNowLabel;
   final VoidCallback onRate;
   final VoidCallback onDismiss;
 
   const _PendingRatingBanner({
     required this.providerName,
     required this.jobId,
+    required this.pendingLabel,
+    required this.rateNowLabel,
     required this.onRate,
     required this.onDismiss,
   });
@@ -199,10 +231,10 @@ class _PendingRatingBanner extends StatelessWidget {
           children: [
             const Icon(Icons.star_rounded, color: AppColors.amber, size: 20),
             const SizedBox(width: 8),
-            const Expanded(
+            Expanded(
               child: Text(
-                'لديك تقييم معلق',
-                style: TextStyle(
+                pendingLabel,
+                style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
@@ -212,8 +244,8 @@ class _PendingRatingBanner extends StatelessWidget {
             ),
             GestureDetector(
               onTap: onRate,
-              child: const Text(
-                'قيّم الآن',
+              child: Text(
+                rateNowLabel,
                 style: TextStyle(
                   fontFamily: 'Cairo',
                   color: AppColors.amber,

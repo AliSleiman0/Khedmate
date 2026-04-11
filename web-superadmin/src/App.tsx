@@ -7,6 +7,7 @@ import Admins from './pages/Admins/Admins'
 import Financials from './pages/Financials/Financials'
 import Audit from './pages/Audit/Audit'
 import Config from './pages/Config/Config'
+import PlansPage from './pages/Plans/PlansPage'
 import Login from './pages/Login/Login'
 import Forbidden from './pages/Forbidden'
 import ProtectedRoute from './router/ProtectedRoute'
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/financials" element={<Financials />} />
             <Route path="/audit" element={<Audit />} />
             <Route path="/config" element={<Config />} />
+            <Route path="/plans" element={<PlansPage />} />
           </Route>
         </Route>
       </Routes>

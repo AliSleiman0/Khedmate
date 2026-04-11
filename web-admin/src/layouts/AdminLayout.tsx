@@ -7,11 +7,13 @@ const navItems = [
   { to: '/providers', label: 'Providers', icon: '👷' },
   { to: '/customers', label: 'Customers', icon: '👤' },
   { to: '/disputes', label: 'Disputes', icon: '⚖️' },
+  { to: '/subscriptions', label: 'Subscriptions', icon: '💳' },
+  { to: '/reminder-rules', label: 'Reminder Rules', icon: '🔔' },
   { to: '/settings', label: 'Settings', icon: '⚙️' },
 ]
 
 export default function AdminLayout() {
-  const logout = useAuthStore(s => s.logout)
+  const clearAuth = useAuthStore(s => s.clearAuth)
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className="w-64 bg-[#1B4F72] text-white flex flex-col flex-shrink-0">
@@ -36,7 +38,7 @@ export default function AdminLayout() {
           ))}
         </nav>
         <button
-          onClick={logout}
+          onClick={clearAuth}
           className="m-4 p-3 text-sm text-blue-300 hover:text-white text-left flex items-center gap-2 rounded-lg hover:bg-white/10 transition-colors"
         >
           <span>🚪</span> Logout

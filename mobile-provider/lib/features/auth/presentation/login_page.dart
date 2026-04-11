@@ -259,16 +259,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: TextButton(
                       onPressed: () => ScaffoldMessenger.of(context)
                           .showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
-                                'قريباً — استعادة كلمة المرور',
-                                style: TextStyle(fontFamily: 'Cairo'),
+                                S.read(ref).forgotPasswordSoon,
+                                style: const TextStyle(fontFamily: 'Cairo'),
                               ),
                             ),
                           ),
-                      child: const Text(
-                        'نسيت كلمة المرور؟',
-                        style: TextStyle(
+                      child: Text(
+                        s.forgotPassword,
+                        style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontFamily: 'Cairo',
                           fontSize: 13,

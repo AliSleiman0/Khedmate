@@ -2,14 +2,18 @@ using System.Security.Claims;
 using Khudmati.Modules.Bookings.Application.Commands;
 using Khudmati.Modules.Bookings.Application.DTOs;
 using Khudmati.Modules.Bookings.Application.Queries;
+using Khudmati.Modules.Bookings.Domain.Entities;
 using Khudmati.Modules.Bookings.Domain.Enums;
+using Khudmati.Modules.Payments.Domain.Entities;
 using Khudmati.Modules.Providers.Application.Commands;
 using Khudmati.Modules.Providers.Domain.Enums;
 using Khudmati.Modules.Providers.Infrastructure.Persistence;
 using Khudmati.Shared.Application;
+using Khudmati.Shared.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Khudmati.API.Controllers.Providers;
 
@@ -22,17 +26,20 @@ public class ProviderJobsController : ControllerBase
     private readonly IProvidersRepository _providersRepo;
     private readonly IProviderLocationRepository _locationRepo;
     private readonly IWebHostEnvironment _env;
+    private readonly AppDbContext _context;
 
     public ProviderJobsController(
         IMediator mediator,
         IProvidersRepository providersRepo,
         IProviderLocationRepository locationRepo,
-        IWebHostEnvironment env)
+        IWebHostEnvironment env,
+        AppDbContext context)
     {
         _mediator = mediator;
         _providersRepo = providersRepo;
         _locationRepo = locationRepo;
         _env = env;
+        _context = context;
     }
 
     private Guid GetProviderId()
@@ -209,6 +216,75 @@ public class ProviderJobsController : ControllerBase
             await _mediator.Send(new AddJobPhotosCommand(jobId, savedUrls, "after"), ct);
 
         return Ok(Result<IReadOnlyList<string>>.Ok(savedUrls));
+    }
+
+    // GET /api/providers/me/jobs?status=Paid&page=1&pageSize=20 — provider's completed/paid jobs
+    [HttpGet("me/jobs")]
+    public async Task<IActionResult> GetMyCompletedJobs(
+        [FromQuery] string status = "Paid",
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var providerId = GetProviderId();
+
+        // Only Paid status is supported for this endpoint
+        if (!string.Equals(status, "Paid", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { success = false, error = "UNSUPPORTED_STATUS_FILTER" });
+
+        var categoryNames = new Dictionary<string, string>
+        {
+            ["plumbing"] = "سباكة",
+            ["electrical"] = "كهرباء",
+            ["cleaning"] = "تنظيف",
+            ["carpentry"] = "نجارة",
+            ["painting"] = "دهان",
+            ["ac_maintenance"] = "تكييف"
+        };
+
+        var query = _context.Set<Job>()
+            .Where(j => j.ProviderId == providerId && j.Status == JobStatus.Paid)
+            .OrderByDescending(j => j.PaidAt);
+
+        var total = await query.CountAsync(ct);
+
+        var jobs = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var jobIds = jobs.Select(j => j.Id).ToList();
+
+        // Left-join with transactions to get net amounts
+        var transactions = await _context.Set<Transaction>()
+            .Where(t => jobIds.Contains(t.JobId) && t.ProviderId == providerId)
+            .ToListAsync(ct);
+
+        var txByJobId = transactions.ToDictionary(t => t.JobId, t => t.NetAmount);
+
+        var items = jobs.Select(j => new
+        {
+            jobId = j.Id,
+            referenceNumber = j.ReferenceNumber,
+            categoryId = j.CategoryId,
+            categoryName = categoryNames.GetValueOrDefault(j.CategoryId, j.CategoryId),
+            district = j.Address.Split('،', ',')[0].Trim(),
+            netAmount = (double)(txByJobId.TryGetValue(j.Id, out var net) ? net : 0m),
+            completedAt = j.PaidAt ?? j.UpdatedAt
+        }).ToList();
+
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                items,
+                total,
+                page,
+                pageSize,
+                hasNextPage = (page * pageSize) < total
+            }
+        });
     }
 }
 
