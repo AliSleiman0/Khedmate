@@ -2,6 +2,8 @@
 
 > "My Service" — A two-sided home services marketplace for MENA markets.
 
+**New to the project? Start here: [ONBOARDING.md](ONBOARDING.md)**
+
 ## Projects
 
 | Project | Stack | Dev Port | Description |
