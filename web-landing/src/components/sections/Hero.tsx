@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { fadeInUp, staggerContainer, waveFloat } from '../../animations/variants'
+import { fadeInUp, staggerContainer } from '../../animations/variants'
 
 function AppleIcon() {
   return (
@@ -96,7 +96,7 @@ export default function Hero() {
             gap: 12,
             boxShadow: '0 8px 32px rgba(0,0,0,0.30)',
           }}>
-            <img src="/logo.png" alt="خدمتي" style={{ height: 48 }} />
+            <img src="/logo.webp" alt="خدمتي" style={{ height: 48 }} />
             <span style={{ color: 'var(--brown-primary)', fontWeight: 800, fontSize: 26, letterSpacing: '-0.5px' }}>
               خدمتي
             </span>
@@ -171,7 +171,9 @@ export default function Hero() {
 
       {/* Floating wave separator */}
       <motion.div
-        animate={waveFloat}
+        initial={{ y: 0 }}
+        animate={{ y: [0, -10, 0] }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         style={{ marginTop: 64, lineHeight: 0, position: 'relative', zIndex: 1 }}
       >
         <svg viewBox="0 0 1440 80" preserveAspectRatio="none" style={{ width: '100%', height: 80, display: 'block' }}>

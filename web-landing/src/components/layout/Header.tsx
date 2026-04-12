@@ -46,7 +46,7 @@ export default function Header() {
         transition={{ duration: 0.4, ease: 'easeOut' }}
       >
         <div style={{ background: 'white', borderRadius: 10, padding: '4px 6px', display: 'flex', alignItems: 'center' }}>
-          <img src="/logo.png" alt="خدمتي" style={{ height: 36 }} />
+          <img src="/logo.webp" alt="خدمتي" style={{ height: 36 }} />
         </div>
         <span style={{ color: 'var(--amber)', fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}>
           خدمتي

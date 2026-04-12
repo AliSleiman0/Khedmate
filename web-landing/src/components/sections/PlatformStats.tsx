@@ -75,9 +75,11 @@ function StatCard({
   )
 }
 
+const FALLBACK: StatsData = { totalBookings: 1200, totalProviders: 350, avgRating: 4.8, citiesCovered: 6 }
+
 export default function PlatformStats() {
   const { t } = useTranslation()
-  const [stats, setStats] = useState<StatsData | null>(null)
+  const [stats, setStats] = useState<StatsData>(FALLBACK)
   const sectionRef = useRef<HTMLElement>(null)
   const inView = useInView(sectionRef, { once: true, amount: 0.2 })
 
@@ -85,12 +87,8 @@ export default function PlatformStats() {
     fetch('/api/landing/stats')
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((data: { success: boolean; data: StatsData }) => setStats(data.data ?? data))
-      .catch(() => {
-        setStats({ totalBookings: 12400, totalProviders: 5200, avgRating: 4.8, citiesCovered: 14 })
-      })
+      .catch(() => { /* keep fallback values */ })
   }, [])
-
-  if (!stats) return null
 
   return (
     <section ref={sectionRef} style={{ background: 'var(--cream-warm)' }}>

@@ -319,6 +319,16 @@ AppDbContext.AdditionalModelConfiguration = modelBuilder =>
         e.HasIndex(x => x.CreatedAt).IsDescending();
     });
 
+    // Landing page contact inquiries (public schema — Feature #16)
+    modelBuilder.Entity<ContactInquiry>(e =>
+    {
+        e.ToTable("contact_inquiries", "public");
+        e.HasKey(x => x.Id);
+        e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        e.Property(x => x.Email).HasMaxLength(200).IsRequired();
+        e.Property(x => x.Message).HasColumnType("text").IsRequired();
+    });
+
     // Disputes (bookings schema)
     modelBuilder.Entity<Dispute>(e =>
     {

@@ -36,7 +36,11 @@
       "Bash(JAVA_HOME=\"C:/Program Files/Microsoft/jdk-21.0.10.7-hotspot\" flutter run -d R3CT90MEVFM)",
       "Bash(JAVA_HOME=\"C:/Program Files/Microsoft/jdk-21.0.10.7-hotspot\" flutter analyze lib/widgets/main_scaffold.dart lib/app/router.dart lib/features/home/presentation/home_page.dart)",
       "Bash(flutter analyze:*)",
-      "Bash(python3 -c ':*)"
+      "Bash(python3 -c ':*)",
+      "Bash(dotnet build:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker compose:*)",
+      "Bash(dotnet run:*)"
     ]
   }
 }

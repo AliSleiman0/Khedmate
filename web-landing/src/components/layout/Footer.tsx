@@ -87,7 +87,7 @@ export default function Footer() {
         <motion.div variants={fadeInUp}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <div style={{ background: 'white', borderRadius: 10, padding: '4px 6px', display: 'flex', alignItems: 'center' }}>
-              <img src="/logo.png" alt="خدمتي" style={{ height: 36 }} />
+              <img src="/logo.webp" alt="خدمتي" style={{ height: 36 }} />
             </div>
             <span style={{ color: 'var(--amber)', fontWeight: 700, fontSize: 22 }}>خدمتي</span>
           </div>

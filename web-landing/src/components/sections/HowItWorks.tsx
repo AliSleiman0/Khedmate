@@ -132,7 +132,7 @@ export default function HowItWorks() {
             </motion.div>
           )
           if (i < steps.length - 1) {
-            return [card, <ChevronIcon key={`arrow-${i}`} flip={isLtr} />]
+            return [card, <ChevronIcon key={`arrow-${i}`} flip={!isLtr} />]
           }
           return [card]
         })}
