@@ -43,14 +43,14 @@ export default function ContactForm() {
   }
 
   return (
-    <section id="contact" style={{ background: 'var(--surface-warm)' }}>
+    <section id="contact" style={{ background: 'var(--surface)' }}>
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
         <motion.h2
           variants={fadeInUp}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          style={{ fontSize: 38, fontWeight: 700, marginBottom: 12, textAlign: 'center', color: 'var(--brown-primary)' }}
+          style={{ fontSize: 38, fontWeight: 700, marginBottom: 12, textAlign: 'center', color: 'var(--brand-blue)' }}
         >
           {t('contact_us')}
         </motion.h2>
@@ -75,8 +75,8 @@ export default function ContactForm() {
                 padding: '56px 24px',
                 background: 'white',
                 borderRadius: 'var(--radius-card)',
-                boxShadow: '0 4px 24px var(--shadow-brown)',
-                border: '1px solid var(--cream-border)',
+                boxShadow: '0 4px 24px rgba(27,79,114,0.08)',
+                border: '1px solid rgba(27,79,114,0.10)',
               }}
             >
               <motion.svg
@@ -89,7 +89,7 @@ export default function ContactForm() {
                 <circle cx="12" cy="12" r="10" stroke="var(--success)" strokeWidth="2"/>
                 <polyline points="9 12 11 14 15 10" stroke="var(--success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               </motion.svg>
-              <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--brown-primary)' }}>{t('contact_success_title')}</p>
+              <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--brand-blue)' }}>{t('contact_success_title')}</p>
               <p style={{ color: 'var(--text-secondary)', marginTop: 10 }}>{t('contact_success_desc')}</p>
             </motion.div>
           ) : (
@@ -107,8 +107,8 @@ export default function ContactForm() {
                 background: 'white',
                 padding: 36,
                 borderRadius: 'var(--radius-card)',
-                boxShadow: '0 4px 24px var(--shadow-brown)',
-                border: '1px solid var(--cream-border)',
+                boxShadow: '0 4px 24px rgba(27,79,114,0.08)',
+                border: '1px solid rgba(27,79,114,0.10)',
               }}
             >
               {(['name', 'email'] as const).map(f => (
@@ -116,8 +116,8 @@ export default function ContactForm() {
                   key={f}
                   animate={{
                     boxShadow: focusedField === f
-                      ? '0 0 0 2px var(--brown-primary)'
-                      : '0 0 0 1px var(--cream-border)',
+                      ? '0 0 0 2px var(--brand-blue)'
+                      : '0 0 0 1px rgba(27,79,114,0.15)',
                   }}
                   transition={{ duration: 0.18 }}
                   style={{ borderRadius: 12 }}
@@ -137,8 +137,8 @@ export default function ContactForm() {
               <motion.div
                 animate={{
                   boxShadow: focusedField === 'message'
-                    ? '0 0 0 2px var(--brown-primary)'
-                    : '0 0 0 1px var(--cream-border)',
+                    ? '0 0 0 2px var(--brand-blue)'
+                    : '0 0 0 1px rgba(27,79,114,0.15)',
                 }}
                 transition={{ duration: 0.18 }}
                 style={{ borderRadius: 12 }}
@@ -160,10 +160,10 @@ export default function ContactForm() {
               <motion.button
                 type="submit"
                 disabled={loading}
-                whileHover={!loading ? { scale: 1.03, boxShadow: '0 6px 20px var(--shadow-brown-lg)' } : {}}
+                whileHover={!loading ? { scale: 1.03, boxShadow: '0 6px 20px rgba(27,79,114,0.25)' } : {}}
                 whileTap={!loading ? { scale: 0.97 } : {}}
                 style={{
-                  background: loading ? 'var(--brown-mid)' : 'var(--brown-primary)',
+                  background: loading ? '#2E6B99' : 'var(--brand-blue)',
                   color: 'white',
                   border: 'none',
                   padding: '15px',

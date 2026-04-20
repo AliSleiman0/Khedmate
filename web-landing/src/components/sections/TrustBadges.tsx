@@ -58,7 +58,7 @@ export default function TrustBadges() {
 
   return (
     <section style={{
-      background: 'linear-gradient(135deg, var(--brown-primary) 0%, var(--brown-mid) 100%)',
+      background: 'linear-gradient(135deg, #1B4F72 0%, #0D3050 100%)',
       textAlign: 'center',
     }}>
       <motion.h2

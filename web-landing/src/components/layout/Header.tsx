@@ -14,9 +14,9 @@ export default function Header() {
   }, [])
 
   const { scrollY } = useScroll()
-  const headerBg = useTransform(scrollY, [0, 60], ['rgba(59,23,4,1)', 'rgba(59,23,4,0.92)'])
+  const headerBg = useTransform(scrollY, [0, 60], ['rgba(27,79,114,1)', 'rgba(27,79,114,0.95)'])
   const headerBlur = useTransform(scrollY, [0, 60], ['blur(0px) saturate(100%)', 'blur(16px) saturate(180%)'])
-  const headerShadow = useTransform(scrollY, [0, 60], ['0 2px 20px rgba(59,23,4,0)', '0 2px 20px rgba(59,23,4,0.20)'])
+  const headerShadow = useTransform(scrollY, [0, 60], ['0 2px 20px rgba(27,79,114,0)', '0 2px 20px rgba(27,79,114,0.25)'])
 
   const navLinks = [
     { href: '#how-it-works', label: t('how_it_works') },

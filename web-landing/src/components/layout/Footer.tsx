@@ -73,7 +73,7 @@ export default function Footer() {
   ]
 
   return (
-    <footer style={{ background: 'var(--brown-primary)', color: 'rgba(255,255,255,0.85)' }}>
+    <footer style={{ background: '#0D3050', color: 'rgba(255,255,255,0.85)' }}>
       {/* Main grid */}
       <AnimatedSection stagger="slow" style={{
         display: 'grid',

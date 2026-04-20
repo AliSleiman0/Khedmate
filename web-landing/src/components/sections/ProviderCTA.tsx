@@ -3,42 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer, getDirectionalVariants } from '../../animations/variants'
 
-function HouseIllustration() {
-  return (
-    <svg viewBox="0 0 300 260" width="280" fill="none" xmlns="http://www.w3.org/2000/svg"
-      style={{ opacity: 0.9 }}>
-      {/* House body */}
-      <rect x="70" y="130" width="160" height="110" rx="6" stroke="white" strokeWidth="3" fill="rgba(255,255,255,0.06)"/>
-      {/* Roof */}
-      <polyline points="55,135 150,55 245,135" stroke="white" strokeWidth="3" strokeLinejoin="round"/>
-      {/* Chimney */}
-      <rect x="185" y="70" width="22" height="42" rx="3" stroke="white" strokeWidth="2.5" fill="rgba(255,255,255,0.06)"/>
-      {/* Door */}
-      <rect x="126" y="175" width="48" height="65" rx="4" stroke="white" strokeWidth="2.5" fill="rgba(255,255,255,0.06)"/>
-      <circle cx="167" cy="210" r="3" fill="white"/>
-      {/* Window left */}
-      <rect x="85" y="155" width="42" height="36" rx="4" stroke="white" strokeWidth="2" fill="rgba(255,255,255,0.06)"/>
-      <line x1="106" y1="155" x2="106" y2="191" stroke="white" strokeWidth="1.5"/>
-      <line x1="85" y1="173" x2="127" y2="173" stroke="white" strokeWidth="1.5"/>
-      {/* Window right */}
-      <rect x="173" y="155" width="42" height="36" rx="4" stroke="white" strokeWidth="2" fill="rgba(255,255,255,0.06)"/>
-      <line x1="194" y1="155" x2="194" y2="191" stroke="white" strokeWidth="1.5"/>
-      <line x1="173" y1="173" x2="215" y2="173" stroke="white" strokeWidth="1.5"/>
-      {/* Sparkles */}
-      <circle cx="40" cy="80" r="5" fill="var(--amber)" opacity="0.8"/>
-      <circle cx="260" cy="90" r="4" fill="var(--amber)" opacity="0.7"/>
-      <circle cx="30" cy="160" r="3" fill="white" opacity="0.5"/>
-      <circle cx="272" cy="150" r="3.5" fill="white" opacity="0.5"/>
-      <line x1="40" y1="60" x2="40" y2="72" stroke="var(--amber)" strokeWidth="1.5" opacity="0.8"/>
-      <line x1="34" y1="66" x2="46" y2="66" stroke="var(--amber)" strokeWidth="1.5" opacity="0.8"/>
-      <line x1="260" y1="72" x2="260" y2="82" stroke="var(--amber)" strokeWidth="1.5" opacity="0.7"/>
-      <line x1="255" y1="77" x2="265" y2="77" stroke="var(--amber)" strokeWidth="1.5" opacity="0.7"/>
-      {/* Ground line */}
-      <line x1="40" y1="240" x2="260" y2="240" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  )
-}
-
 export default function ProviderCTA() {
   const { t, i18n } = useTranslation()
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -59,7 +23,7 @@ export default function ProviderCTA() {
 
   return (
     <section style={{
-      background: 'linear-gradient(135deg, var(--brown-primary) 0%, #5C2D0A 50%, var(--amber) 100%)',
+      background: 'linear-gradient(135deg, #1B4F72 0%, #0D3050 100%)',
       color: 'white',
     }}>
       <div style={{
@@ -67,7 +31,7 @@ export default function ProviderCTA() {
         margin: '0 auto',
         display: 'flex',
         alignItems: 'center',
-        gap: 48,
+        gap: 64,
         flexDirection: isMobile ? 'column' : 'row',
       }}>
         {/* Text side */}
@@ -109,7 +73,7 @@ export default function ProviderCTA() {
             whileTap={{ scale: 0.97 }}
             style={{
               background: 'white',
-              color: 'var(--brown-primary)',
+              color: 'var(--brand-blue)',
               border: 'none',
               padding: '15px 48px',
               borderRadius: 'var(--radius-pill)',
@@ -123,7 +87,7 @@ export default function ProviderCTA() {
           </motion.button>
         </motion.div>
 
-        {/* Decorative illustration */}
+        {/* Provider photo — desktop only */}
         {!isMobile && (
           <motion.div
             variants={dv.slideInEnd}
@@ -132,7 +96,18 @@ export default function ProviderCTA() {
             viewport={{ once: true, amount: 0.2 }}
             style={{ flexShrink: 0 }}
           >
-            <HouseIllustration />
+            <img
+              src="/provider.jpg"
+              alt="Service provider"
+              style={{
+                width: 300,
+                height: 380,
+                objectFit: 'cover',
+                borderRadius: 20,
+                boxShadow: '0 24px 48px rgba(0,0,0,0.35)',
+                display: 'block',
+              }}
+            />
           </motion.div>
         )}
       </div>

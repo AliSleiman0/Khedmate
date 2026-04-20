@@ -1,6 +1,6 @@
-import { useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '../../animations/variants'
 
 function AppleIcon() {
@@ -23,11 +23,13 @@ function AndroidIcon() {
 
 export default function Hero() {
   const { t } = useTranslation()
-  const sectionRef = useRef<HTMLElement>(null)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 900)
 
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end start'] })
-  const isMobile = window.matchMedia('(max-width: 768px)').matches
-  const bgY = useTransform(scrollYProgress, [0, 1], isMobile ? [0, 0] : [0, -80])
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 900)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const heroTitle = t('hero_title')
   const highlight = t('hero_title_highlight')
@@ -36,150 +38,145 @@ export default function Hero() {
   const afterWords = (parts[1] || '').split(' ').filter(Boolean)
 
   return (
-    <section ref={sectionRef} style={{ position: 'relative', overflow: 'hidden', textAlign: 'center' }}>
-      {/* Parallax background layer */}
-      <motion.div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(150deg, var(--brown-primary) 0%, var(--brown-deep) 60%, #1A0800 100%)',
-        y: bgY,
-        willChange: 'transform',
-        zIndex: 0,
-      }} />
+    <section style={{
+      position: 'relative',
+      overflow: 'hidden',
+      background: 'linear-gradient(135deg, #1B4F72 0%, #0D3050 100%)',
+      padding: 0,
+    }}>
+      <div style={{
+        maxWidth: 1200,
+        margin: '0 auto',
+        padding: isMobile ? '80px 24px 0' : '100px 48px 0',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 64,
+        flexDirection: 'row',
+      }}>
+        {/* Text column */}
+        <motion.div
+          style={{ flex: 1, color: 'white', textAlign: isMobile ? 'center' : 'start', zIndex: 1 }}
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          {/* Logo badge */}
+          <motion.div variants={fadeInUp} style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start', marginBottom: 32 }}>
+            <div style={{
+              background: 'white',
+              borderRadius: 20,
+              padding: '8px 18px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 12,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+            }}>
+              <img src="/logo.webp" alt="خدمتي" style={{ height: 44 }} />
+              <span style={{ color: '#1B4F72', fontWeight: 800, fontSize: 24, letterSpacing: '-0.5px' }}>
+                خدمتي
+              </span>
+            </div>
+          </motion.div>
 
-      {/* Ambient floating dots */}
-      <motion.div
-        aria-hidden="true"
-        animate={{ y: [0, -18, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute', top: '15%', insetInlineStart: '8%',
-          width: 12, height: 12, borderRadius: '50%',
-          background: 'var(--amber)', opacity: 0.35, zIndex: 0,
-        }}
-      />
-      <motion.div
-        aria-hidden="true"
-        animate={{ y: [0, 12, 0] }}
-        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-        style={{
-          position: 'absolute', top: '35%', insetInlineEnd: '10%',
-          width: 8, height: 8, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.4)', opacity: 0.4, zIndex: 0,
-        }}
-      />
-      <motion.div
-        aria-hidden="true"
-        animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 2.5 }}
-        style={{
-          position: 'absolute', top: '60%', insetInlineStart: '15%',
-          width: 6, height: 6, borderRadius: '50%',
-          background: 'var(--amber)', opacity: 0.25, zIndex: 0,
-        }}
-      />
-
-      {/* Content */}
-      <motion.div
-        style={{ position: 'relative', zIndex: 1, padding: '120px 24px 0', color: 'white' }}
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
-        {/* Logo badge */}
-        <motion.div variants={fadeInUp} style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-          <div style={{
-            background: 'white',
-            borderRadius: 20,
-            padding: '10px 20px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 12,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.30)',
+          {/* Headline */}
+          <motion.h1 style={{
+            fontSize: 'clamp(34px, 5vw, 56px)',
+            fontWeight: 700,
+            lineHeight: 1.15,
+            marginBottom: 24,
           }}>
-            <img src="/logo.webp" alt="خدمتي" style={{ height: 48 }} />
-            <span style={{ color: 'var(--brown-primary)', fontWeight: 800, fontSize: 26, letterSpacing: '-0.5px' }}>
-              خدمتي
-            </span>
-          </div>
+            {beforeWords.map((word, i) => (
+              <motion.span key={`b${i}`} variants={fadeInUp}
+                style={{ display: 'inline-block', marginInlineEnd: '0.28em' }}>
+                {word}
+              </motion.span>
+            ))}
+            <motion.span variants={fadeInUp}
+              style={{ display: 'inline-block', color: 'var(--amber)', marginInlineEnd: '0.28em' }}>
+              {highlight}
+            </motion.span>
+            {afterWords.map((word, i) => (
+              <motion.span key={`a${i}`} variants={fadeInUp}
+                style={{ display: 'inline-block', marginInlineStart: i === 0 ? 0 : '0.28em' }}>
+                {word}
+              </motion.span>
+            ))}
+          </motion.h1>
+
+          <motion.p variants={fadeInUp} style={{
+            fontSize: 19, opacity: 0.88, maxWidth: 500,
+            margin: isMobile ? '0 auto 40px' : '0 0 40px', lineHeight: 1.7,
+          }}>
+            {t('hero_subtitle')}
+          </motion.p>
+
+          <motion.div variants={staggerContainer} style={{
+            display: 'flex', gap: 14, flexWrap: 'wrap',
+            justifyContent: isMobile ? 'center' : 'flex-start',
+          }}>
+            <motion.button
+              variants={fadeInUp}
+              whileHover={{ scale: 1.05, background: 'var(--amber-dark)' }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 18 }}
+              style={{
+                background: 'var(--amber)', color: 'white', border: 'none',
+                padding: '14px 36px', borderRadius: 'var(--radius-pill)',
+                fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              <AppleIcon />{t('download_ios')}
+            </motion.button>
+
+            <motion.button
+              variants={fadeInUp}
+              whileHover={{ scale: 1.05, background: 'rgba(255,255,255,0.18)' }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 18 }}
+              style={{
+                background: 'rgba(255,255,255,0.10)', color: 'white',
+                border: '1.5px solid rgba(255,255,255,0.35)',
+                padding: '14px 36px', borderRadius: 'var(--radius-pill)',
+                fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              <AndroidIcon />{t('download_android')}
+            </motion.button>
+          </motion.div>
         </motion.div>
 
-        {/* Word-split headline */}
-        <motion.h1 style={{
-          fontSize: 'clamp(38px, 6vw, 58px)',
-          fontWeight: 700,
-          lineHeight: 1.15,
-          marginBottom: 24,
-        }}>
-          {beforeWords.map((word, i) => (
-            <motion.span key={`b${i}`} variants={fadeInUp}
-              style={{ display: 'inline-block', marginInlineEnd: '0.28em' }}>
-              {word}
-            </motion.span>
-          ))}
-          <motion.span variants={fadeInUp}
-            style={{ display: 'inline-block', color: 'var(--amber)', marginInlineEnd: '0.28em' }}>
-            {highlight}
-          </motion.span>
-          {afterWords.map((word, i) => (
-            <motion.span key={`a${i}`} variants={fadeInUp}
-              style={{ display: 'inline-block', marginInlineStart: i === 0 ? 0 : '0.28em' }}>
-              {word}
-            </motion.span>
-          ))}
-        </motion.h1>
-
-        <motion.p variants={fadeInUp} style={{
-          fontSize: 20, opacity: 0.88, maxWidth: 620,
-          margin: '0 auto 48px', lineHeight: 1.7,
-        }}>
-          {t('hero_subtitle')}
-        </motion.p>
-
-        <motion.div variants={staggerContainer} style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <motion.button
-            variants={fadeInUp}
-            whileHover={{ scale: 1.05, background: 'var(--amber-dark)' }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 18 }}
-            style={{
-              background: 'var(--amber)', color: 'white', border: 'none',
-              padding: '15px 40px', borderRadius: 'var(--radius-pill)',
-              fontSize: 17, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              display: 'flex', alignItems: 'center',
-            }}
+        {/* Image column — desktop only */}
+        {!isMobile && (
+          <motion.div
+            initial={{ opacity: 0, x: 60 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+            style={{ flexShrink: 0, width: 440 }}
           >
-            <AppleIcon />{t('download_ios')}
-          </motion.button>
+            <img
+              src="/hero.jpg"
+              alt="Professional home service"
+              style={{
+                width: '100%',
+                height: 480,
+                objectFit: 'cover',
+                borderRadius: 24,
+                boxShadow: '0 32px 64px rgba(0,0,0,0.35)',
+                display: 'block',
+              }}
+            />
+          </motion.div>
+        )}
+      </div>
 
-          <motion.button
-            variants={fadeInUp}
-            whileHover={{ scale: 1.05, background: 'rgba(255,255,255,0.18)' }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 18 }}
-            style={{
-              background: 'rgba(255,255,255,0.10)', color: 'white',
-              border: '1.5px solid rgba(255,255,255,0.35)',
-              padding: '15px 40px', borderRadius: 'var(--radius-pill)',
-              fontSize: 17, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              display: 'flex', alignItems: 'center',
-            }}
-          >
-            <AndroidIcon />{t('download_android')}
-          </motion.button>
-        </motion.div>
-      </motion.div>
-
-      {/* Floating wave separator */}
-      <motion.div
-        initial={{ y: 0 }}
-        animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ marginTop: 64, lineHeight: 0, position: 'relative', zIndex: 1 }}
-      >
+      {/* Wave separator */}
+      <div style={{ marginTop: 72, lineHeight: 0, position: 'relative', zIndex: 1 }}>
         <svg viewBox="0 0 1440 80" preserveAspectRatio="none" style={{ width: '100%', height: 80, display: 'block' }}>
-          <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="var(--surface-warm)" />
+          <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="white" />
         </svg>
-      </motion.div>
+      </div>
     </section>
   )
 }

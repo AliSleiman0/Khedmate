@@ -35,18 +35,28 @@ function useCountUp(target: number, duration: number, started: boolean) {
   return count
 }
 
+function StarIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="var(--amber)" style={{ verticalAlign: 'middle', marginInlineStart: 4 }}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  )
+}
+
 function StatCard({
   value,
   suffix,
   label,
   started,
   isDecimal,
+  showStar,
 }: {
   value: number
-  suffix: string
+  suffix?: string
   label: string
   started: boolean
   isDecimal?: boolean
+  showStar?: boolean
 }) {
   const { i18n } = useTranslation()
   const count = useCountUp(isDecimal ? Math.round(value * 10) : value, 1500, started)
@@ -62,13 +72,14 @@ function StatCard({
         borderRadius: 'var(--radius-card)',
         padding: '36px 24px',
         textAlign: 'center',
-        boxShadow: '0 4px 20px var(--shadow-brown)',
-        border: '1px solid var(--cream-border)',
+        boxShadow: '0 4px 20px rgba(27,79,114,0.08)',
+        border: '1px solid rgba(27,79,114,0.10)',
       }}
     >
-      <div style={{ fontSize: 48, fontWeight: 700, color: 'var(--brown-primary)', lineHeight: 1 }}>
+      <div style={{ fontSize: 48, fontWeight: 700, color: 'var(--brand-blue)', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {display}
-        <span style={{ color: 'var(--amber)', fontSize: 32 }}>{suffix}</span>
+        {suffix && <span style={{ color: 'var(--amber)', fontSize: 32, marginInlineStart: 2 }}>{suffix}</span>}
+        {showStar && <StarIcon />}
       </div>
       <p style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: 10 }}>{label}</p>
     </motion.div>
@@ -91,13 +102,13 @@ export default function PlatformStats() {
   }, [])
 
   return (
-    <section ref={sectionRef} style={{ background: 'var(--cream-warm)' }}>
+    <section ref={sectionRef} style={{ background: 'var(--surface)' }}>
       <motion.h2
         variants={fadeInUp}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}
-        style={{ fontSize: 38, fontWeight: 700, color: 'var(--brown-primary)', textAlign: 'center', marginBottom: 12 }}
+        style={{ fontSize: 38, fontWeight: 700, color: 'var(--brand-blue)', textAlign: 'center', marginBottom: 12 }}
       >
         {t('stats_title')}
       </motion.h2>
@@ -117,7 +128,7 @@ export default function PlatformStats() {
       }}>
         <StatCard value={stats.totalBookings} suffix="+" label={t('stats_bookings')} started={inView} />
         <StatCard value={stats.totalProviders} suffix="+" label={t('stats_providers')} started={inView} />
-        <StatCard value={stats.avgRating} suffix="⭐" label={t('stats_rating')} started={inView} isDecimal />
+        <StatCard value={stats.avgRating} showStar label={t('stats_rating')} started={inView} isDecimal />
         <StatCard value={stats.citiesCovered} suffix="+" label={t('stats_cities')} started={inView} />
       </AnimatedSection>
     </section>
