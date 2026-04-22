@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
-import '../data/auth_repository.dart';
+import 'auth_provider.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   final String phone;

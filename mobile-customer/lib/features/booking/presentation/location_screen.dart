@@ -68,7 +68,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        desiredAccuracy: LocationAccuracy.high,
       );
       final latLng = LatLng(pos.latitude, pos.longitude);
       setState(() => _center = latLng);

@@ -25,14 +25,9 @@ class MainScaffold extends ConsumerWidget {
 
     return Scaffold(
       body: navigationShell,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/booking/category'),
-        backgroundColor: AppColors.amber,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: const CircleBorder(),
-        tooltip: s.navBook,
-        child: const Icon(Icons.add_rounded, size: 32),
+      floatingActionButton: _AmberFab(
+        label: s.navBook,
+        onTap: () => context.go('/booking/category'),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
@@ -72,6 +67,48 @@ class MainScaffold extends ConsumerWidget {
               onTap: () => _onTap(context, 3),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AmberFab extends StatelessWidget {
+  const _AmberFab({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 58,
+          height: 58,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.amber, AppColors.amberDeep],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.amber.withOpacity(0.55),
+                blurRadius: 18,
+                spreadRadius: 0,
+                offset: const Offset(0, 8),
+              ),
+            ],
+            border: Border.all(color: Colors.white, width: 3),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.add_rounded,
+              size: 28, color: Colors.white),
         ),
       ),
     );

@@ -22,6 +22,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _obscurePassword = true;
   String? _errorMessage;
   bool _showResendOtp = false;
+  String _dialCode = '+961';
 
   @override
   void dispose() {
@@ -47,7 +48,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
     if (!_formKey.currentState!.validate()) return;
 
-    final phone = _phoneController.text.trim();
+    final phone = '$_dialCode${_phoneController.text.trim()}';
 
     await ref.read(authNotifierProvider.notifier).login(
           phone: phone,
@@ -100,7 +101,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
-    final phone = _phoneController.text.trim();
+    final phone = '$_dialCode${_phoneController.text.trim()}';
     final s = S.of(ref);
 
     return Scaffold(
@@ -204,22 +205,72 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Phone field
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.next,
-                    decoration: _inputDecoration(
-                      label: s.phoneNumber,
-                      icon: Icons.phone_outlined,
-                    ),
-                    style: const TextStyle(fontFamily: 'Cairo'),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return s.phoneRequired;
-                      }
-                      return null;
-                    },
+                  // Phone field with country code
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        height: 56,
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _dialCode,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 15,
+                              color: Colors.black87,
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: '+966', child: Text('+966 🇸🇦')),
+                              DropdownMenuItem(value: '+971', child: Text('+971 🇦🇪')),
+                              DropdownMenuItem(value: '+965', child: Text('+965 🇰🇼')),
+                              DropdownMenuItem(value: '+973', child: Text('+973 🇧🇭')),
+                              DropdownMenuItem(value: '+968', child: Text('+968 🇴🇲')),
+                              DropdownMenuItem(value: '+974', child: Text('+974 🇶🇦')),
+                              DropdownMenuItem(value: '+962', child: Text('+962 🇯🇴')),
+                              DropdownMenuItem(value: '+961', child: Text('+961 🇱🇧')),
+                              DropdownMenuItem(value: '+20', child: Text('+20 🇪🇬')),
+                              DropdownMenuItem(value: '+212', child: Text('+212 🇲🇦')),
+                              DropdownMenuItem(value: '+1', child: Text('+1 🇺🇸')),
+                              DropdownMenuItem(value: '+44', child: Text('+44 🇬🇧')),
+                              DropdownMenuItem(value: '+33', child: Text('+33 🇫🇷')),
+                              DropdownMenuItem(value: '+49', child: Text('+49 🇩🇪')),
+                              DropdownMenuItem(value: '+91', child: Text('+91 🇮🇳')),
+                              DropdownMenuItem(value: '+92', child: Text('+92 🇵🇰')),
+                              DropdownMenuItem(value: '+880', child: Text('+880 🇧🇩')),
+                              DropdownMenuItem(value: '+63', child: Text('+63 🇵🇭')),
+                            ],
+                            onChanged: (v) => setState(() => _dialCode = v!),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.next,
+                          decoration: _inputDecoration(
+                            label: s.phoneNumber,
+                            icon: Icons.phone_outlined,
+                          ),
+                          style: const TextStyle(fontFamily: 'Cairo'),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return s.phoneRequired;
+                            }
+                            final digits = v.trim().replaceAll(RegExp(r'\D'), '');
+                            if (digits.length < 7) return s.phoneInvalid;
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 

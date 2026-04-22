@@ -106,6 +106,30 @@ class S {
   String get homePendingRating => isAr ? 'لديك تقييم معلق'   : 'You have a pending rating';
   String get homeRateNow       => isAr ? 'قيّم الآن'         : 'Rate Now';
 
+  // ── Home (redesigned — Direction C) ─────────────────────────────────────────
+  String get homeLocationLabel  => isAr ? 'الموقع'                         : 'Location';
+  String get homeLocationPrompt => isAr ? 'اختر موقعك'                     : 'Pick location';
+  String get homeAskHeadline    => isAr ? 'ما الذي يحتاج إصلاح؟'            : 'What needs fixing?';
+  String get homeAskSub         => isAr
+      ? 'اكتب، تكلم، أو اختر من الأسفل. سنجد لك فنياً مناسباً.'
+      : "Type, speak, or pick below. We'll match you to a trusted pro.";
+  String get homeAskPlaceholder => isAr ? 'مثلاً: الحنفية تسرّب…'            : 'e.g. The tap is leaking…';
+  String get homeSpeak          => isAr ? 'تكلم'                           : 'Speak';
+  String get homeChipEmergency  => isAr ? 'طارئ'                           : 'Emergency';
+  String get homeChipPreGuest   => isAr ? 'تنظيف قبل الضيوف'               : 'Pre-guest clean';
+  String get homeChipAcCheck    => isAr ? 'فحص التكييف'                    : 'AC check-up';
+  String get homeChipQuickPlumb => isAr ? 'سباكة سريعة'                    : 'Quick plumbing';
+  String get homeBrowseServices => isAr ? 'تصفّح حسب الخدمة'               : 'Browse by service';
+  String get homeBookAgain      => isAr ? 'احجز مجدداً'                     : 'Book again';
+  String get homeHistoryLink    => isAr ? 'سجل الحجوزات'                    : 'History';
+  String get homeSeeAll         => isAr ? 'عرض الكل'                       : 'See all';
+  String get homeSummerPick     => isAr ? 'موسم الصيف'                     : 'Summer pick';
+  String get homeAcService      => isAr ? 'صيانة وتنظيف التكييف'           : 'AC service & clean';
+  String get homeAcServiceSub   => isAr ? 'حافظ على برودة البيت'           : 'Keep your home cool';
+  String get homePopularBadge   => isAr ? 'الأشهر'                         : 'Popular';
+  String get homeReferTitle     => isAr ? 'ادعُ صديقاً واربح رصيداً'        : 'Invite a friend, earn credit';
+  String homeCategoriesCount(int n) => isAr ? '$n فئة' : '$n categories';
+
   // ── Service categories ────────────────────────────────────────────────────────
   String get catCleaning   => isAr ? 'تنظيف'   : 'Cleaning';
   String get catPlumbing   => isAr ? 'سباكة'   : 'Plumbing';
