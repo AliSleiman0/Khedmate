@@ -9,11 +9,20 @@ Customers book home services; verified providers accept and fulfill jobs.
 | Directory | Stack | Dev port |
 |---|---|---|
 | `backend/` | .NET 8 modular monolith + PostgreSQL | 5000 |
-| `mobile-customer/` | Flutter (Riverpod, GoRouter, Dio) | — |
-| `mobile-provider/` | Flutter (Riverpod, GoRouter, Dio) | — |
+| `mobile/` | Flutter unified app (Riverpod, GoRouter, Dio) — **in-progress migration** | — |
+| `mobile-customer/` | Flutter (Riverpod, GoRouter, Dio) — legacy, being merged into `mobile/` | — |
+| `mobile-provider/` | Flutter (Riverpod, GoRouter, Dio) — legacy, being merged into `mobile/` | — |
 | `web-landing/` | React + Vite + i18next (AR default / EN fallback) | 3000 |
 | `web-admin/` | React + Vite + Tailwind + Zustand | 3001 |
 | `web-superadmin/` | React + Vite + Tailwind + Zustand | 3002 |
+
+### Mobile migration (in progress)
+The two legacy Flutter apps are being merged into a single role-aware `mobile/`
+app on branch `feat/unified-app`. Plan + per-phase prompts live under
+`migration-plan/` (see `migration-plan/README.md`). Phase 01 scaffolded
+`mobile/`; Phase 02 ported the shared core (theme, l10n, API client, SignalR,
+FCM, locale, new `role_provider`). Until the migration completes, the two
+legacy apps remain the production targets. See `mobile/CLAUDE.md` for details.
 
 ## Brand
 - Blue: `#1B4F72` — primary brand, backgrounds, buttons
