@@ -35,6 +35,18 @@ class S {
   String get createAccount => isAr ? 'إنشاء حساب' : 'Create Account';
   String get signIn => isAr ? 'تسجيل الدخول' : 'Sign In';
   String get joinAsProvider => isAr ? 'أنا مزود خدمة' : 'Join as Provider';
+  String get welcomeRoleQuestion =>
+      isAr ? 'كيف تريد استخدام خدمتي؟' : 'How would you like to use Khudmati?';
+  String get welcomeRoleCustomer =>
+      isAr ? 'أحتاج خدمة' : 'I need a service';
+  String get welcomeRoleCustomerSub =>
+      isAr ? 'احجز مقدمي خدمات موثوقين في دقائق'
+           : 'Book trusted providers in minutes';
+  String get welcomeRoleProvider =>
+      isAr ? 'أقدم خدمات' : 'I provide services';
+  String get welcomeRoleProviderSub =>
+      isAr ? 'استقبل طلبات العملاء وابدأ العمل'
+           : 'Receive jobs and start earning';
 
   // ── Login ───────────────────────────────────────────────────────────────────
   String get welcomeBack => isAr ? 'مرحباً بك مجدداً' : 'Welcome Back';

@@ -21,11 +21,12 @@ in.
 - minSdk: 21 · iOS deployment target: 13.0
 - Flutter `>=3.16.0` · Dart `>=3.2.0 <4.0.0`
 
-## Architecture (Phase 02 state)
+## Architecture (Phase 03 state)
 ```
 lib/
 ├── app/
-│   ├── app.dart          # KhudmatiApp — MaterialApp.router (placeholder router)
+│   ├── app.dart          # KhudmatiApp — MaterialApp.router wired to routerProvider
+│   ├── router.dart       # routerProvider — GoRouter with role+token redirect guards
 │   └── theme.dart        # AppTheme.light() — Cairo + Material 3
 ├── core/
 │   ├── api/
@@ -43,10 +44,34 @@ lib/
 │   │   └── signalr_service.dart     # HubConnection with JWT token factory + auto-reconnect
 │   └── utils/
 │       └── distance_utils.dart      # Haversine
+├── features/
+│   ├── auth/presentation/
+│   │   ├── welcome_screen.dart          # Role picker — blue surface + customer/provider tiles
+│   │   ├── login_placeholder.dart       # PLACEHOLDER — writes mock tokens (Phase 04 replaces)
+│   │   └── register_placeholder.dart    # PLACEHOLDER — back-to-welcome (Phase 04 replaces)
+│   ├── customer/
+│   │   └── placeholder_home.dart        # PLACEHOLDER — logout button (Phase 06 replaces)
+│   └── provider/
+│       └── placeholder_home.dart        # PLACEHOLDER — logout button (Phase 07 replaces)
 └── main.dart             # Bootstrap: Firebase (graceful), Stripe, persisted locale, ProviderScope
 ```
 
-Features (`lib/features/...`) land from Phase 04 onwards.
+Real feature screens (Phase 05+) will land alongside the placeholder scaffolding.
+
+## Routing (Phase 03)
+- `routerProvider` (in `lib/app/router.dart`) returns a `GoRouter`. The redirect
+  reads `access_token` and `user_role` directly from `FlutterSecureStorage` so
+  it is correct on cold-start even before `roleProvider` finishes hydrating. A
+  `ValueNotifier` wired to `ref.listen(roleProvider, ...)` pulses the router on
+  login/logout transitions via `refreshListenable`.
+- Routes: `/welcome` · `/login` · `/register` · `/customer/home` · `/provider/home`.
+- Redirect matrix:
+  - No token + `/welcome` → stay.
+  - No token + (`/login` or `/register`) with role set → stay.
+  - No token + anything else → `/welcome`.
+  - Has token + role=customer but route ∉ `/customer/*` → `/customer/home`.
+  - Has token + role=provider but route ∉ `/provider/*` → `/provider/home`.
+  - Has token + role null → `/welcome` (edge case).
 
 ## Role awareness (new in the unified app)
 - `roleProvider` is a `StateNotifierProvider<RoleNotifier, UserRole?>` that
@@ -124,8 +149,9 @@ completion is tracked in git history on branch `feat/unified-app`.
 | 00 | Prep & decisions | ✅ complete |
 | 01 | Scaffold unified app | ✅ complete (commit `787fb7a`) |
 | 02 | Port core / shared infrastructure | ✅ complete (commit `c6e3d55`) |
-| 03 | Role-aware routing + auth | ⏳ next |
-| 04–13 | Features (customer flows, provider flows, payments, etc.) | ⏳ queued |
+| 03 | Role selection + router skeleton | ✅ complete |
+| 04 | Shared auth screens (real phone/OTP/password) | ⏳ next |
+| 05–13 | Features (customer flows, provider flows, payments, etc.) | ⏳ queued |
 
 ## Verification
 - `flutter analyze` → 0 issues.
