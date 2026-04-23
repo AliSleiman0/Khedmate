@@ -21,8 +21,11 @@ The two legacy Flutter apps are being merged into a single role-aware `mobile/`
 app on branch `feat/unified-app`. Plan + per-phase prompts live under
 `migration-plan/` (see `migration-plan/README.md`). Phase 01 scaffolded
 `mobile/`; Phase 02 ported the shared core (theme, l10n, API client, SignalR,
-FCM, locale, new `role_provider`). Until the migration completes, the two
-legacy apps remain the production targets. See `mobile/CLAUDE.md` for details.
+FCM, locale, new `role_provider`); Phase 03 added the role-picker welcome
+screen + a role/token-aware GoRouter with placeholder auth/home screens so
+the routing shape can be tested end-to-end. Until the migration completes,
+the two legacy apps remain the production targets. See `mobile/CLAUDE.md`
+for details.
 
 ## Brand
 - Blue: `#1B4F72` — primary brand, backgrounds, buttons

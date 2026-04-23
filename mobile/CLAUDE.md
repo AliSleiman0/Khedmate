@@ -11,9 +11,10 @@ the production targets.
 flutter pub get
 flutter run
 ```
-At the current phase the app launches into a blank `MaterialApp` with a
-placeholder router — Phase 3 introduces auth + routing, Phase 4+ bring features
-in.
+At the current phase the app launches into the role-picker `WelcomeScreen`
+and can route to placeholder customer/provider home screens via mock login.
+Phase 04 replaces the mock auth with real phone/OTP/password; Phase 05+
+bring feature screens in.
 
 ## Identity
 - Package ID / bundle ID: `com.khudmati.app` (both Android + iOS)
@@ -149,7 +150,7 @@ completion is tracked in git history on branch `feat/unified-app`.
 | 00 | Prep & decisions | ✅ complete |
 | 01 | Scaffold unified app | ✅ complete (commit `787fb7a`) |
 | 02 | Port core / shared infrastructure | ✅ complete (commit `c6e3d55`) |
-| 03 | Role selection + router skeleton | ✅ complete |
+| 03 | Role selection + router skeleton | ✅ complete (commit `3a9123a`) |
 | 04 | Shared auth screens (real phone/OTP/password) | ⏳ next |
 | 05–13 | Features (customer flows, provider flows, payments, etc.) | ⏳ queued |
 
