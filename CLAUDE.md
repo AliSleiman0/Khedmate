@@ -22,10 +22,45 @@ app on branch `feat/unified-app`. Plan + per-phase prompts live under
 `migration-plan/` (see `migration-plan/README.md`). Phase 01 scaffolded
 `mobile/`; Phase 02 ported the shared core (theme, l10n, API client, SignalR,
 FCM, locale, new `role_provider`); Phase 03 added the role-picker welcome
-screen + a role/token-aware GoRouter with placeholder auth/home screens so
-the routing shape can be tested end-to-end. Until the migration completes,
-the two legacy apps remain the production targets. See `mobile/CLAUDE.md`
-for details.
+screen + a role/token-aware GoRouter with placeholder auth/home screens; Phase
+04 replaced those placeholders with real role-aware auth (login / register /
+OTP / forgot / reset) backed by an `AuthRepository` that branches every call
+on `roleProvider` to hit `/auth/customers/*` or `/auth/providers/*`; Phase 05
+landed the four shared features under `lib/features/shared/` — chat,
+notifications (with role-aware `handleNotificationTap`), profile (shell +
+role-branched tile lists + role-aware `PATCH /me`), and a unified rating
+bottom sheet with role-branched tag sets. Phase 06 ported the full
+customer stack under `lib/features/customer/` — Direction-C home redesign,
+5-screen booking wizard (Stripe PaymentSheet + Grok AI "improve with AI"),
+live GPS tracking, payment receipt/status, history + job detail, referral,
+maintenance reminders, dispute raise — plus `MainScaffoldCustomer` hosting
+a `StatefulShellRoute.indexedStack` with 4 tabs (`/customer/home`,
+`/customer/history`, `/customer/notifications`, `/customer/profile`) and
+the amber-gradient FAB opening `/customer/booking/category`. Phase 07
+ported the full provider stack under `lib/features/provider/` — 3-tab
+job feed with SignalR live broadcasts and 2-min countdown, onboarding hub
+(ID upload + skill tests), active-job status machine with 3 s GPS
+broadcast during EnRoute, upload-after-photos before Complete, navigation
+page, Stripe Connect earnings + payout onboarding, Power Provider
+subscription (Stripe PaymentSheet via SetupIntent), analytics dashboard
+(`fl_chart` line/bar/sparkline with 5-min `keepAlive` cache) — plus
+`MainScaffoldProvider` hosting a `StatefulShellRoute.indexedStack` with 4
+tabs (`/provider/jobs`, `/provider/earnings`, `/provider/notifications`,
+`/provider/profile`) and no center FAB. Phase 08 consolidated routing
+into one role-aware `GoRouter`, re-namespaced the Phase-5 shared features
+under `/customer/*` + `/provider/*` (removed the top-level `/chat`,
+`/notifications`, `/profile`, `/profile/edit` shims), added a
+provider-tier gate (unverified providers can only reach onboarding /
+profile / notifications / chat until they hit `Active`; tier is
+persisted to secure storage by `onboardingStatusProvider` and cleared on
+logout), and introduced a single `NotificationHandler` in
+`lib/core/services/notification_handler.dart` that dispatches both FCM
+taps and `khudmati://` custom-scheme deep links
+(`khudmati://job/<id>`, `…/reminders`, `…/onboarding`,
+`…/referral?ref=CODE`) to role-scoped routes. Android manifest + iOS
+`Info.plist` declare the `khudmati` URL scheme; `app_links: ^6.1.4`
+streams runtime intents. Until the migration completes, the two legacy
+apps remain the production targets. See `mobile/CLAUDE.md` for details.
 
 ## Brand
 - Blue: `#1B4F72` — primary brand, backgrounds, buttons
