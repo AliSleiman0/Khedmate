@@ -27,11 +27,31 @@ chat/notifications/profile under `/customer/*` + `/provider/*`
 namespaces (removed the Phase-5 top-level shims), added provider-tier
 gating on cold start, and introduced a single `NotificationHandler`
 that dispatches both FCM taps and `khudmati://` deep links to the right
-role-scoped route.
+role-scoped route. Phase 09 finalised platform config for release
+builds — Android permissions + queries, iOS usage descriptions +
+background modes, localised display name (`Khudmati` / `خدمتي`),
+ProGuard/R8 rules for Stripe + SignalR + Firebase + Play Core,
+`--dart-define STRIPE_PUBLISHABLE_KEY` gating, and placeholder config
+for `flutter_launcher_icons` / `flutter_native_splash`. Firebase config
+files (`google-services.json`, `GoogleService-Info.plist`) are
+git-ignored with `.example` placeholders checked in. Phase 10 shipped
+the hard-cutover gate for existing legacy users — `X-App-Package` +
+`X-App-Version` headers on every request, a typed `AppUpgradeRequired`
+exception raised by the Dio response/error interceptor when the
+backend returns 426 or `{"error":"UPGRADE_REQUIRED"}`, a root
+`UpgradeRequiredScreen` swapped in via `upgradeRequiredProvider`, and
+a one-shot `migration_opened_new_app` Firebase Analytics event on
+first launch. Both legacy apps were patched with the same gate so
+the cutover can be flipped on atomically from the backend when the
+unified app reaches production.
 
 ## Identity
 - Package ID / bundle ID: `com.khudmati.app` (both Android + iOS)
-- Display name: "Khudmati"
+- Display name: "Khudmati" (EN) / "خدمتي" (AR) — localised via
+  `values/strings.xml` + `values-ar/strings.xml` on Android and
+  `en.lproj/InfoPlist.strings` + `ar.lproj/InfoPlist.strings` on iOS.
+  The Android manifest references `@string/app_name`; iOS reads from
+  `CFBundleDisplayName`.
 - minSdk: 21 · iOS deployment target: 13.0
 - Flutter `>=3.16.0` · Dart `>=3.2.0 <4.0.0`
 
@@ -173,6 +193,9 @@ lib/
 │           └── presentation/
 │               ├── subscription_provider.dart
 │               └── subscription_screen.dart      # Stripe PaymentSheet via SetupIntent
+├── features/migration/                   # ← Phase 10 — hard-cutover gate
+│   ├── data/migration_analytics.dart     # Fires `migration_opened_new_app` once per install
+│   └── presentation/upgrade_required_screen.dart  # Defensive UPGRADE_REQUIRED takeover
 └── main.dart             # Bootstrap: Firebase (graceful), Stripe, persisted locale, ProviderScope
 ```
 
@@ -410,11 +433,24 @@ Phase 05.
 - Provider variant adds a verification badge under the name in the header.
 - Customer tiles: Edit → `/customer/profile/edit`, Addresses (Coming Soon),
   Payment (Coming Soon), Referral → `/customer/referral`, Language toggle,
-  Notifications → `/customer/notifications`, Help → `https://khudmati.app/#contact`.
+  Notifications → `/customer/notifications`, Help → `https://khudmati.app/#contact`,
+  **Delete Account** (red, destructive — see below).
 - Provider tiles: Edit → `/provider/profile/edit`, Verification →
   `/provider/onboarding`, Payment → `/provider/payout-status`, Subscription
   → `/provider/subscription`, Analytics → `/provider/analytics`, Work Hours
-  (Coming Soon), Language toggle, Notifications (Coming Soon), Help.
+  (Coming Soon), Language toggle, Notifications (Coming Soon), Help,
+  **Delete Account** (red, destructive — see below).
+- Delete Account (Phase 12, Apple 5.1.1(v) + Google Data Safety):
+  shared `showDeleteAccountDialog(context, ref)` in
+  `features/shared/profile/presentation/delete_account_action.dart`
+  shows a destructive confirmation, calls
+  `AuthNotifier.deleteAccount()` → `AuthRepository.deleteAccount()`
+  (`DELETE /customers/me` or `DELETE /providers/me`), clears tokens +
+  role, and routes back to `/welcome`. Backend endpoints must land
+  before first Apple submission — see
+  `migration-plan/phase-12-implementation.md` §"Account deletion
+  endpoints" for the server-side contract (hard-delete PII, soft-
+  delete financial / audit rows, revoke JWTs, audit-log).
 - `EditProfileScreen` hides the email field for providers and applies the
   role-specific full-name minimum (3 chars for customers, 2 for providers,
   matching the legacy `providerFullNameTooShort` message). Save calls
@@ -449,6 +485,131 @@ Phase 08 added `app_links: ^6.1.4` for custom-scheme deep links
 (`khudmati://…`). Both Android (`<intent-filter>` on `MainActivity`) and
 iOS (`CFBundleURLTypes`) already declare the scheme.
 
+Phase 09 added `flutter_launcher_icons: ^0.13.1` and
+`flutter_native_splash: ^2.3.10` (dev-dependencies). Both are config-only
+— icon/splash assets themselves are not checked in and need to be
+generated once the designer drops finals (see
+`mobile/assets/icon/README.md` + `mobile/assets/splash/README.md`).
+
+## Platform config (Phase 09)
+### Android
+- `android/app/src/main/AndroidManifest.xml` declares all runtime
+  permissions: `INTERNET`, `ACCESS_NETWORK_STATE`, `POST_NOTIFICATIONS`,
+  `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`,
+  `ACCESS_BACKGROUND_LOCATION` (required for provider EnRoute GPS
+  broadcasting; Play Store reviewers will scrutinise — the use-case is
+  documented on the listing), `FOREGROUND_SERVICE`,
+  `FOREGROUND_SERVICE_LOCATION`, `CAMERA`, `READ_EXTERNAL_STORAGE`
+  (maxSdk 32), `READ_MEDIA_IMAGES`.
+- `<queries>` block declares `PROCESS_TEXT`, `https`-scheme `VIEW`
+  (required by `url_launcher` from Android 11+), and `DIAL`.
+- Localised app label: `android:label="@string/app_name"` resolving to
+  `Khudmati` via `values/strings.xml` and `خدمتي` via
+  `values-ar/strings.xml`.
+- `android/app/build.gradle.kts` enables `isMinifyEnabled` +
+  `isShrinkResources` on the release build type and wires
+  `proguard-rules.pro`. Rules preserve Stripe (heavy reflection), Firebase
+  + GMS, SignalR (`com.microsoft.signalr` + OkHttp + Gson),
+  `flutter_local_notifications`, and Play Core. Kotlin metadata is kept
+  for reflection-based libraries.
+- Custom-scheme intent-filter (`khudmati://`) remains on `MainActivity`
+  from Phase 08 — untouched by Phase 09.
+
+### iOS
+- `ios/Runner/Info.plist` declares all usage-description keys:
+  `NSLocationWhenInUseUsageDescription`,
+  `NSLocationAlwaysAndWhenInUseUsageDescription`,
+  `NSLocationAlwaysUsageDescription` (kept for iOS 10 fallback),
+  `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`,
+  `NSPhotoLibraryAddUsageDescription`, `NSMicrophoneUsageDescription`.
+- `UIBackgroundModes` declares `fetch`, `remote-notification`, and
+  `location` (provider EnRoute GPS).
+- `en.lproj/InfoPlist.strings` + `ar.lproj/InfoPlist.strings` hold the
+  localised `CFBundleDisplayName` (`Khudmati` / `خدمتي`) and Arabic
+  translations of all usage descriptions.
+- ⚠️ `ar.lproj` must be registered as a `knownRegions` entry + a
+  `PBXVariantGroup` for `InfoPlist.strings` must be added to the Xcode
+  project on first open. The file tree on disk is ready; the
+  `project.pbxproj` change must happen through Xcode (Project → Info →
+  Localizations → `+` → Arabic). Push notifications + location work on
+  both locales regardless — only the AR-localised launcher name depends
+  on this wiring.
+
+### Firebase
+- `google-services.json` (Android) and `GoogleService-Info.plist` (iOS)
+  are git-ignored. Commit checks in `.example` placeholders with
+  instructions instead. Once Firebase console creates the project (or
+  an existing project is reused per Phase 0 Decision B), drop the real
+  files at `android/app/google-services.json` and
+  `ios/Runner/GoogleService-Info.plist`.
+- Firebase init already handles the placeholder case: `main.dart`
+  wraps `Firebase.initializeApp()` in a try/catch and skips FCM
+  registration if init fails, so the app still builds + runs without
+  the real config.
+
+## Migration gate (Phase 10)
+- **Headers**: every Dio request carries `X-App-Package: com.khudmati.app`
+  + `X-App-Version: 1.0.0+1` (sourced from
+  `AppConfig.appPackage` / `AppConfig.appVersion`). Keep these in sync
+  with Android `applicationId`, iOS bundle id, and pubspec `version`
+  if you ever bump them.
+- **Gate detection**: `ApiClient`'s `onResponse` + `onError` interceptors
+  sniff both HTTP 426 and any payload shaped
+  `{"success": false, "error": "UPGRADE_REQUIRED", "data": {"storeUrl": "…"}}`.
+  When detected, they set `upgradeRequiredProvider` (a `StateProvider<AppUpgradeRequired?>`).
+  Refresh logic is skipped when the gate fires — refresh would hit the
+  same gate.
+- **Takeover**: `KhudmatiApp.build` watches the provider and — when
+  non-null — swaps the whole `MaterialApp.builder` child for
+  `UpgradeRequiredScreen` (brand-blue surface, Download CTA to the
+  provided `storeUrl` or `AppConfig.androidStoreUrl` / `iosStoreUrl`
+  fallback, plus a Retry button that clears the flag for transient
+  gate flips). The unified app should never actually trigger this —
+  it fails closed defensively if the backend ever misclassifies
+  an `X-App-Package: com.khudmati.app` request.
+- **Migration analytics**:
+  `features/migration/data/migration_analytics.dart` fires
+  `migration_opened_new_app` (Firebase Analytics) once per install,
+  gated by the secure-storage flag `migration_first_launch_logged`.
+  Skipped gracefully when Firebase isn't configured (still sets the
+  flag so debug logs don't repeat). Dependency:
+  `firebase_analytics: ^10.8.0` (paired with the existing
+  `firebase_core`).
+- **Legacy apps**: both `mobile-customer/` and `mobile-provider/` carry
+  the same gate (module-level `ValueNotifier<String?>
+  upgradeRequiredNotifier` mounted via `MaterialApp.builder` →
+  `ValueListenableBuilder<String?>` → `UpgradeRequiredScreen`).
+  Their `appPackage` values are `com.khudmati.customer` /
+  `com.khudmati.provider` so the backend can identify legacy traffic
+  unambiguously.
+- **Backend hand-off**: spec for the `Auth:ForceUpgradeForLegacyApps`
+  feature flag, the 426 response contract, communication plan, and
+  monitoring dashboard live in
+  `migration-plan/phase-10-implementation.md`. Backend is intentionally
+  untouched on this branch (executed during Phase 12 store submission).
+
+### Stripe publishable key — env-gated
+- `main.dart` reads
+  `String.fromEnvironment('STRIPE_PUBLISHABLE_KEY', defaultValue: 'pk_test_REPLACE_WITH_YOUR_TEST_KEY')`.
+- Release build command:
+  `flutter build apk --release --dart-define=STRIPE_PUBLISHABLE_KEY=pk_live_<KEY>`.
+- Without the flag, PaymentSheet will throw `StripeException` against
+  the placeholder key rather than silently using test mode in
+  production.
+
+### Icons + splash
+- `pubspec.yaml` carries `flutter_launcher_icons` + `flutter_native_splash`
+  config blocks; run after dropping the source assets:
+  ```bash
+  dart run flutter_launcher_icons
+  dart run flutter_native_splash:create
+  ```
+- Source assets (not checked in): `assets/icon/icon.png` (1024x1024),
+  `assets/icon/icon-foreground.png` (adaptive foreground),
+  `assets/splash/logo.png`. README files in each folder document
+  expected dimensions and safe-area rules.
+- Splash/adaptive-icon background is brand blue `#1B4F72`.
+
 ## Migration status
 See `migration-plan/README.md` for the full 14-phase plan. Phase-by-phase
 completion is tracked in git history on branch `feat/unified-app`.
@@ -464,11 +625,181 @@ completion is tracked in git history on branch `feat/unified-app`.
 | 06 | Customer-only features (home, booking, payments, history, tracking, referral, reminders, dispute) + `MainScaffoldCustomer` | ✅ complete |
 | 07 | Provider-only features (job feed, onboarding, navigation, earnings, analytics, subscription) + `MainScaffoldProvider` | ✅ complete |
 | 08 | Unified router + `NotificationHandler` + `khudmati://` deep links + provider-tier gate | ✅ complete |
-| 09–13 | Platform config, user migration, store submission, etc. | ⏳ queued |
+| 09 | Platform config — permissions, Firebase placeholders, icons/splash, ProGuard, Stripe `--dart-define` | ✅ complete |
+| 10 | Existing-user migration — hard cutover gate (`X-App-Package` headers, `UpgradeRequiredScreen`, `migration_opened_new_app` analytics, legacy-app patches) | ✅ complete |
+| 11 | End-to-end verification — checklist scaffolded (`docs/verification-checklist.md`); device/release-build sign-off pending manual run | 🟡 scaffolded |
+| 12 | Store submission — listing copy (EN + AR), rejection log, in-app account deletion for Apple 5.1.1(v), backend prereqs specced | 🟡 scaffolded |
+| 13 | Deprecate legacy apps | ⏳ queued |
 
 ## Verification
-- `flutter analyze` → 0 issues.
+- `flutter analyze` → 0 errors / 0 warnings; 58 `info`-level lints (mostly
+  `withOpacity` deprecations from the Flutter SDK upgrade — non-blocking
+  for release builds, slated for a follow-up cleanup ticket).
 - `flutter test` → `test/widget_test.dart` exercises the role_provider
   read/write/clear cycle against an in-memory `FlutterSecureStorage` fake.
-- Device/emulator smoke test (launch + locale persistence round-trip) pending
-  manual verification per phase exit criteria.
+- Phase 11 device test matrix lives at `docs/verification-checklist.md` —
+  derived from `migration-plan/phase-11-verification.md`, organised per
+  flow / role / platform (`EN-A` / `AR-A` / `EN-i` / `AR-i`) with
+  security, performance, and accessibility sections + an open-issues
+  log and a sign-off table. Initial each cell with tester name + date
+  on pass.
+- Release-build verification (`flutter build apk --release`,
+  `flutter build ios --release --no-codesign`) — see
+  **Phase 11 QA build setup** below for the Gradle wrapper pin and
+  Windows trust store fix that were required to build on a corporate
+  AzureAD-joined dev machine. Document build artefact sizes in the
+  "Build artefacts" table of the checklist once the build completes.
+
+## Phase 11 QA build setup
+Phase 11 verification required three extra tweaks to run a release
+build on a corporate-managed Windows 11 machine with SSL interception:
+
+### 1. Gradle wrapper pinned to 8.13-bin
+- `android/gradle/wrapper/gradle-wrapper.properties` now uses
+  `gradle-8.13-bin.zip` instead of `gradle-8.14-all.zip`.
+- Why: the 8.14 distribution was never downloaded on this machine,
+  so the wrapper tried to pull it from
+  `services.gradle.org/distributions/…` and failed with
+  `PKIX path building failed` (corporate SSL interception — the
+  proxy's root CA isn't in the JDK's `cacerts`). 8.13-bin was
+  already cached by the legacy `mobile-customer/` build, so pointing
+  at it sidesteps the fetch entirely. AGP 8.11.1 works fine with
+  either version.
+
+### 2. Gradle JVM uses the Windows root cert store
+- `android/gradle.properties` adds
+  `-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT` to
+  `org.gradle.jvmargs`.
+- Why: Maven artefacts (AGP transitives, OkHttp, etc.) are pulled
+  from `dl.google.com` and `repo.maven.apache.org`; those requests
+  also hit the corporate MITM cert which the JDK's default
+  `cacerts` doesn't trust, but the Windows cert store does (because
+  the machine was joined to AzureAD). The `WINDOWS-ROOT` trust
+  store type is a built-in Java 9+ option; no keystore surgery
+  needed. Safe on any Windows machine — on non-corporate boxes the
+  Windows store has the same public roots as `cacerts`, so behaviour
+  is unchanged.
+
+### 3. Core library desugaring for `flutter_local_notifications`
+- `android/app/build.gradle.kts` enables
+  `isCoreLibraryDesugaringEnabled = true` in `compileOptions` and
+  adds `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")`
+  to `dependencies`.
+- Why: `flutter_local_notifications` (used for FCM in-app banners
+  via `initLocalNotifications()` in `main.dart`) uses `java.time` on
+  `minSdk 21`. Without desugaring, the release build fails with
+  `Dependency ':flutter_local_notifications' requires core library
+  desugaring to be enabled for :app`. Debug builds succeed because
+  they don't run through R8 / Proguard.
+- Safe across versions: desugar_jdk_libs 2.1.x is the currently
+  recommended line for AGP 8.x. Bump alongside AGP upgrades.
+
+### 4. Payment bypass flag for device testing
+- `AppConfig.bypassPayments` — compile-time bool via
+  `bool.fromEnvironment('BYPASS_PAYMENTS', defaultValue: false)`.
+- When `true`, `BookingNotifier.submitBooking()` skips the Stripe
+  path entirely: no `createIntent`, no PaymentSheet, no
+  `confirmPayment`. Calls `POST /bookings/jobs` directly and stores
+  sentinel strings (`'BYPASSED'`) for `paymentIntentId` +
+  `transactionId`. `chargedAmount` is set to `agreedAmount`.
+- An orange warning banner — `"QA BUILD — PAYMENTS BYPASSED. Not
+  for production."` — is shown at the top of
+  `BookingSummaryScreen` whenever the flag is on so testers can't
+  ship a bypass build by accident.
+- Subscription flow (provider row 29a) is **not** bypassed because
+  the backend expects a real Stripe SetupIntent id and can't be
+  faked without backend changes.
+- Caveat: we haven't yet confirmed whether the backend broadcasts a
+  job to providers without a `confirmPayment` call. If provider-side
+  rows (16, 17, 18) don't fire against a bypassed job, the backend
+  is gating broadcast on payment confirmation and those rows will
+  need Stripe test mode (or a backend test flag) to pass. Verify on
+  the first QA run.
+
+### QA build + run commands
+Release APK (Phase 11 acceptance artefact):
+```bash
+flutter build apk --release \
+  --dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_placeholder \
+  --dart-define=BYPASS_PAYMENTS=true
+```
+
+Day-to-day debug on a connected Samsung:
+```bash
+flutter run -d <device-id> \
+  --dart-define=BYPASS_PAYMENTS=true
+```
+
+Without `BYPASS_PAYMENTS=true`, every booking terminates at
+PaymentSheet against the placeholder Stripe key and throws
+`StripeException` — intentional (prevents accidental live payments
+from a misconfigured build).
+
+## Phase 12 store-submission scaffold
+Phase 12 shipped the store-facing artefacts and the last mobile-side
+compliance bits needed for Apple + Google submission:
+
+- **Listing copy** — `mobile/docs/store-listing-en.md` and
+  `mobile/docs/store-listing-ar.md` hold the full EN + AR copy for
+  both stores (app name, subtitle, short + long descriptions,
+  keywords, data-safety tables, permission rationales, Apple 5.1.2 /
+  3.1.1 compliance notes, privacy + terms URLs). Paste verbatim into
+  Play Console and App Store Connect.
+- **Rejection log** — `mobile/docs/store-rejections.md` is an empty
+  template for tracking reviewer rejections with a standard format
+  (reviewer note, root cause, fix, resubmit date).
+- **Account deletion (Apple 5.1.1(v))** — a destructive red "Delete
+  Account" tile on both `CustomerProfileTiles` and
+  `ProviderProfileTiles`, a shared `showDeleteAccountDialog` action,
+  `AuthNotifier.deleteAccount()`, and `AuthRepository.deleteAccount()`
+  which calls `DELETE /customers/me` or `DELETE /providers/me` then
+  clears tokens + role and routes to `/welcome`. The mobile side is
+  complete; the backend endpoints are a Phase 12 prereq (see below).
+- **Runbook** — `migration-plan/phase-12-implementation.md` records
+  what landed in the app, the backend hand-off spec (delete endpoints
+  + `Auth:ForceUpgradeForLegacyApps` flag), per-store submission
+  runbooks (Play appbundle upload, App Store Connect + TestFlight),
+  sunset sequencing for the legacy apps, and the analytics-dashboard
+  hand-off.
+
+### Backend prereqs before first Apple submission
+
+1. ✅ `DELETE /api/customers/me` + `DELETE /api/providers/me` — shipped
+   2026-04-24 on `feat/unified-app`. Anonymises PII via
+   `SoftDeletePii()` (sets `FullName="DELETED"`, `Email=null`,
+   `Phone="DEL_<shortId>"`, blanks `PasswordHash`, deactivates),
+   deletes refresh tokens / OTPs / device tokens / provider location
+   rows in a single transaction. Guards against deletion with active
+   jobs (`HAS_ACTIVE_JOBS`) or — provider only — an active
+   subscription (`HAS_ACTIVE_SUBSCRIPTION`). Contract documented in
+   `phase-12-implementation.md` §"Account deletion endpoints".
+   Pending deploy to prod (`api.khudmati.app`).
+2. ✅ `Auth:ForceUpgradeForLegacyApps` feature flag (default `false`)
+   — shipped 2026-04-24 as `LegacyAppUpgradeMiddleware` on
+   `feat/unified-app`. See `backend/CLAUDE.md` §"Legacy-app
+   force-upgrade gate" and the rollout runbook in
+   `phase-12-implementation.md` §"Legacy-app force-upgrade flag".
+3. 🟡 `https://khudmati.app/privacy` + `https://khudmati.app/terms` —
+   bilingual static pages drafted at `web-landing/public/privacy.html`
+   and `/terms.html`; the landing-page Footer now links to them.
+   Pending legal review + deploy of `web-landing` to prod.
+
+### Store-submission hand-off (not doable from this machine)
+- Play Console upload requires the production signing keystore.
+- App Store Connect upload requires Xcode + a Mac + Apple Developer
+  Program seat.
+- Feature graphic, app icon, and phone screenshots (≥ 2 per locale)
+  must be taken from Phase 11 device runs — these aren't in the repo.
+- Build commands for the release appbundle / IPA live in
+  `phase-12-implementation.md` §"Store submission runbook".
+
+## Backend topology
+`AppConfig.backendHost = 'https://api.khudmati.app'` is the **same
+host** used by both legacy apps and by the prod web admin. There is
+no separate staging environment — local dev points at the same host.
+Phase 11 verification therefore runs against production data; create
+test accounts that are clearly marked (e.g. phone `+966500000001`)
+so they're easy to prune. Any backend change required for Phase 11
+/ 12 (the `Auth:ForceUpgradeForLegacyApps` flag, bypass-friendly
+broadcast, etc.) must be rolled out to the single prod instance —
+plan for a short window and communicate before flipping flags.

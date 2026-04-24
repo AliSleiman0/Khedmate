@@ -1,0 +1,10 @@
+{
+  "_comment": "PLACEHOLDER — replace with the real google-services.json downloaded from the Firebase console.",
+  "_instructions": [
+    "1. Open https://console.firebase.google.com and select the Khudmati project (create one if none exists).",
+    "2. Add an Android app with package name `com.khudmati.app`.",
+    "3. Download `google-services.json` and save it to this same folder as `google-services.json` (drop the `.example` suffix).",
+    "4. Do NOT commit the real file to git — it is already ignored via .gitignore.",
+    "5. Enable Cloud Messaging in the Firebase project; the backend FCM server key must match this project's Sender ID."
+  ]
+}

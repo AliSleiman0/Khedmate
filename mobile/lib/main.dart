@@ -11,6 +11,7 @@ import 'core/api/api_client.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/services/fcm_service.dart';
 import 'core/services/notification_handler.dart';
+import 'features/migration/data/migration_analytics.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -36,8 +37,15 @@ void main() async {
   }
 
   try {
-    // Env-gated in Phase 9 via --dart-define=STRIPE_PUBLISHABLE_KEY=...
-    Stripe.publishableKey = 'pk_test_REPLACE_WITH_YOUR_TEST_KEY';
+    // Gated via --dart-define=STRIPE_PUBLISHABLE_KEY=<pk_live_…> for release.
+    // Debug/profile builds fall back to a test-mode placeholder; callers to
+    // PaymentSheet will fail gracefully (StripeException) if the placeholder
+    // reaches production.
+    const stripePublishableKey = String.fromEnvironment(
+      'STRIPE_PUBLISHABLE_KEY',
+      defaultValue: 'pk_test_REPLACE_WITH_YOUR_TEST_KEY',
+    );
+    Stripe.publishableKey = stripePublishableKey;
     await Stripe.instance.applySettings();
   } catch (e) {
     debugPrint('Stripe init skipped: $e');
@@ -66,6 +74,13 @@ void main() async {
     );
     registerFcmToken(apiClient, container);
   }
+
+  // Phase 10 — fire `migration_opened_new_app` once per install so we can
+  // track legacy → unified conversion in Firebase. Fire-and-forget; must
+  // never block app startup.
+  unawaited(
+    MigrationAnalytics().logFirstLaunchIfNeeded(firebaseReady: firebaseReady),
+  );
 
   // Custom-scheme deep links (khudmati://…). Covers cold-start (the intent
   // that launched the app) and warm events while the app is running.

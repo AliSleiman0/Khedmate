@@ -1,0 +1,10 @@
+"CFBundleDisplayName" = "خدمتي";
+"CFBundleName" = "خدمتي";
+
+"NSLocationWhenInUseUsageDescription" = "يستخدم خدمتي موقعك للعثور على مزودي الخدمة القريبين ولمشاركة عنوانك عند حجز الخدمة.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "يشارك مزود الخدمة موقعه المباشر مع العميل أثناء توجهه لتنفيذ الطلب.";
+"NSLocationAlwaysUsageDescription" = "يشارك مزود الخدمة موقعه المباشر مع العميل أثناء توجهه لتنفيذ الطلب.";
+"NSCameraUsageDescription" = "التقاط صور للخدمة لدقة العمل، والتحقق من الهوية، وتسجيل الحالة قبل وبعد.";
+"NSPhotoLibraryUsageDescription" = "إرفاق الصور من جهازك لوصف الخدمة أو رفع وثائق التحقق.";
+"NSPhotoLibraryAddUsageDescription" = "حفظ إيصالات وصور الخدمة على جهازك.";
+"NSMicrophoneUsageDescription" = "إرسال رسائل صوتية في المحادثة مع مزود الخدمة أو العميل.";

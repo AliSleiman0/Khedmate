@@ -1,6 +1,15 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/app_config.dart';
+
+/// Phase 10 cutover gate. The backend flips
+/// `Auth:ForceUpgradeForLegacyApps` on once the unified `com.khudmati.app`
+/// is live in both stores; from that moment every legacy-provider request
+/// comes back with `UPGRADE_REQUIRED`. The top-level `app.dart` listens to
+/// this notifier and swaps the whole surface for a "Download new app" card.
+final ValueNotifier<String?> upgradeRequiredNotifier =
+    ValueNotifier<String?>(null);
 
 class ApiClient {
   static const _baseUrl = AppConfig.baseUrl;
@@ -16,7 +25,11 @@ class ApiClient {
       baseUrl: _baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-App-Package': AppConfig.appPackage,
+        'X-App-Version': AppConfig.appVersion,
+      },
     ));
 
     dio.interceptors.add(
@@ -28,7 +41,25 @@ class ApiClient {
           }
           handler.next(options);
         },
+        onResponse: (response, handler) {
+          final storeUrl = _readUpgradeStoreUrl(response.data);
+          if (storeUrl != null) {
+            upgradeRequiredNotifier.value =
+                storeUrl.isEmpty ? AppConfig.unifiedStoreUrl : storeUrl;
+          }
+          handler.next(response);
+        },
         onError: (DioException error, handler) async {
+          final status = error.response?.statusCode;
+          final storeUrl = _readUpgradeStoreUrl(error.response?.data);
+          if (status == 426 || storeUrl != null) {
+            upgradeRequiredNotifier.value = (storeUrl == null || storeUrl.isEmpty)
+                ? AppConfig.unifiedStoreUrl
+                : storeUrl;
+            handler.next(error);
+            return;
+          }
+
           if (error.response?.statusCode == 401 && !_isRefreshing) {
             _isRefreshing = true;
             try {
@@ -80,6 +111,18 @@ class ApiClient {
         },
       ),
     );
+  }
+
+  /// Returns the store URL when the payload is a Phase 10 UPGRADE_REQUIRED
+  /// response. Empty string = error code matched but no `storeUrl` supplied
+  /// (caller falls back to `unifiedStoreUrl`). Null = not a migration gate
+  /// response.
+  static String? _readUpgradeStoreUrl(Object? data) {
+    if (data is! Map) return null;
+    if (data['error'] != 'UPGRADE_REQUIRED') return null;
+    final inner = data['data'];
+    final url = inner is Map ? inner['storeUrl'] as String? : null;
+    return url ?? '';
   }
 
   Future<void> _clearTokens() async {

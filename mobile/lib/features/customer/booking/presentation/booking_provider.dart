@@ -5,6 +5,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:dio/dio.dart';
 import '../data/booking_repository.dart';
 import '../../payments/data/payment_repository.dart';
+import '../../../../core/constants/app_config.dart';
 
 class BookingState {
   final String? categoryId;
@@ -129,6 +130,11 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
   /// 2. Present PaymentSheet
   /// 3. Create job
   /// 4. Confirm payment (link to job)
+  ///
+  /// When [AppConfig.bypassPayments] is true (QA-only builds with
+  /// `--dart-define=BYPASS_PAYMENTS=true`), steps 1, 2, and 4 are skipped —
+  /// the job is created directly so the post-booking lifecycle can be tested
+  /// without Stripe keys. Not for production.
   Future<void> submitBooking() async {
     final current = state.valueOrNull;
     if (current == null) return;
@@ -138,6 +144,36 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
     try {
       final paymentRepo = ref.read(paymentRepositoryProvider);
       final bookingRepo = ref.read(bookingRepositoryProvider);
+
+      if (AppConfig.bypassPayments) {
+        final jobResult = await bookingRepo.createJob(
+          categoryId: current.categoryId!,
+          description: current.description,
+          latitude: current.latitude!,
+          longitude: current.longitude!,
+          address: current.address!,
+          photoUrls: [],
+        );
+
+        final jobData = jobResult['data'] as Map<String, dynamic>;
+        final jobId = jobData['jobId'] as String;
+        final refNumber = jobData['referenceNumber'] as String;
+
+        if (current.photos.isNotEmpty) {
+          try {
+            await bookingRepo.uploadPhotos(jobId, current.photos);
+          } catch (_) {}
+        }
+
+        state = AsyncValue.data(current.copyWith(
+          createdJobId: jobId,
+          referenceNumber: refNumber,
+          paymentIntentId: 'BYPASSED',
+          transactionId: 'BYPASSED',
+          chargedAmount: current.agreedAmount,
+        ));
+        return;
+      }
 
       final intentData = await paymentRepo.createIntent(
         amount: current.agreedAmount!,

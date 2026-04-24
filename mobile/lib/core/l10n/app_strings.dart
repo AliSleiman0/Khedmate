@@ -443,6 +443,23 @@ class S {
   String get profileHelp          => isAr ? 'المساعدة والدعم'  : 'Help & Support';
   String get providerProfileHelp  => isAr ? 'المساعدة'         : 'Help';
   String get profileLogout        => isAr ? 'تسجيل الخروج'    : 'Log Out';
+  String get profileDeleteAccount => isAr ? 'حذف الحساب'      : 'Delete Account';
+  String get deleteAccountDialogTitle => isAr ? 'حذف الحساب نهائياً؟' : 'Delete account permanently?';
+  String get deleteAccountDialogBody  => isAr
+      ? 'سيتم حذف حسابك وجميع بياناتك بشكل نهائي. لا يمكن التراجع عن هذا الإجراء.'
+      : 'Your account and all data will be permanently removed. This action cannot be undone.';
+  String get deleteAccountConfirm => isAr ? 'حذف الحساب' : 'Delete account';
+  String get deleteAccountCancel  => isAr ? 'إلغاء'       : 'Cancel';
+  String get deleteAccountSuccess => isAr ? 'تم حذف الحساب' : 'Account deleted';
+  String get deleteAccountError   => isAr
+      ? 'تعذّر حذف الحساب. يرجى المحاولة لاحقاً.'
+      : 'Unable to delete account. Please try again later.';
+  String get deleteAccountHasActiveJobs => isAr
+      ? 'لا يمكن حذف الحساب لديك طلب نشط. أكمل الطلب أو ألغه أولاً.'
+      : 'You have an active job. Complete or cancel it before deleting your account.';
+  String get deleteAccountHasActiveSubscription => isAr
+      ? 'ألغِ اشتراك Power Provider أولاً ثم احذف الحساب.'
+      : 'Cancel your Power Provider subscription first, then delete your account.';
   String get profileVerification  => isAr ? 'مستوى التوثيق'  : 'Verification Level';
   String get profileWorkHours     => isAr ? 'ساعات العمل'    : 'Work Hours';
   String get profileNotifications => isAr ? 'الإشعارات'      : 'Notifications';

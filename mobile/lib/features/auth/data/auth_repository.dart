@@ -151,6 +151,20 @@ class AuthRepository {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Required for Apple App Store review (guideline 5.1.1(v)) and Google Play
+  /// Data Safety. Hits `DELETE /customers/me` or `DELETE /providers/me` on the
+  /// backend. On success, clears local tokens + role so the next cold-start
+  /// lands on `/welcome`. Backend endpoint must land before the first Apple
+  /// submission — see `migration-plan/phase-12-implementation.md`.
+  Future<void> deleteAccount() async {
+    final path = _role == UserRole.provider ? '/providers/me' : '/customers/me';
+    await _dio.delete(path);
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
+    await _storage.delete(key: kProviderTierStorageKey);
+    await _ref.read(roleProvider.notifier).clear();
+  }
+
   // ---------------------------------------------------------------------------
   // Token helpers
   // ---------------------------------------------------------------------------

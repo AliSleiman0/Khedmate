@@ -1,0 +1,10 @@
+"CFBundleDisplayName" = "Khudmati";
+"CFBundleName" = "Khudmati";
+
+"NSLocationWhenInUseUsageDescription" = "Khudmati uses your location to find nearby service providers and to share your address when you book a job.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Providers share their live location with customers while en route to a job.";
+"NSLocationAlwaysUsageDescription" = "Providers share their live location with customers while en route to a job.";
+"NSCameraUsageDescription" = "Take photos of the job for accurate service, identity verification, and before/after records.";
+"NSPhotoLibraryUsageDescription" = "Attach existing photos to help describe the job or upload verification documents.";
+"NSPhotoLibraryAddUsageDescription" = "Save job receipts and photos to your device.";
+"NSMicrophoneUsageDescription" = "Send voice messages in chat with your provider or customer.";

@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/api/api_client.dart';
 import '../core/providers/locale_provider.dart';
 import '../core/services/fcm_service.dart';
+import '../core/widgets/upgrade_required_screen.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -51,7 +52,16 @@ class _KhudmatiCustomerAppState extends ConsumerState<KhudmatiCustomerApp> {
       locale: locale,
       builder: (context, child) => Directionality(
         textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
-        child: child!,
+        child: ValueListenableBuilder<String?>(
+          valueListenable: upgradeRequiredNotifier,
+          builder: (context, storeUrl, normalChild) {
+            if (storeUrl != null) {
+              return UpgradeRequiredScreen(storeUrl: storeUrl);
+            }
+            return normalChild!;
+          },
+          child: child!,
+        ),
       ),
     );
   }

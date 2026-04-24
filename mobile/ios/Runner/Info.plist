@@ -45,6 +45,26 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Khudmati uses your location to find nearby service providers and to share your address when you book a job.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Providers share their live location with customers while en route to a job.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Providers share their live location with customers while en route to a job.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take photos of the job for accurate service, identity verification, and before/after records.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach existing photos to help describe the job or upload verification documents.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save job receipts and photos to your device.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Send voice messages in chat with your provider or customer.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+		<string>location</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

@@ -33,4 +33,21 @@ public class Customer : AuditableEntity
         PasswordHash = newPasswordHash;
         SetUpdated();
     }
+
+    /// <summary>
+    /// Apple 5.1.1(v) / Google Data Safety: user-initiated account deletion.
+    /// Anonymises PII in place so financial / audit rows (bookings, ratings,
+    /// referrals) retain foreign-key integrity while the account itself becomes
+    /// unusable. Deletes refresh tokens and OTPs out-of-band — the Phone
+    /// placeholder (`DEL_<id>`) preserves the unique index.
+    /// </summary>
+    public void SoftDeletePii()
+    {
+        FullName = "DELETED";
+        Email = null;
+        Phone = "DEL_" + Id.ToString("N").Substring(0, 20);
+        PasswordHash = string.Empty;
+        IsActive = false;
+        SetUpdated();
+    }
 }

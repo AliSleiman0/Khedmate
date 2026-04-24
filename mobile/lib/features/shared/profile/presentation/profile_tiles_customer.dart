@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/providers/locale_provider.dart';
+import 'delete_account_action.dart';
 
 class CustomerProfileTiles extends ConsumerWidget {
   const CustomerProfileTiles({super.key});
@@ -39,6 +40,11 @@ class CustomerProfileTiles extends ConsumerWidget {
             launchUrl(uri, mode: LaunchMode.externalApplication);
           }
         }),
+        _destructiveTile(
+          Icons.delete_forever,
+          s.profileDeleteAccount,
+          () => showDeleteAccountDialog(context, ref),
+        ),
       ],
     );
   }
@@ -58,6 +64,17 @@ class CustomerProfileTiles extends ConsumerWidget {
       ListTile(
         leading: Icon(icon, color: AppColors.brandBlue),
         title: Text(label, style: const TextStyle(fontFamily: 'Cairo')),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      );
+
+  static ListTile _destructiveTile(
+          IconData icon, String label, VoidCallback onTap) =>
+      ListTile(
+        leading: Icon(icon, color: Colors.red.shade700),
+        title: Text(label,
+            style: TextStyle(
+                fontFamily: 'Cairo', color: Colors.red.shade700)),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       );

@@ -4,6 +4,7 @@ using Google.Apis.Auth.OAuth2;
 using Khudmati.API.Domain;
 using Khudmati.API.EventHandlers;
 using Khudmati.API.Infrastructure;
+using Khudmati.API.Middleware;
 using Khudmati.API.Services;
 using Khudmati.Modules.Bookings;
 using Khudmati.Modules.Bookings.Domain.Entities;
@@ -554,6 +555,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.UseLegacyAppUpgradeGate();
 app.UseAuthentication();
 app.UseAuthorization();
 

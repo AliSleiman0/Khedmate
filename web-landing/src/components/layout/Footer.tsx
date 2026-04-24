@@ -177,10 +177,13 @@ export default function Footer() {
           © {new Date().getFullYear()} خدمتي. {t('footer_rights')}.
         </p>
         <div style={{ display: 'flex', gap: 20 }}>
-          {[{ key: 'footer_privacy' }, { key: 'footer_terms' }].map(({ key }) => (
+          {[
+            { key: 'footer_privacy', href: '/privacy.html' },
+            { key: 'footer_terms', href: '/terms.html' },
+          ].map(({ key, href }) => (
             <motion.a
               key={key}
-              href="#"
+              href={href}
               whileHover={{ color: 'rgba(255,255,255,0.85)' }}
               style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
             >

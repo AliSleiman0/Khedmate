@@ -59,8 +59,100 @@ taps and `khudmati://` custom-scheme deep links
 (`khudmati://job/<id>`, `…/reminders`, `…/onboarding`,
 `…/referral?ref=CODE`) to role-scoped routes. Android manifest + iOS
 `Info.plist` declare the `khudmati` URL scheme; `app_links: ^6.1.4`
-streams runtime intents. Until the migration completes, the two legacy
-apps remain the production targets. See `mobile/CLAUDE.md` for details.
+streams runtime intents. Phase 09 finalised platform config for
+release builds — Android runtime permissions + `<queries>` block,
+iOS usage descriptions + `UIBackgroundModes` (fetch / remote-
+notification / location), localised launcher name (`Khudmati` EN /
+`خدمتي` AR via `values(-ar)/strings.xml` and
+`(en|ar).lproj/InfoPlist.strings`), ProGuard/R8 rules for Stripe +
+SignalR + Firebase + Play Core (minify + shrinkResources enabled on
+the release build type), `String.fromEnvironment('STRIPE_PUBLISHABLE_KEY')`
+gating so release builds require `--dart-define=STRIPE_PUBLISHABLE_KEY=pk_live_…`,
+and `flutter_launcher_icons` + `flutter_native_splash` config blocks
+in `pubspec.yaml` (source assets drop into `assets/icon/` +
+`assets/splash/` once the designer ships finals). Firebase config
+files are git-ignored with `.example` placeholders + inline
+instructions for `google-services.json` and `GoogleService-Info.plist`.
+Phase 10 implemented the hard-cutover strategy (Phase 0 Decision C):
+the unified `ApiClient` tags every request with `X-App-Package:
+com.khudmati.app` + `X-App-Version`, catches HTTP 426 / `{"error":
+"UPGRADE_REQUIRED"}` payloads via a Dio response + error interceptor,
+and raises `upgradeRequiredProvider`; the root `MaterialApp.builder`
+swaps the whole surface for
+`features/migration/presentation/upgrade_required_screen.dart` when
+the flag is non-null. `main.dart` fires a one-shot Firebase Analytics
+event `migration_opened_new_app` on first launch (persisted via
+secure-storage key `migration_first_launch_logged`). The two legacy
+apps (`mobile-customer/`, `mobile-provider/`) received minimal final
+patches — same headers, a module-level `ValueNotifier<String?>
+upgradeRequiredNotifier` flipped by their `ApiClient`, and a
+bilingual "Download the new Khudmati app" takeover
+(`lib/core/widgets/upgrade_required_screen.dart`) mounted via the
+root `MaterialApp.builder`. Backend changes (header sniffing +
+`Auth:ForceUpgradeForLegacyApps` feature flag) are specced out in
+`migration-plan/phase-10-implementation.md` and scheduled for
+Phase 12. Until the migration completes, the two legacy apps remain
+the production targets. Phase 11 scaffolded the verification
+checklist at `mobile/docs/verification-checklist.md` — a per-row /
+per-platform / per-language sign-off sheet derived from the 40-row
+test matrix in `migration-plan/phase-11-verification.md`, plus
+security, performance, and accessibility sections and an open-issues
+log. To make release builds possible on a corporate AzureAD-joined
+Windows host with SSL interception, the unified app's Gradle wrapper
+was pinned to `gradle-8.13-bin` (already cached from the legacy apps)
+and `-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT` was added to
+`android/gradle.properties` so the Gradle JVM trusts the corporate
+root CA via the Windows cert store. For QA runs without Stripe test
+keys, a compile-time `AppConfig.bypassPayments` flag
+(`--dart-define=BYPASS_PAYMENTS=true`) short-circuits the booking
+flow past PaymentSheet and calls `POST /bookings/jobs` directly;
+`BookingSummaryScreen` shows an orange "QA BUILD — PAYMENTS BYPASSED"
+banner to prevent accidental production releases. Subscription row
+29a is not bypassable (backend expects a real SetupIntent id).
+Backend target for Phase 11 is **production** (`api.khudmati.app`) —
+there is no separate staging environment, so test data must be
+clearly labelled and pruned after the run. Automated baselines on
+the unified app are clean (`flutter analyze`: 0 errors / 0 warnings;
+`flutter test`: pass). Device-side execution + release builds
+(Android APK via the bypass build, iOS IPA via TestFlight once Mac
+access is available) are the remaining manual exit criteria before
+Phase 12 store submission. Phase 12 scaffolded the store-submission
+artefacts: full EN + AR listing copy (`mobile/docs/store-listing-en.md`
++ `store-listing-ar.md`) ready to paste into Play Console and App
+Store Connect, a rejection log template (`mobile/docs/store-rejections.md`),
+and the in-app account-deletion flow required by Apple 5.1.1(v) +
+Google Data Safety — a red "Delete Account" tile on both customer and
+provider profile pages, a shared confirmation action
+(`features/shared/profile/presentation/delete_account_action.dart`),
+`AuthNotifier.deleteAccount()`, and `AuthRepository.deleteAccount()`
+calling `DELETE /customers/me` or `DELETE /providers/me`. All three Phase 12 backend / web
+prereqs landed in-session:
+(1) the `Auth:ForceUpgradeForLegacyApps` middleware specced in
+Phase 10 now lives at
+`backend/src/Khudmati.API/Middleware/LegacyAppUpgradeMiddleware.cs`,
+registered between `UseCors()` and `UseAuthentication()` in
+`Program.cs` — flip the `Auth:ForceUpgradeForLegacyApps` appsettings
+key (default `false`) once the unified app is live in both stores to
+hard-cutover legacy bundles.
+(2) bilingual privacy + terms pages are drafted at
+`web-landing/public/privacy.html` and `/terms.html` with the
+landing-page Footer linking to them (pending legal review + deploy).
+(3) `DELETE /api/customers/me` and `DELETE /api/providers/me` shipped
+for Apple 5.1.1(v) — `CustomersController.DeleteMe` and
+`ProvidersController.DeleteMe` anonymise PII in-place via
+`SoftDeletePii()` on the entity (sets `FullName="DELETED"`,
+`Email=null`, `Phone="DEL_<shortId>"` to preserve the unique index,
+blanks `PasswordHash`), wipe refresh tokens / OTPs / device tokens /
+provider location rows in a single transaction, and guard against
+deletion with active jobs (`HAS_ACTIVE_JOBS`) or an active provider
+subscription (`HAS_ACTIVE_SUBSCRIPTION`). Financial and audit rows
+reference the account by FK only so they ride the 7-year tax-law
+retention window alongside the anonymised parent. Contract + rollout
+runbook + migration docs are in
+`migration-plan/phase-12-implementation.md`.
+Phase 11 Android release APK built successfully (66.4 MB fat APK —
+switch to `flutter build appbundle` for Play Store submission to get
+per-ABI slices of ~22 MB each). See `mobile/CLAUDE.md` for details.
 
 ## Brand
 - Blue: `#1B4F72` — primary brand, backgrounds, buttons

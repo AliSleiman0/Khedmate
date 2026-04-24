@@ -187,6 +187,12 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     await repo.logout();
     state = const AsyncValue.data(AuthUnauthenticated());
   }
+
+  Future<void> deleteAccount() async {
+    final repo = ref.read(authRepositoryProvider);
+    await repo.deleteAccount();
+    state = const AsyncValue.data(AuthUnauthenticated());
+  }
 }
 
 final authNotifierProvider =
