@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../constants/app_config.dart';
+import '../logging/app_logger.dart';
 
 class SignalRService {
   static const _hubUrl = AppConfig.hubUrl;
@@ -16,6 +17,11 @@ class SignalRService {
 
     final token = await _storage.read(key: 'access_token');
 
+    log.i('SignalR', 'init', data: {
+      'url': _hubUrl,
+      'hasToken': token != null,
+    });
+
     _connection = HubConnectionBuilder()
         .withUrl(
           _hubUrl,
@@ -25,6 +31,16 @@ class SignalRService {
         )
         .withAutomaticReconnect()
         .build();
+
+    _connection!.onclose(({Exception? error}) {
+      log.w('SignalR', 'closed', error: error);
+    });
+    _connection!.onreconnecting(({Exception? error}) {
+      log.w('SignalR', 'reconnecting', error: error);
+    });
+    _connection!.onreconnected(({String? connectionId}) {
+      log.i('SignalR', 'reconnected', data: {'connectionId': connectionId});
+    });
 
     await _connection!.start();
   }
@@ -53,21 +69,32 @@ class SignalRService {
     required bool hasActiveSubscription,
   }) async {
     if (_connection?.state != HubConnectionState.Connected) return;
+    log.d('SignalR', 'join groups start', data: {
+      'isActive': isActive,
+      'hasSub': hasActiveSubscription,
+    });
     if (isActive) {
       try {
         await _connection!.invoke('JoinProvidersAvailable');
-      } catch (_) {
+        log.d('SignalR', 'join ok', data: {'group': 'available'});
+      } catch (e) {
         // Non-fatal — server-side auto-join already covers the primary case.
+        log.w('SignalR', 'join failed',
+            data: {'group': 'available'}, error: e);
       }
     }
     if (hasActiveSubscription) {
       try {
         await _connection!.invoke('JoinProvidersPower');
-      } catch (_) {}
+        log.d('SignalR', 'join ok', data: {'group': 'power'});
+      } catch (e) {
+        log.w('SignalR', 'join failed', data: {'group': 'power'}, error: e);
+      }
     }
   }
 
   Future<void> disconnect() async {
+    log.d('SignalR', 'stop on dispose');
     await _connection?.stop();
     _connection = null;
   }

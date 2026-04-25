@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/services/signalr_service.dart';
 import '../../../shared/rating/data/rating_repository.dart';
 import '../../../shared/rating/presentation/rating_bottom_sheet.dart';
 import '../data/job_repository.dart';
+
+const _tag = 'ActiveJobsScreen';
 
 // Stream-updated list of active jobs. Subscribes to `JobStatusChanged` so the
 // chip reflects live status changes.
@@ -145,7 +148,11 @@ class _ActiveJobCard extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => context.push('/provider/active-job/${job.id}'),
+          onTap: () {
+            log.d(_tag, 'card tap',
+                data: {'jobId': job.id, 'status': job.status});
+            context.push('/provider/active-job/${job.id}');
+          },
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -197,11 +204,16 @@ class _ActiveJobCard extends ConsumerWidget {
                 if (needsRating) ...[
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: () => RatingBottomSheet.show(
-                      context,
-                      jobId: job.id,
-                      otherPartyName: job.customerFirstName ?? s.chatCustomer,
-                    ).then((_) => ref.invalidate(pendingRatingJobIdsProvider)),
+                    onTap: () {
+                      log.d(_tag, 'rate tap', data: {'jobId': job.id});
+                      RatingBottomSheet.show(
+                        context,
+                        jobId: job.id,
+                        otherPartyName:
+                            job.customerFirstName ?? s.chatCustomer,
+                      ).then((_) =>
+                          ref.invalidate(pendingRatingJobIdsProvider));
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),

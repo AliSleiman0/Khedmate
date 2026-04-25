@@ -5,8 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../data/job_repository.dart';
 import 'active_job_provider.dart';
+
+const _tag = 'UploadAfterPhotos';
 
 class _UploadAfterPhotosState {
   final List<XFile> selectedPhotos;
@@ -37,14 +41,20 @@ class _UploadAfterPhotosNotifier
 
   Future<void> pickPhoto(BuildContext context, ImageSource source,
       {required String tooLargeMessage}) async {
-    if (state.selectedPhotos.length >= _maxPhotos) return;
+    if (state.selectedPhotos.length >= _maxPhotos) {
+      log.d(_tag, 'pick blocked', data: {'reason': 'max_reached'});
+      return;
+    }
 
+    log.d(_tag, 'pick image', data: {'source': source.name});
     final picker = ImagePicker();
     final file = await picker.pickImage(source: source, imageQuality: 90);
     if (file == null) return;
 
     final bytes = await file.length();
     if (bytes > _maxSizeBytes) {
+      log.w(_tag, 'pick rejected',
+          data: {'reason': 'too_large', 'bytes': bytes});
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -58,20 +68,28 @@ class _UploadAfterPhotosNotifier
       return;
     }
 
+    log.d(_tag, 'pick ok',
+        data: {'bytes': bytes, 'count': state.selectedPhotos.length + 1});
     state = state.copyWith(
       selectedPhotos: [...state.selectedPhotos, file],
     );
   }
 
   void removePhoto(int index) {
+    log.d(_tag, 'remove', data: {'index': index});
     final updated = List<XFile>.from(state.selectedPhotos)..removeAt(index);
     state = state.copyWith(selectedPhotos: updated);
   }
 
   Future<void> uploadAndComplete(BuildContext context, WidgetRef ref,
       {required String uploadFailedMessage}) async {
-    if (state.selectedPhotos.isEmpty || state.isUploading) return;
+    if (state.selectedPhotos.isEmpty || state.isUploading) {
+      log.d(_tag, 'advance blocked', data: {'reason': 'no_after_photo'});
+      return;
+    }
 
+    log.d(_tag, 'upload start',
+        data: {'jobId': arg, 'count': state.selectedPhotos.length});
     state = state.copyWith(isUploading: true);
 
     try {
@@ -79,10 +97,12 @@ class _UploadAfterPhotosNotifier
           .read(jobRepositoryProvider)
           .uploadAfterPhotos(arg, state.selectedPhotos);
 
+      log.i(_tag, 'upload ok', data: {'jobId': arg});
       await ref.read(activeJobNotifierProvider(arg).notifier).advanceStatus();
 
       if (context.mounted) context.pop(true);
-    } catch (_) {
+    } catch (e) {
+      log.e(_tag, 'upload failed', error: e, data: {'jobId': arg});
       state = state.copyWith(isUploading: false);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -121,6 +141,7 @@ class UploadAfterPhotosScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.uploadAfterTitle,
             style: const TextStyle(

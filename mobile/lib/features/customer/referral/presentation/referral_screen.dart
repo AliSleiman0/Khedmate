@@ -4,7 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import 'referral_provider.dart';
+
+const _tag = 'ReferralScreen';
 
 class ReferralScreen extends ConsumerWidget {
   final String? prefilledCode;
@@ -22,6 +26,7 @@ class ReferralScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.referralTitle,
             style: const TextStyle(
@@ -127,6 +132,8 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
                             const Icon(Icons.copy, color: AppColors.brandBlue),
                         onPressed: () {
                           if (info == null) return;
+                          log.d(_tag, 'copy tap',
+                              data: {'code': info.code});
                           Clipboard.setData(ClipboardData(text: info.code));
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -342,6 +349,7 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
 
   Future<void> _shareCode(
       BuildContext context, String shareUrl, String code) async {
+    log.d(_tag, 'share tap', data: {'code': code});
     final s = S.read(ref);
     final message =
         'استخدم كودي $code على تطبيق خدمتي واحصل على خصم 15% في أول حجز! $shareUrl';
@@ -349,8 +357,10 @@ class _ReferralBodyState extends ConsumerState<_ReferralBody> {
         'whatsapp://send?text=${Uri.encodeComponent(message)}');
 
     if (await canLaunchUrl(uri)) {
+      log.i(_tag, 'share via whatsapp');
       await launchUrl(uri);
     } else {
+      log.w(_tag, 'whatsapp unavailable, copied to clipboard');
       await Clipboard.setData(ClipboardData(text: message));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/logging/app_logger.dart';
+
+const _tag = 'CompletedJobs';
 
 class CompletedJobSummary {
   final String id;
@@ -33,13 +36,16 @@ class CompletedJobSummary {
 
 final completedJobsProvider =
     FutureProvider.autoDispose<List<CompletedJobSummary>>((ref) async {
+  log.d(_tag, 'load start');
   final client = ref.watch(apiClientProvider);
   final response = await client.dio.get(
     '/providers/me/jobs',
     queryParameters: {'status': 'Paid', 'page': 1, 'pageSize': 50},
   );
   final items = (response.data['data']['items'] as List?) ?? [];
-  return items
+  final list = items
       .map((e) => CompletedJobSummary.fromJson(e as Map<String, dynamic>))
       .toList();
+  log.i(_tag, 'load ok', data: {'count': list.length});
+  return list;
 });

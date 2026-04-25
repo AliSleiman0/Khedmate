@@ -4,9 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/logging/app_logger.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/providers/role_provider.dart';
+import '../../../core/widgets/app_back_button.dart';
 import 'auth_provider.dart';
+
+const _tag = 'RegisterScreen';
 
 // Service category keys (resolved to localized labels via S.categoryLabel).
 const _providerServiceCategories = [
@@ -61,13 +65,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _submit() async {
     setState(() => _errorMessage = null);
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      log.d(_tag, 'submit blocked', data: {'reason': 'validation_failed'});
+      return;
+    }
 
     final isProvider = ref.read(roleProvider) == UserRole.provider;
     if (isProvider && _selectedCategories.isEmpty) {
+      log.d(_tag, 'submit blocked', data: {'reason': 'no_categories'});
       setState(() => _errorMessage = S.read(ref).categoryRequired);
       return;
     }
+
+    log.d(_tag, 'submit', data: {
+      'role': isProvider ? 'provider' : 'customer',
+      'categoryCount': isProvider ? _selectedCategories.length : null,
+    });
 
     final phone = '$_dialCode${_phoneController.text.trim()}';
 
@@ -85,6 +98,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     authState.when(
       data: (state) {
         if (state is AuthOtpPending) {
+          log.i(_tag, 'nav next', data: {'target': '/otp'});
           context.go('/otp?phone=${Uri.encodeComponent(state.phone)}');
         }
       },
@@ -123,6 +137,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.brandBlue,
         foregroundColor: Colors.white,
+        leading: const AppBackButton(),
         title: Text(
           s.registerTitle,
           style: const TextStyle(

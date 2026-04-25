@@ -1,7 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+import 'package:talker_flutter/talker_flutter.dart';
+import '../core/logging/app_logger.dart';
+import '../core/logging/log_viewer_screen.dart';
 import '../core/providers/role_provider.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_page.dart';
@@ -62,7 +66,12 @@ final routerProvider = Provider<GoRouter>((ref) {
   final storage = ref.watch(secureStorageProvider);
   final refreshTick = ValueNotifier<int>(0);
 
-  ref.listen<UserRole?>(roleProvider, (_, __) {
+  ref.listen<UserRole?>(roleProvider, (prev, next) {
+    log.d('Router.redirect', 'refresh pulse', data: {
+      'reason': 'role_change',
+      'prev': prev?.name,
+      'next': next?.name,
+    });
     refreshTick.value++;
   });
 
@@ -71,6 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/welcome',
     refreshListenable: refreshTick,
     redirect: (context, state) => _topLevelRedirect(storage, state),
+    observers: [TalkerRouteObserver(log.talker)],
     routes: _routes,
   );
 
@@ -101,10 +111,33 @@ Future<String?> _topLevelRedirect(
   FlutterSecureStorage storage,
   GoRouterState state,
 ) async {
+  final goingTo = state.matchedLocation;
+
+  // Debug-only log viewer is reachable regardless of auth state — useful when
+  // logs are needed precisely because auth is broken. Compiled out of release
+  // builds because the route itself is only registered under `kDebugMode`.
+  if (kDebugMode && goingTo.startsWith('/debug/')) return null;
+
   final token = await storage.read(key: 'access_token');
   final hasToken = token != null && token.isNotEmpty;
   final role = await _readRole(storage);
-  final goingTo = state.matchedLocation;
+  final tier = await storage.read(key: kProviderTierStorageKey);
+
+  log.v('Router.redirect', 'redirect', data: {
+    'path': goingTo,
+    'hasToken': hasToken,
+    'role': role?.name,
+    'tier': tier,
+  });
+
+  String? decide(String? to, String reason) {
+    log.d('Router.redirect', 'decision', data: {
+      'from': goingTo,
+      'to': to ?? '<stay>',
+      'reason': reason,
+    });
+    return to;
+  }
 
   // Unauthenticated ------------------------------------------------------------
   if (!hasToken) {
@@ -113,46 +146,50 @@ Future<String?> _topLevelRedirect(
       if (role == UserRole.provider &&
           (goingTo.startsWith('/forgot-password') ||
               goingTo.startsWith('/reset-password'))) {
-        return '/login';
+        return decide('/login', 'provider_no_password_recovery');
       }
-      return null;
+      return decide(null, 'public');
     }
-    return '/welcome';
+    return decide('/welcome', 'no_token');
   }
 
   // Authenticated with no role (corrupted state) → clear token + bounce.
   if (role == null) {
+    log.w('Router.redirect', 'corrupt state, clearing tokens');
     await storage.delete(key: 'access_token');
     await storage.delete(key: 'refresh_token');
-    return '/welcome';
+    return decide('/welcome', 'corrupt_state');
   }
 
   // Authenticated on a public route → send to role's home.
   if (_publicPaths.any(goingTo.startsWith)) {
-    return role == UserRole.customer ? '/customer/home' : '/provider/jobs';
+    return decide(
+      role == UserRole.customer ? '/customer/home' : '/provider/jobs',
+      'authed_on_public',
+    );
   }
 
   // Wrong-role namespace guard.
   if (role == UserRole.customer && goingTo.startsWith('/provider/')) {
-    return '/customer/home';
+    return decide('/customer/home', 'wrong_role');
   }
   if (role == UserRole.provider && goingTo.startsWith('/customer/')) {
-    return '/provider/jobs';
+    return decide('/provider/jobs', 'wrong_role');
   }
 
   // Provider-tier gate: un-verified providers may only navigate to
   // onboarding + profile + notifications + chat until they reach `Active`.
   if (role == UserRole.provider && goingTo.startsWith('/provider/')) {
-    final tier = await storage.read(key: kProviderTierStorageKey);
     // `VerificationTier.active.name` serialises to `"active"` (camelCase).
-    final needsOnboarding = tier != null && tier.isNotEmpty && tier != 'active';
+    final needsOnboarding =
+        tier != null && tier.isNotEmpty && tier != 'active';
     if (needsOnboarding &&
         !_providerTierExemptPrefixes.any(goingTo.startsWith)) {
-      return '/provider/onboarding';
+      return decide('/provider/onboarding', 'tier_gate');
     }
   }
 
-  return null;
+  return decide(null, 'allow');
 }
 
 Future<UserRole?> _readRole(FlutterSecureStorage storage) async {
@@ -388,4 +425,13 @@ final List<RouteBase> _routes = [
       otherPartyName: state.uri.queryParameters['name'] ?? '',
     ),
   ),
+
+  // Debug-only log viewer. Reachable from a long-press on the profile-page
+  // version label — and only when `kDebugMode` is true. Not redirect-guarded
+  // so it works even if auth state is broken.
+  if (kDebugMode)
+    GoRoute(
+      path: '/debug/logs',
+      builder: (_, __) => const LogViewerScreen(),
+    ),
 ];

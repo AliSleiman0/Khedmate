@@ -1,4 +1,4 @@
-package com.khudmati.mobile
+package com.khudmati.app
 
 import io.flutter.embedding.android.FlutterActivity
 

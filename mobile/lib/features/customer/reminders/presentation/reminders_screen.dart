@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../booking/presentation/booking_provider.dart';
 import '../data/reminders_repository.dart';
 import 'reminders_provider.dart';
@@ -23,6 +24,7 @@ class RemindersScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.remindersTitle,
             style: const TextStyle(

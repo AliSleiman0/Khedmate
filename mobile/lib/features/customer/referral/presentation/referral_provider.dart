@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../data/referral_repository.dart';
 import '../domain/referral_info.dart';
+
+const _tag = 'ReferralNotifier';
 
 class ReferralState {
   final ReferralInfo? info;
@@ -40,9 +43,20 @@ class ReferralNotifier extends AsyncNotifier<ReferralState> {
   Future<ReferralState> build() async => _load();
 
   Future<ReferralState> _load() async {
-    final repo = ref.read(referralRepositoryProvider);
-    final info = await repo.getReferralInfo();
-    return ReferralState(info: info);
+    log.d(_tag, 'load start');
+    try {
+      final repo = ref.read(referralRepositoryProvider);
+      final info = await repo.getReferralInfo();
+      log.i(_tag, 'load ok', data: {
+        'code': info.code,
+        'creditBalance': info.creditBalance,
+        'referralsCompleted': info.referralsCompleted,
+      });
+      return ReferralState(info: info);
+    } catch (e) {
+      log.e(_tag, 'load failed', error: e);
+      rethrow;
+    }
   }
 
   Future<void> refresh() async {
@@ -51,6 +65,7 @@ class ReferralNotifier extends AsyncNotifier<ReferralState> {
   }
 
   Future<void> applyCode(String code) async {
+    log.d(_tag, 'apply start', data: {'code': code.trim().toUpperCase()});
     final current = state.valueOrNull ?? const ReferralState();
     state = AsyncValue.data(current.copyWith(
       isApplyingCode: true,
@@ -62,6 +77,7 @@ class ReferralNotifier extends AsyncNotifier<ReferralState> {
       final repo = ref.read(referralRepositoryProvider);
       final result = await repo.applyReferralCode(code);
       final discountPct = (result['discountPct'] as num?)?.toInt() ?? 15;
+      log.i(_tag, 'apply ok', data: {'discountPct': discountPct});
       final updated = await _load();
       state = AsyncValue.data(updated.copyWith(
         isApplyingCode: false,
@@ -70,6 +86,7 @@ class ReferralNotifier extends AsyncNotifier<ReferralState> {
       ));
     } on DioException catch (e) {
       final errorCode = _extractErrorCode(e);
+      log.w(_tag, 'apply failed', data: {'code': errorCode});
       final message = switch (errorCode) {
         'REFERRAL_CODE_NOT_FOUND' => 'الكود غير صحيح أو غير موجود',
         'REFERRAL_ALREADY_USED'   => 'لقد طبّقت كود دعوة مسبقاً',
@@ -82,7 +99,8 @@ class ReferralNotifier extends AsyncNotifier<ReferralState> {
         isApplyingCode: false,
         applyError: message,
       ));
-    } catch (_) {
+    } catch (e, st) {
+      log.e(_tag, 'apply crashed', error: e, stack: st);
       final cur = state.valueOrNull ?? const ReferralState();
       state = AsyncValue.data(cur.copyWith(
         isApplyingCode: false,

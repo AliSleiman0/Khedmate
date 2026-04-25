@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../data/payment_repository.dart';
+
+const _tag = 'PaymentStatus';
 
 class PaymentStatusScreen extends ConsumerStatefulWidget {
   final String jobId;
@@ -25,6 +29,7 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
   }
 
   Future<void> _load() async {
+    log.d(_tag, 'load start', data: {'jobId': widget.jobId});
     setState(() {
       _loading = true;
       _error = null;
@@ -36,11 +41,18 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
         (t) => t['jobId'] == widget.jobId,
         orElse: () => {},
       );
+      log.i(_tag, 'load ok', data: {
+        'jobId': widget.jobId,
+        'found': tx.isNotEmpty,
+        'status': tx.isEmpty ? null : tx['status'],
+      });
       setState(() {
         _transaction = tx.isEmpty ? null : tx;
         _loading = false;
       });
     } catch (e) {
+      log.w(_tag, 'load failed',
+          error: e, data: {'jobId': widget.jobId});
       setState(() {
         _error = S.read(ref).payLoadError;
         _loading = false;
@@ -57,6 +69,7 @@ class _PaymentStatusScreenState extends ConsumerState<PaymentStatusScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(S.of(ref).payStatusTitle,
               style: const TextStyle(
                   fontFamily: 'Cairo', fontWeight: FontWeight.bold)),

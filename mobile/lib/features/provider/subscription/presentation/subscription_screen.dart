@@ -5,9 +5,14 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/logging/redact.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../data/subscription_repository.dart';
 import '../domain/subscription_info.dart';
 import 'subscription_provider.dart';
+
+const _tag = 'Subscription';
 
 class SubscriptionScreen extends ConsumerStatefulWidget {
   const SubscriptionScreen({super.key});
@@ -33,6 +38,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.subTitle,
             style: const TextStyle(
@@ -73,6 +79,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
   }
 
   Future<void> _handleSubscribe() async {
+    log.i(_tag, 'subscribe start');
     setState(() {
       _inlineError = null;
       _paymentInProgress = true;
@@ -82,8 +89,12 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
       final repo = ref.read(subscriptionRepositoryProvider);
       final String clientSecret;
       try {
+        log.d(_tag, 'setup intent start');
         clientSecret = await repo.getSetupIntentClientSecret();
+        log.i(_tag, 'setup intent ok',
+            data: {'clientSecret': redactToken(clientSecret)});
       } on SubscriptionApiException catch (e) {
+        log.w(_tag, 'setup intent failed', data: {'code': e.errorCode});
         final s = S.of(ref);
         setState(() {
           _inlineError = switch (e.errorCode) {
@@ -97,6 +108,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
         return;
       }
 
+      log.d(_tag, 'sheet present');
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           setupIntentClientSecret: clientSecret,
@@ -105,24 +117,31 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
         ),
       );
       await Stripe.instance.presentPaymentSheet();
+      log.i(_tag, 'sheet confirmed');
 
       final siId = clientSecret.split('_secret_').first;
       final error =
           await ref.read(subscriptionProvider.notifier).subscribe(siId);
       if (!mounted) return;
       if (error != null) {
+        log.w(_tag, 'subscribe surfaced error', data: {'error': error});
         setState(() => _inlineError = error);
       } else {
+        log.i(_tag, 'subscribe success');
         _showSnackBar(S.of(ref).subSuccess, isError: false);
       }
     } on StripeException catch (e) {
       if (!mounted) return;
       if (e.error.code == FailureCode.Canceled) {
+        log.w(_tag, 'sheet cancelled');
         setState(() => _inlineError = null);
       } else {
+        log.e(_tag, 'sheet failed',
+            error: e, data: {'code': e.error.code.name});
         setState(() => _inlineError = S.of(ref).subErrorStripe);
       }
-    } catch (_) {
+    } catch (e, st) {
+      log.e(_tag, 'subscribe crashed', error: e, stack: st);
       if (!mounted) return;
       setState(() => _inlineError = S.of(ref).subErrorStripe);
     } finally {
@@ -161,6 +180,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
 
     if (confirmed != true || !mounted) return;
 
+    log.d(_tag, 'cancel confirm tap');
     final error = await ref.read(subscriptionProvider.notifier).cancel();
     if (!mounted) return;
     if (error != null) {

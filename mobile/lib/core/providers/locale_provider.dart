@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../logging/app_logger.dart';
 
 const _kLocaleStorageKey = 'locale_code';
 
@@ -10,6 +11,8 @@ class LocaleNotifier extends StateNotifier<Locale> {
   LocaleNotifier(super.initial);
 
   Future<void> setLocale(Locale locale) async {
+    log.i('LocaleProvider', 'set locale',
+        data: {'code': locale.languageCode});
     state = locale;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kLocaleStorageKey, locale.languageCode);
@@ -20,8 +23,10 @@ class LocaleNotifier extends StateNotifier<Locale> {
   static Future<Locale> loadPersisted() async {
     final prefs = await SharedPreferences.getInstance();
     final code = prefs.getString(_kLocaleStorageKey);
-    if (code == 'ar') return const Locale('ar');
-    return const Locale('en');
+    final locale = code == 'ar' ? const Locale('ar') : const Locale('en');
+    log.d('LocaleProvider', 'load persisted',
+        data: {'code': locale.languageCode});
+    return locale;
   }
 }
 

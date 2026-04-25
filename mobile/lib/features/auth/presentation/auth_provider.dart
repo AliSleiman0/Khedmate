@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/logging/app_logger.dart';
 import '../../../core/providers/role_provider.dart';
 import '../data/auth_repository.dart';
+
+const _tag = 'AuthNotifier';
 
 /// Unified user model. `email` is populated for customers; providers don't
 /// expose an email via `/providers/me`.
@@ -50,6 +53,18 @@ class AuthAuthenticated extends AuthState {
   const AuthAuthenticated(this.user, this.role);
 }
 
+String _errorCode(Object err) {
+  if (err is DioException) {
+    try {
+      final data = err.response?.data;
+      if (data is Map) {
+        return (data['code'] as String?) ?? (data['error'] as String?) ?? '';
+      }
+    } catch (_) {}
+  }
+  return '';
+}
+
 // ---------------------------------------------------------------------------
 // Notifier
 // ---------------------------------------------------------------------------
@@ -58,23 +73,29 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<AuthState> build() async {
     final repo = ref.read(authRepositoryProvider);
     final token = await repo.getAccessToken();
+    final role = ref.read(roleProvider);
+    log.d(_tag, 'build', data: {
+      'hasToken': token != null && token.isNotEmpty,
+      'role': role?.name,
+    });
     if (token == null || token.isEmpty) {
+      log.i(_tag, 'no session');
       return const AuthUnauthenticated();
     }
-    final role = ref.read(roleProvider);
     if (role == null) {
-      // Token present but we don't know which role it belongs to — safest to
-      // force a fresh login so the refresh endpoint can be chosen correctly.
+      log.w(_tag, 'token without role — forcing re-auth');
       return const AuthUnauthenticated();
     }
 
-    // ApiClient's interceptor handles refresh on 401 transparently. If
-    // fetchMe throws after refresh, treat as unauthenticated.
+    log.i(_tag, 'fetchMe start');
     try {
       final result = await repo.fetchMe();
       final data = result['data'] as Map<String, dynamic>? ?? const {};
-      return AuthAuthenticated(AppUser.fromJson(data), role);
-    } catch (_) {
+      final user = AppUser.fromJson(data);
+      log.i(_tag, 'fetchMe ok', data: {'role': role.name, 'userId': user.id});
+      return AuthAuthenticated(user, role);
+    } catch (e) {
+      log.w(_tag, 'fetchMe failed — treating as unauthenticated', error: e);
       return const AuthUnauthenticated();
     }
   }
@@ -86,6 +107,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String password,
     List<String>? serviceCategories,
   }) async {
+    log.d(_tag, 'register start', data: {'role': ref.read(roleProvider)?.name});
     state = const AsyncValue.loading();
     final repo = ref.read(authRepositoryProvider);
     try {
@@ -96,8 +118,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         password: password,
         serviceCategories: serviceCategories,
       );
+      log.i(_tag, 'register ok — otp pending');
       state = AsyncValue.data(AuthOtpPending(phone));
     } on DioException catch (e, st) {
+      log.w(_tag, 'register failed', data: {'code': _errorCode(e)});
       state = AsyncValue.error(e, st);
     }
   }
@@ -106,9 +130,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String phone,
     required String otp,
   }) async {
+    final role = ref.read(roleProvider) ?? UserRole.customer;
+    log.d(_tag, 'verifyOtp start', data: {'role': role.name});
     state = const AsyncValue.loading();
     final repo = ref.read(authRepositoryProvider);
-    final role = ref.read(roleProvider) ?? UserRole.customer;
     try {
       final result = await repo.verifyOtp(phone: phone, otp: otp);
       final data = result['data'] as Map<String, dynamic>;
@@ -126,8 +151,14 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final user = userJson != null
           ? AppUser.fromJson(userJson)
           : AppUser.empty;
+      log.i(_tag, 'verifyOtp ok',
+          data: {'role': role.name, 'userId': user.id});
       state = AsyncValue.data(AuthAuthenticated(user, role));
     } on DioException catch (e, st) {
+      log.w(_tag, 'verifyOtp failed', data: {'code': _errorCode(e)});
+      state = AsyncValue.error(e, st);
+    } catch (e, st) {
+      log.e(_tag, 'verifyOtp crashed', error: e, stack: st);
       state = AsyncValue.error(e, st);
     }
   }
@@ -136,9 +167,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String phone,
     required String password,
   }) async {
+    final role = ref.read(roleProvider) ?? UserRole.customer;
+    log.d(_tag, 'login start', data: {'role': role.name});
     state = const AsyncValue.loading();
     final repo = ref.read(authRepositoryProvider);
-    final role = ref.read(roleProvider) ?? UserRole.customer;
     try {
       final result = await repo.login(phone: phone, password: password);
       final data = result['data'] as Map<String, dynamic>;
@@ -152,8 +184,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final user = userJson != null
           ? AppUser.fromJson(userJson)
           : AppUser.empty;
+      log.i(_tag, 'login ok', data: {'role': role.name, 'userId': user.id});
       state = AsyncValue.data(AuthAuthenticated(user, role));
     } on DioException catch (e, st) {
+      log.w(_tag, 'login failed', data: {'code': _errorCode(e)});
       state = AsyncValue.error(e, st);
     }
   }
@@ -162,9 +196,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String email,
     required String password,
   }) async {
+    final role = ref.read(roleProvider) ?? UserRole.customer;
+    log.d(_tag, 'loginWithEmail start', data: {'role': role.name});
     state = const AsyncValue.loading();
     final repo = ref.read(authRepositoryProvider);
-    final role = ref.read(roleProvider) ?? UserRole.customer;
     try {
       final result = await repo.loginWithEmail(email: email, password: password);
       final data = result['data'] as Map<String, dynamic>;
@@ -176,22 +211,37 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final user = userJson != null
           ? AppUser.fromJson(userJson)
           : AppUser.empty;
+      log.i(_tag, 'loginWithEmail ok',
+          data: {'role': role.name, 'userId': user.id});
       state = AsyncValue.data(AuthAuthenticated(user, role));
     } on DioException catch (e, st) {
+      log.w(_tag, 'loginWithEmail failed', data: {'code': _errorCode(e)});
       state = AsyncValue.error(e, st);
     }
   }
 
   Future<void> logout() async {
+    log.d(_tag, 'logout start');
     final repo = ref.read(authRepositoryProvider);
     await repo.logout();
+    log.i(_tag, 'logout ok');
     state = const AsyncValue.data(AuthUnauthenticated());
   }
 
   Future<void> deleteAccount() async {
+    log.d(_tag, 'deleteAccount start');
     final repo = ref.read(authRepositoryProvider);
-    await repo.deleteAccount();
-    state = const AsyncValue.data(AuthUnauthenticated());
+    try {
+      await repo.deleteAccount();
+      log.i(_tag, 'deleteAccount ok');
+      state = const AsyncValue.data(AuthUnauthenticated());
+    } on DioException catch (e) {
+      log.w(_tag, 'deleteAccount failed', data: {'code': _errorCode(e)});
+      rethrow;
+    } catch (e, st) {
+      log.e(_tag, 'deleteAccount crashed', error: e, stack: st);
+      rethrow;
+    }
   }
 }
 

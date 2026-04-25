@@ -5,7 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import 'booking_provider.dart';
+
+const _tag = 'BookingSummary';
 
 class BookingSummaryScreen extends ConsumerWidget {
   const BookingSummaryScreen({super.key});
@@ -27,10 +31,7 @@ class BookingSummaryScreen extends ConsumerWidget {
             style: const TextStyle(
                 fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/customer/booking/location'),
-          ),
+          leading: const AppBackButton(),
         ),
         body: asyncState.when(
           loading: () => const Center(
@@ -39,8 +40,10 @@ class BookingSummaryScreen extends ConsumerWidget {
             message: e.toString().contains('فشل')
                 ? e.toString()
                 : s.summaryPaymentFailed,
-            onRetry: () =>
-                ref.read(bookingNotifierProvider.notifier).submitBooking(),
+            onRetry: () {
+              log.d(_tag, 'retry tap');
+              ref.read(bookingNotifierProvider.notifier).submitBooking();
+            },
           ),
           data: (booking) => _SummaryBody(booking: booking),
         ),
@@ -396,7 +399,15 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                 onPressed: isLoading || !amountEntered
                     ? null
                     : () async {
-                        if (!_formKey.currentState!.validate()) return;
+                        if (!_formKey.currentState!.validate()) {
+                          log.d(_tag, 'pay blocked',
+                              data: {'reason': 'validation_failed'});
+                          return;
+                        }
+                        log.d(_tag, 'pay tap', data: {
+                          'amount': booking.agreedAmount,
+                          'bypass': AppConfig.bypassPayments,
+                        });
                         await ref
                             .read(bookingNotifierProvider.notifier)
                             .submitBooking();
@@ -404,6 +415,10 @@ class _SummaryBodyState extends ConsumerState<_SummaryBody> {
                             ref.read(bookingNotifierProvider).valueOrNull;
                         if (updated?.createdJobId != null &&
                             context.mounted) {
+                          log.i(_tag, 'nav next', data: {
+                            'target': '/customer/payment/receipt',
+                            'jobId': updated!.createdJobId,
+                          });
                           context.go('/customer/payment/receipt');
                         }
                       },

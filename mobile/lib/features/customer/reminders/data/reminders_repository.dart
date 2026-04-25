@@ -1,4 +1,7 @@
 import '../../../../core/api/api_client.dart';
+import '../../../../core/logging/app_logger.dart';
+
+const _tag = 'RemindersRepo';
 
 class ReminderModel {
   final String id;
@@ -42,6 +45,7 @@ class RemindersRepository {
   RemindersRepository(this._api);
 
   Future<List<ReminderModel>> fetchReminders() async {
+    log.d(_tag, 'fetchReminders start');
     final response = await _api.dio.get('/customers/me/reminders');
     final data = response.data as Map<String, dynamic>;
     final items = data['data'] as List? ?? [];
@@ -51,6 +55,7 @@ class RemindersRepository {
   }
 
   Future<void> snooze(String id, int days) async {
+    log.d(_tag, 'snooze start', data: {'id': id, 'days': days});
     await _api.dio.patch(
       '/customers/me/reminders/$id',
       data: {'action': 'Snooze', 'snoozeDays': days},
@@ -58,6 +63,7 @@ class RemindersRepository {
   }
 
   Future<void> dismiss(String id) async {
+    log.d(_tag, 'dismiss start', data: {'id': id});
     await _api.dio.patch(
       '/customers/me/reminders/$id',
       data: {'action': 'Dismiss'},
@@ -65,12 +71,15 @@ class RemindersRepository {
   }
 
   Future<void> markBooked(String id) async {
+    log.d(_tag, 'markBooked start', data: {'id': id});
     try {
       await _api.dio.patch(
         '/customers/me/reminders/$id',
         data: {'action': 'Booked'},
       );
-    } catch (_) {
+    } catch (e) {
+      log.w(_tag, 'markBooked fallback to dismiss',
+          error: e, data: {'id': id});
       await _api.dio.patch(
         '/customers/me/reminders/$id',
         data: {'action': 'Dismiss'},

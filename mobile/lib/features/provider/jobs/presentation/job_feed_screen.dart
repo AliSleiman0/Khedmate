@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../../shared/notifications/presentation/notifications_provider.dart';
 import '../data/job_repository.dart';
 import 'active_jobs_screen.dart';
 import 'completed_jobs_provider.dart';
 import 'job_feed_provider.dart';
+
+const _tag = 'JobFeedScreen';
 
 const _categoryIcons = {
   'plumbing': Icons.plumbing,
@@ -33,6 +37,12 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      const tabs = ['available', 'active', 'completed'];
+      log.d(_tag, 'tab change',
+          data: {'tab': tabs[_tabController.index]});
+    });
   }
 
   @override
@@ -53,12 +63,12 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen>
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.jobsTitle,
             style: const TextStyle(
                 fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
-          automaticallyImplyLeading: false,
           actions: [
             Stack(
               children: [
@@ -165,7 +175,10 @@ class _JobCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: InkWell(
-        onTap: () => context.push('/provider/job-detail/${job.id}'),
+        onTap: () {
+          log.d(_tag, 'card tap', data: {'jobId': job.id});
+          context.push('/provider/job-detail/${job.id}');
+        },
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -313,8 +326,10 @@ class _EmptyState extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           IconButton(
-            onPressed: () =>
-                ref.read(jobFeedNotifierProvider.notifier).refresh(),
+            onPressed: () {
+              log.d(_tag, 'empty refresh tap');
+              ref.read(jobFeedNotifierProvider.notifier).refresh();
+            },
             icon: const Icon(Icons.refresh, color: AppColors.brandBlue),
           ),
         ],

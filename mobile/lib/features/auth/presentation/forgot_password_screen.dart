@@ -4,7 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/logging/app_logger.dart';
+import '../../../core/logging/redact.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../data/auth_repository.dart';
+
+const _tag = 'ForgotPassword';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -28,19 +33,25 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      log.d(_tag, 'submit blocked', data: {'reason': 'validation_failed'});
+      return;
+    }
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     final phone = '$_dialCode${_phoneController.text.trim()}';
+    log.d(_tag, 'submit', data: {'phone': redactPhone(phone)});
     try {
       final repo = ref.read(authRepositoryProvider);
       await repo.forgotPassword(phone: phone);
+      log.i(_tag, 'nav next', data: {'target': '/reset-password'});
       if (!mounted) return;
       context.push('/reset-password?phone=${Uri.encodeComponent(phone)}');
-    } on DioException {
+    } on DioException catch (e) {
+      log.w(_tag, 'submit failed', error: e);
       setState(() => _errorMessage = S.read(ref).errorGeneric);
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -55,6 +66,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.brandBlue,
         foregroundColor: Colors.white,
+        leading: const AppBackButton(),
         title: Text(
           s.forgotPasswordTitle,
           style: const TextStyle(

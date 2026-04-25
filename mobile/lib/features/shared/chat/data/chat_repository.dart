@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/logging/app_logger.dart';
+
+const _tag = 'ChatRepo';
 
 class ChatRepository {
   final ApiClient _api;
@@ -8,6 +11,8 @@ class ChatRepository {
 
   Future<Map<String, dynamic>> getMessages(
       String jobId, int page, int pageSize) async {
+    log.d(_tag, 'getMessages start',
+        data: {'jobId': jobId, 'page': page, 'pageSize': pageSize});
     final response = await _api.dio.get(
       '/chat/jobs/$jobId/messages',
       queryParameters: {'page': page, 'pageSize': pageSize},
@@ -17,6 +22,8 @@ class ChatRepository {
 
   Future<Map<String, dynamic>> sendMessage(
       String jobId, String text) async {
+    log.d(_tag, 'sendMessage start',
+        data: {'jobId': jobId, 'len': text.length});
     final response = await _api.dio.post(
       '/chat/jobs/$jobId/messages',
       data: {'text': text},
@@ -25,6 +32,7 @@ class ChatRepository {
   }
 
   Future<void> markAsRead(String jobId) async {
+    log.d(_tag, 'markAsRead', data: {'jobId': jobId});
     await _api.dio.post('/chat/jobs/$jobId/read');
   }
 

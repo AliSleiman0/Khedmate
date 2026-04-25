@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
+
+const _tag = 'JobDetail';
 
 class _JobDetail {
   final String id;
@@ -62,11 +66,20 @@ class _JobDetail {
 
 final jobDetailProvider =
     FutureProvider.autoDispose.family<_JobDetail, String>((ref, jobId) async {
+  log.d(_tag, 'load start', data: {'jobId': jobId});
   final client = ref.read(apiClientProvider);
   final response = await client.dio.get('/bookings/jobs/$jobId');
   final data = (response.data as Map<String, dynamic>)['data']
       as Map<String, dynamic>;
-  return _JobDetail.fromJson(data);
+  final detail = _JobDetail.fromJson(data);
+  log.i(_tag, 'load ok', data: {
+    'jobId': jobId,
+    'status': detail.status,
+    'beforeCount': detail.beforePhotoUrls.length,
+    'afterCount': detail.afterPhotoUrls.length,
+    'hasOpenDispute': detail.hasOpenDispute,
+  });
+  return detail;
 });
 
 class JobDetailPage extends ConsumerWidget {
@@ -96,6 +109,7 @@ class JobDetailPage extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.historyDetailTitle,
             style: const TextStyle(
@@ -230,6 +244,8 @@ class _JobDetailBody extends ConsumerWidget {
               height: 52,
               child: OutlinedButton.icon(
                 onPressed: () async {
+                  log.d(_tag, 'raise dispute tap',
+                      data: {'jobId': job.id});
                   await context.push(
                     '/customer/dispute/raise',
                     extra: {

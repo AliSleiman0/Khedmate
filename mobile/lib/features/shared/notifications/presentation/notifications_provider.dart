@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../data/notification_repository.dart';
 import '../domain/notification_model.dart';
+
+const _tag = 'NotifNotifier';
 
 class NotificationsNotifier extends AsyncNotifier<List<AppNotification>> {
   int _totalCount = 0;
@@ -12,17 +15,26 @@ class NotificationsNotifier extends AsyncNotifier<List<AppNotification>> {
 
   Future<List<AppNotification>> _load() async {
     final repo = ref.read(notificationRepositoryProvider);
-    final page = await repo.getNotifications();
-    _totalCount = page.totalCount;
-    return page.items;
+    try {
+      final page = await repo.getNotifications();
+      _totalCount = page.totalCount;
+      log.i(_tag, 'load ok',
+          data: {'count': page.items.length, 'totalCount': _totalCount});
+      return page.items;
+    } catch (e, st) {
+      log.e(_tag, 'load failed', error: e, stack: st);
+      rethrow;
+    }
   }
 
   Future<void> refresh() async {
+    log.d(_tag, 'refresh');
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(_load);
   }
 
   Future<void> markRead(String id) async {
+    log.d(_tag, 'markRead', data: {'id': id});
     final repo = ref.read(notificationRepositoryProvider);
     await repo.markRead(id);
     state = state.whenData((items) => [

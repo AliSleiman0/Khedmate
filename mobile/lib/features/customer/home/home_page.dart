@@ -8,6 +8,7 @@ import '../../../core/l10n/app_strings.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/providers/categories_provider.dart';
 import '../../../core/providers/locale_provider.dart';
+import '../../../core/widgets/back_chip.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../shared/notifications/presentation/notifications_provider.dart';
 import '../../shared/rating/data/rating_repository.dart';
@@ -90,11 +91,13 @@ class HomePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.canvas,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 96),
-          physics: const BouncingScrollPhysics(),
-          children: [
+      body: Stack(
+        children: [
+          SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 96),
+              physics: const BouncingScrollPhysics(),
+              children: [
             _TopBar(
               initial: initial,
               unreadCount: unreadCount,
@@ -139,6 +142,9 @@ class HomePage extends ConsumerWidget {
               _FilteredGrid(s: s, ref: ref, context: context, query: query),
           ],
         ),
+          ),
+          const BackChip(),
+        ],
       ),
     );
   }

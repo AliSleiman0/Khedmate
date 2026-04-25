@@ -1,6 +1,6 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../core/logging/app_logger.dart';
 
 /// Phase 10 migration analytics. Fires `migration_opened_new_app` once per
 /// install the first time the unified app successfully boots.
@@ -30,13 +30,14 @@ class MigrationAnalytics {
       } else {
         // Firebase not configured in this build (placeholder config files).
         // Still persist the flag so we don't spam debug logs every launch.
-        debugPrint('[migration] Firebase not ready — analytics skipped.');
+        log.w('MigrationAnalytics', 'firebase not ready — analytics skipped');
       }
 
       await _storage.write(key: _flagKey, value: 'true');
-    } catch (e) {
+    } catch (e, st) {
       // Analytics is best-effort — never block app startup.
-      debugPrint('[migration] logFirstLaunchIfNeeded failed: $e');
+      log.e('MigrationAnalytics', 'logFirstLaunchIfNeeded failed',
+          error: e, stack: st);
     }
   }
 }

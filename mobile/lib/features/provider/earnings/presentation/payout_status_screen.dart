@@ -3,8 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/logging/redact.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../data/earnings_repository.dart';
 import 'earnings_provider.dart';
+
+const _tag = 'PayoutStatus';
 
 class PayoutStatusScreen extends ConsumerStatefulWidget {
   const PayoutStatusScreen({super.key});
@@ -18,6 +23,7 @@ class _PayoutStatusScreenState extends ConsumerState<PayoutStatusScreen> {
   bool _onboarding = false;
 
   Future<void> _startOnboarding() async {
+    log.d(_tag, 'connect tap');
     setState(() => _onboarding = true);
     try {
       final repo = ref.read(earningsRepositoryProvider);
@@ -25,10 +31,15 @@ class _PayoutStatusScreenState extends ConsumerState<PayoutStatusScreen> {
       final url = data['onboardingUrl'] as String;
 
       if (await canLaunchUrl(Uri.parse(url))) {
+        log.i(_tag, 'open external', data: {'url': redactUrl(url)});
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         await ref.read(earningsSummaryProvider.notifier).refresh();
+      } else {
+        log.w(_tag, 'cannot launch onboarding url',
+            data: {'url': redactUrl(url)});
       }
     } catch (e) {
+      log.w(_tag, 'onboarding failed', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -54,6 +65,7 @@ class _PayoutStatusScreenState extends ConsumerState<PayoutStatusScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.payoutTitle,
             style: const TextStyle(

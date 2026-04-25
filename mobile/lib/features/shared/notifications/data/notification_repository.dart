@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../domain/notification_model.dart';
+
+const _tag = 'NotifRepo';
 
 class NotificationsPage {
   final List<AppNotification> items;
@@ -21,6 +24,8 @@ class NotificationRepository {
     int pageSize = 20,
   }) async {
     final role = _ref.read(roleProvider) ?? UserRole.customer;
+    log.d(_tag, 'getNotifications start',
+        data: {'role': role.name, 'page': page, 'pageSize': pageSize});
     final response = await _client.dio.get(
       '/notifications',
       queryParameters: {
@@ -40,6 +45,7 @@ class NotificationRepository {
   }
 
   Future<void> markRead(String notificationId) async {
+    log.d(_tag, 'markRead', data: {'id': notificationId});
     await _client.dio.post('/notifications/$notificationId/read');
   }
 }

@@ -3,9 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../domain/notification_model.dart';
 import 'notifications_provider.dart';
+
+const _tag = 'NotifList';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -33,6 +37,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.brandBlue,
         foregroundColor: Colors.white,
+        leading: const AppBackButton(),
         title: Text(
           s.notifTitle,
           style: const TextStyle(
@@ -163,6 +168,10 @@ class _NotificationCard extends ConsumerWidget {
     final s = S.of(ref);
     return InkWell(
       onTap: () {
+        log.d(_tag, 'tap', data: {
+          'type': notification.type,
+          'jobId': notification.jobId,
+        });
         ref
             .read(notificationsNotifierProvider.notifier)
             .markRead(notification.id);

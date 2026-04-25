@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
+
+const _tag = 'RaiseDispute';
 
 final _raiseDisputeProvider = StateNotifierProvider.autoDispose
     .family<_RaiseDisputeNotifier, _RaiseDisputeState, String>(
@@ -42,12 +46,22 @@ class _RaiseDisputeNotifier extends StateNotifier<_RaiseDisputeState> {
       : super(const _RaiseDisputeState());
 
   Future<void> submit(String complaint) async {
+    log.d(_tag, 'submit start',
+        data: {'jobId': _jobId, 'reasonLen': complaint.length});
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      await _client.dio.post(
+      final response = await _client.dio.post(
         '/bookings/jobs/$_jobId/dispute',
         data: {'complaint': complaint},
       );
+      String? disputeId;
+      try {
+        final data = response.data as Map<String, dynamic>?;
+        disputeId = (data?['data'] as Map<String, dynamic>?)?['disputeId']
+            as String?;
+      } catch (_) {}
+      log.i(_tag, 'submit ok',
+          data: {'jobId': _jobId, 'disputeId': disputeId});
       state = state.copyWith(isLoading: false, success: true);
     } catch (e) {
       String? code;
@@ -56,6 +70,8 @@ class _RaiseDisputeNotifier extends StateNotifier<_RaiseDisputeState> {
             (e as dynamic).response?.data as Map<String, dynamic>?;
         code = data?['error'] as String?;
       } catch (_) {}
+      log.w(_tag, 'submit failed',
+          data: {'jobId': _jobId, 'code': code ?? 'UNKNOWN_ERROR'});
       state = state.copyWith(
           isLoading: false, errorCode: code ?? 'UNKNOWN_ERROR');
     }
@@ -103,7 +119,12 @@ class _RaiseDisputeScreenState extends ConsumerState<RaiseDisputeScreen> {
   }
 
   Future<void> _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      log.d(_tag, 'submit blocked',
+          data: {'reason': 'validation_failed'});
+      return;
+    }
+    log.d(_tag, 'open', data: {'jobId': widget.jobId});
     await ref
         .read(_raiseDisputeProvider(widget.jobId).notifier)
         .submit(_controller.text.trim());
@@ -138,6 +159,7 @@ class _RaiseDisputeScreenState extends ConsumerState<RaiseDisputeScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.disputeTitle,
             style: const TextStyle(

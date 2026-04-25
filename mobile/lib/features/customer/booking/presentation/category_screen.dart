@@ -8,6 +8,7 @@ import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/providers/categories_provider.dart';
 import '../../../../core/providers/locale_provider.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import 'booking_provider.dart';
 
 const _tag = 'CategoryScreen';
@@ -33,11 +34,7 @@ class CategoryScreen extends ConsumerWidget {
             style: const TextStyle(
                 fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
-          automaticallyImplyLeading: false,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/customer/home'),
-          ),
+          leading: const AppBackButton(),
         ),
         body: Padding(
           padding: const EdgeInsets.all(16),

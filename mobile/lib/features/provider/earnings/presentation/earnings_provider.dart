@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../data/earnings_repository.dart';
+
+const _tag = 'EarningsNotifier';
 
 class EarningsSummary {
   final double pendingBalance;
@@ -34,12 +37,20 @@ class EarningsSummary {
 class EarningsSummaryNotifier extends AsyncNotifier<EarningsSummary> {
   @override
   Future<EarningsSummary> build() async {
+    log.d(_tag, 'load summary');
     final repo = ref.read(earningsRepositoryProvider);
     final data = await repo.getEarningsSummary();
-    return EarningsSummary.fromJson(data);
+    final summary = EarningsSummary.fromJson(data);
+    log.i(_tag, 'load summary ok', data: {
+      'pending': summary.pendingBalance,
+      'available': summary.availableBalance,
+      'stripe': summary.stripeConnectStatus,
+    });
+    return summary;
   }
 
   Future<void> refresh() async {
+    log.d(_tag, 'refresh summary');
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final repo = ref.read(earningsRepositoryProvider);

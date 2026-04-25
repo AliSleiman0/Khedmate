@@ -1,12 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../../auth/presentation/auth_provider.dart';
 import 'profile_tiles_customer.dart';
 import 'profile_tiles_provider.dart';
+
+const _tag = 'ProfilePage';
+
+/// Build version shown at the bottom of the profile page. Matches
+/// `pubspec.yaml: version`. Long-press in `kDebugMode` opens the log viewer.
+const _kAppVersionLabel = 'v1.0.0+1';
 
 /// Shared profile shell. The header (avatar + name + phone) and the logout
 /// tile are identical across roles; the middle tile list is delegated to a
@@ -24,6 +33,7 @@ class ProfilePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(color: AppColors.ink),
         title: Text(
           s.profileTitle,
           style: const TextStyle(fontFamily: 'Cairo'),
@@ -53,9 +63,33 @@ class ProfilePage extends ConsumerWidget {
               ),
             ),
             onTap: () async {
+              log.d(_tag, 'logout tap', data: {'role': role?.name});
               await ref.read(authNotifierProvider.notifier).logout();
               if (context.mounted) context.go('/welcome');
             },
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onLongPress: kDebugMode
+                  ? () {
+                      log.d(_tag, 'long-press version → /debug/logs');
+                      context.push('/debug/logs');
+                    }
+                  : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  _kAppVersionLabel,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),

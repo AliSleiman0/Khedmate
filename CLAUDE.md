@@ -154,6 +154,126 @@ Phase 11 Android release APK built successfully (66.4 MB fat APK —
 switch to `flutter build appbundle` for Play Store submission to get
 per-ABI slices of ~22 MB each). See `mobile/CLAUDE.md` for details.
 
+Logging plan (separate from the 14-phase migration plan) lives at
+`mobile/docs/logging-plan/` — six phases adding structured `talker_flutter`
+logging across the unified app. **All six phases are complete**:
+- Phase 01 — `AppLogger` + redaction helpers + `/debug/logs` viewer +
+  `avoid_print: error` lint; all existing `debugPrint(...)` calls
+  migrated.
+- Phase 02 — `TalkerDioLogger` (PII-safe, headers + bodies OFF) on the
+  `ApiClient`; manual instrumentation on `ApiClient` /
+  `SignalRService` / `fcm_service` / `NotificationHandler` /
+  `router.redirect` / `role_provider` / `locale_provider`; route push /
+  pop / replace via `TalkerRouteObserver` on the root `GoRouter`;
+  provider build / dispose / state / errors via
+  `TalkerRiverpodObserver` on the root `ProviderContainer`. Added
+  `redactUrl` helper that strips token / OTP / password / secret query
+  keys (referral `ref=` survives).
+
+Phase 03 — Auth flow + shared features (chat / notifications / profile /
+rating). Adds `[AuthRepo]`, `[AuthNotifier]`, `[OtpScreen]`,
+`[LoginPage]` / `[RegisterScreen]` / `[ForgotPassword]` /
+`[ResetPassword]` / `[WelcomeScreen]` lines to the auth surface;
+`[ChatRepo]` / `[ChatNotifier]` / `[ChatScreen]` to chat (no message
+text — only lengths); `[NotifRepo]` / `[NotifNotifier]` / `[NotifList]`
+to notifications; `[ProfilePage]`, `[ProfileTilesC]` /
+`[ProfileTilesP]`, `[EditProfile]`, `[DeleteAccount]` (full Apple
+5.1.1(v) trace) to profile; `[RatingRepo]` / `[RatingNotifier]` /
+`[RatingSheet]` to rating. Phase 01 redaction helpers (`redactPhone` /
+`redactEmail` / `redactOtp` / `redactToken`) are applied at every
+PII-touching call site. Validation failures log the reason code
+(`reason=validation_failed`, `reason=no_categories`) — never the
+offending value. Scope is `mobile/lib/**` only — legacy apps,
+backend, and web are out of scope.
+
+Phase 04 — Customer-only stack under `lib/features/customer/**`. T3
+treatment for the incident hotspots: `[BookingNotifier]` traces every
+state-machine setter and the full Stripe path
+(`d 'create intent start' → i 'intent ok' clientSecret=${redactToken(...)}` →
+`d 'present sheet' → i 'sheet confirmed' → d 'confirm start' →
+i 'confirm ok' jobId=… transactionId=…`); the bypass path emits
+`w 'bypass path — no Stripe' reason=qa_build` and the `BYPASSED`
+sentinel literally so QA bookings stay distinguishable from real ones.
+`[TrackingNotifier]` traces `build`, SignalR `JobStatusChanged` /
+`ProviderLocationUpdated` subscriptions, every `i 'status transition'`,
+and per-frame `v 'loc update' coords=${redactLatLng(...)} ageMs=…`
+(verbose so the 3 s GPS cadence stays off by default). T2 narrow
+instrumentation on `[CustomerHome]` (1.2k LOC — only side-effectful
+spots: search input, category taps with `source` tag, FAB / rating
+banner). Plus `[BookingRepo]`, `[AiRepo]`, `[CategoryScreen]`,
+`[JobDescription]` (AI improve trace), `[LocationScreen]` (GPS +
+geocode), `[BookingSummary]`, `[BookingConfirm]`, `[TrackingPage]`,
+`[PaymentRepo]`, `[PaymentReceipt]`, `[PaymentStatus]`,
+`[HistoryPage]`, `[JobDetail]`, `[ReferralRepo]`,
+`[ReferralNotifier]`, `[ReferralScreen]`, `[RemindersRepo]`,
+`[RemindersNotifier]`, `[RaiseDispute]`. Stripe redaction rule:
+`clientSecret` always passes through `redactToken(...)`; raw
+`paymentMethod` / `customerId` / Stripe response objects are never
+logged. Maps coordinates always pass through `redactLatLng(...)` (2
+decimal places, ≈ 1.1 km).
+
+Phase 05 — Provider-only stack under `lib/features/provider/**`. T3
+treatment for the four incident hotspots:
+`[JobDetailNotifier]` traces the 2-min job countdown
+(`i 'countdown start' seconds=120 → v 'tick' remaining=… → w 'expired'`)
+and accept / reject (`d 'accept start' → i 'accept ok' / e 'accept failed'`);
+`[ActiveJobNotifier]` traces every status transition with
+`i 'status' from=… to=… source=signalr|advance_api`, the EnRoute
+GPS broadcast (`i 'gps broadcast start' intervalMs=3000`,
+`v 'gps push' coords=${redactLatLng(...)}` per frame,
+`i 'gps broadcast stop' reason=arrived|disposed|restart`), and GPS
+errors with `e 'gps failed'`; `[SkillTest]` traces the full session
+(`d 'init' → i 'session start' sessionId=… total=… → d 'answer'
+q=… optionId=… → d 'submit start' → i 'session ok' score=…
+passed=…` or `w 'session failed cooldown' nextRetryAt=…`);
+`[Subscription]` + `[SubscriptionNotifier]` trace the Stripe
+SetupIntent path
+(`i 'subscribe start' → d 'setup intent start' → i 'setup intent ok'
+clientSecret=${redactToken(secret)} → d 'sheet present' →
+i 'sheet confirmed' → i 'activate ok' status=Active`) with
+`StripeException` always logging `e 'sheet failed'
+code=${error.code.name}` plus a softer
+`w 'sheet cancelled'` for `FailureCode.Canceled`. T2 instrumentation
+on `[JobRepo]`, `[JobFeedNotifier]` (SignalR `NewJobAvailable`),
+`[JobFeedScreen]` (tab change), `[JobDetailScreen]`,
+`[ActiveJobDetail]` (action taps), `[UploadAfterPhotos]`
+(`d 'advance blocked' reason=no_after_photo` gate),
+`[OnboardingApi]` (with `i 'tier bumped' from=… to=…` for the
+persisted-tier change that drives the next router redirect),
+`[OnboardingHub]`, `[IdUploadScreen]`, `[ProviderNav]` (Geolocator
+permission + position trace), `[EarningsRepo]`, `[EarningsNotifier]`,
+`[PayoutStatus]` (Stripe Connect onboarding URL launch via
+`redactUrl(...)`), `[SubscriptionRepo]`, `[AnalyticsRepo]`,
+`[AnalyticsNotifier]` (parallel `Future.wait` fetch trace).
+Same Stripe redaction rule: every `clientSecret` /
+`paymentMethodId` passes through `redactToken(...)`; the derived
+SetupIntent id is safe to log in full. Provider-tier gate
+logging is split: Phase 02's router redirect still logs the
+`/provider/onboarding` deflection; Phase 05's
+`OnboardingApi.tier bumped` line traces the underlying tier change.
+
+Phase 06 — Polish & release. Hardens the logging stack for
+production: `AppLogger.v` / `d` / `i` early-return when
+`kReleaseMode` so `verbose` / `debug` / `info` emit nothing in a
+release APK / IPA (only `w` / `e` / `c` survive). A new
+`CrashlyticsSink` (`mobile/lib/core/logging/crashlytics_sink.dart`)
+mirrors `error` (`fatal: false`) and `critical` (`fatal: true`)
+log lines to Firebase Crashlytics — wired by
+`AppLogger.attachCrashlytics(...)` from `main.dart` only when
+`firebaseReady && kReleaseMode`. `FlutterError.onError` and
+`PlatformDispatcher.instance.onError` are installed before any
+other init so a Stripe / Firebase / deep-link bootstrap throw
+lands in the same Talker history as runtime errors. The
+`/debug/logs` `GoRoute` (and the redirect-guard short-circuit
+on `/debug/`) are wrapped in `if (kDebugMode)` so the in-app
+viewer is unreachable in release builds. Adds
+`firebase_crashlytics: ^3.5.0` to `pubspec.yaml` and a CI-ready
+PII sweep script at `mobile/docs/logging-plan/check_pii.sh`
+(grep for bearer tokens, Stripe `pi_…` / `seti_…` /
+`sk_(live|test)_…` identifiers, and raw `print(` /
+`debugPrint(` outside `redact.dart`; exits 0 on a clean tree,
+2 on a finding).
+
 ## Brand
 - Blue: `#1B4F72` — primary brand, backgrounds, buttons
 - Amber: `#F39C12` — CTA, highlights

@@ -2,6 +2,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/logging/redact.dart';
+
+const _tag = 'JobRepo';
 
 class JobSummary {
   final String id;
@@ -146,44 +150,77 @@ class JobRepository {
 
   Future<List<JobSummary>> getAvailableJobs(
       {int page = 1, int pageSize = 20}) async {
-    final response = await _client.dio.get(
-      '/providers/jobs/available',
-      queryParameters: {'page': page, 'pageSize': pageSize},
-    );
-    final data = response.data as Map<String, dynamic>;
-    final items = (data['data']['items'] as List);
-    return items
-        .map((e) => JobSummary.fromJson(e as Map<String, dynamic>))
-        .toList();
+    log.d(_tag, 'getAvailableJobs start',
+        data: {'page': page, 'pageSize': pageSize});
+    try {
+      final response = await _client.dio.get(
+        '/providers/jobs/available',
+        queryParameters: {'page': page, 'pageSize': pageSize},
+      );
+      final data = response.data as Map<String, dynamic>;
+      final items = (data['data']['items'] as List);
+      final list = items
+          .map((e) => JobSummary.fromJson(e as Map<String, dynamic>))
+          .toList();
+      log.i(_tag, 'getAvailableJobs ok', data: {'count': list.length});
+      return list;
+    } on DioException catch (e) {
+      log.e(_tag, 'getAvailableJobs failed', error: e);
+      rethrow;
+    }
   }
 
   Future<JobDetail> getJobById(String jobId) async {
+    log.d(_tag, 'getJobById start', data: {'jobId': jobId});
     final response = await _client.dio.get('/providers/jobs/$jobId');
     final data = response.data as Map<String, dynamic>;
     return JobDetail.fromJson(data['data'] as Map<String, dynamic>);
   }
 
   Future<void> respondToJob(String jobId, String action) async {
-    await _client.dio.post(
-      '/providers/jobs/$jobId/respond',
-      data: {'action': action},
-    );
+    log.d(_tag, 'respondToJob start',
+        data: {'jobId': jobId, 'action': action});
+    try {
+      await _client.dio.post(
+        '/providers/jobs/$jobId/respond',
+        data: {'action': action},
+      );
+      log.i(_tag, 'respondToJob ok',
+          data: {'jobId': jobId, 'action': action});
+    } on DioException catch (e) {
+      log.e(_tag, 'respondToJob failed',
+          error: e, data: {'jobId': jobId, 'action': action});
+      rethrow;
+    }
   }
 
   Future<List<JobDetail>> getActiveJobs() async {
+    log.d(_tag, 'getActiveJobs start');
     final response = await _client.dio.get('/providers/jobs/active');
     final data = response.data as Map<String, dynamic>;
     final items = (data['data'] as List);
-    return items
+    final list = items
         .map((e) => JobDetail.fromJson(e as Map<String, dynamic>))
         .toList();
+    log.i(_tag, 'getActiveJobs ok', data: {'count': list.length});
+    return list;
   }
 
   Future<JobDetail> advanceJobStatus(String jobId) async {
-    await _client.dio.post('/providers/jobs/$jobId/advance');
-    // The advance endpoint returns AdvanceJobStatusResultDto, not a full
-    // JobDetail. Re-fetch the job so the screen gets the full updated detail.
-    return getJobById(jobId);
+    log.d(_tag, 'advanceJobStatus start', data: {'jobId': jobId});
+    try {
+      await _client.dio.post('/providers/jobs/$jobId/advance');
+      // The advance endpoint returns AdvanceJobStatusResultDto, not a full
+      // JobDetail. Re-fetch the job so the screen gets the full updated detail.
+      final detail = await getJobById(jobId);
+      log.i(_tag, 'advanceJobStatus ok',
+          data: {'jobId': jobId, 'status': detail.status});
+      return detail;
+    } on DioException catch (e) {
+      log.e(_tag, 'advanceJobStatus failed',
+          error: e, data: {'jobId': jobId});
+      rethrow;
+    }
   }
 
   Future<void> updateLocation(double latitude, double longitude) async {
@@ -195,6 +232,10 @@ class JobRepository {
 
   Future<void> sendLocationForJob(
       String jobId, double latitude, double longitude) async {
+    log.v(_tag, 'sendLocationForJob', data: {
+      'jobId': jobId,
+      'coords': redactLatLng(latitude, longitude),
+    });
     await _client.dio.post('/tracking/jobs/$jobId/location', data: {
       'latitude': latitude,
       'longitude': longitude,
@@ -203,6 +244,8 @@ class JobRepository {
 
   Future<List<String>> uploadAfterPhotos(
       String jobId, List<XFile> photos) async {
+    log.d(_tag, 'uploadAfterPhotos start',
+        data: {'jobId': jobId, 'count': photos.length});
     final formData = FormData();
     for (final photo in photos) {
       formData.files.add(MapEntry(
@@ -210,13 +253,22 @@ class JobRepository {
         await MultipartFile.fromFile(photo.path, filename: photo.name),
       ));
     }
-    final response = await _client.dio.post(
-      '/providers/jobs/$jobId/after-photos',
-      data: formData,
-      options: Options(contentType: 'multipart/form-data'),
-    );
-    final data = response.data as Map<String, dynamic>;
-    return (data['data'] as List).map((e) => e.toString()).toList();
+    try {
+      final response = await _client.dio.post(
+        '/providers/jobs/$jobId/after-photos',
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      final data = response.data as Map<String, dynamic>;
+      final urls = (data['data'] as List).map((e) => e.toString()).toList();
+      log.i(_tag, 'uploadAfterPhotos ok',
+          data: {'jobId': jobId, 'uploaded': urls.length});
+      return urls;
+    } on DioException catch (e) {
+      log.e(_tag, 'uploadAfterPhotos failed',
+          error: e, data: {'jobId': jobId});
+      rethrow;
+    }
   }
 }
 

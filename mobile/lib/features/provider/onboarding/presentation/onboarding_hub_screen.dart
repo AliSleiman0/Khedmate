@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../data/onboarding_api_service.dart';
 import '../domain/onboarding_status.dart';
+
+const _tag = 'OnboardingHub';
 
 class OnboardingHubScreen extends ConsumerWidget {
   const OnboardingHubScreen({super.key});
@@ -15,6 +19,7 @@ class OnboardingHubScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: Text(s.onboardingTitle),
         centerTitle: true,
       ),
@@ -49,6 +54,11 @@ class _OnboardingHubBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = S.of(ref);
+
+    log.d(_tag, 'build', data: {
+      'tier': status.verificationTier.name,
+      'canAcceptJobs': status.canAcceptJobs,
+    });
 
     if (status.canAcceptJobs) {
       return Center(
@@ -88,13 +98,19 @@ class _OnboardingHubBody extends ConsumerWidget {
         _StepCard(
           title: s.onboardingIdVerify,
           step: status.steps.idVerified,
-          onTap: () => context.push('/provider/onboarding/id-upload'),
+          onTap: () {
+            log.d(_tag, 'step tap', data: {'step': 'id-upload'});
+            context.push('/provider/onboarding/id-upload');
+          },
         ),
         const SizedBox(height: 16),
         _StepCard(
           title: s.onboardingSkillTest,
           step: status.steps.skillTested,
-          onTap: () => context.push('/provider/onboarding/skill-test'),
+          onTap: () {
+            log.d(_tag, 'step tap', data: {'step': 'skill-test'});
+            context.push('/provider/onboarding/skill-test');
+          },
           enabled: status.steps.idVerified.isComplete,
         ),
         const SizedBox(height: 16),

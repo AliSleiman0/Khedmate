@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../shared/chat/presentation/chat_provider.dart';
 import 'active_job_provider.dart';
+
+const _tag = 'ActiveJobDetail';
 
 class ActiveJobDetailScreen extends ConsumerWidget {
   final String jobId;
@@ -24,9 +27,12 @@ class ActiveJobDetailScreen extends ConsumerWidget {
       final unreadCount = unreadAsync.valueOrNull ?? 0;
       chatFab = FloatingActionButton(
         backgroundColor: AppColors.brandBlue,
-        onPressed: () => context.push(
-          '/provider/chat/$jobId?name=${Uri.encodeComponent(job.customerFirstName ?? '')}',
-        ),
+        onPressed: () {
+          log.d(_tag, 'chat fab tap', data: {'jobId': jobId});
+          context.push(
+            '/provider/chat/$jobId?name=${Uri.encodeComponent(job.customerFirstName ?? '')}',
+          );
+        },
         child: Stack(
           alignment: Alignment.topLeft,
           clipBehavior: Clip.none,
@@ -62,6 +68,10 @@ class ActiveJobDetailScreen extends ConsumerWidget {
 
     return Directionality(
       textDirection: TextDirection.rtl,
+      // Phase 07 lock — providers must not lose context mid-job. The
+      // app-wide back-button sweep deliberately skips this screen; do not
+      // add an AppBackButton or BackChip here without a follow-up product
+      // discussion about how status / GPS broadcast should behave on exit.
       child: PopScope(
         canPop: false,
         child: Scaffold(
@@ -356,8 +366,11 @@ class _AcceptedActions extends ConsumerWidget {
       icon: Icons.directions_car,
       color: AppColors.brandBlue,
       isLoading: isLoading,
-      onPressed: () =>
-          ref.read(activeJobNotifierProvider(jobId).notifier).advanceStatus(),
+      onPressed: () {
+        log.d(_tag, 'action tap',
+            data: {'jobId': jobId, 'action': 'enroute'});
+        ref.read(activeJobNotifierProvider(jobId).notifier).advanceStatus();
+      },
     );
   }
 }
@@ -395,9 +408,13 @@ class _EnRouteActions extends ConsumerWidget {
           icon: Icons.play_circle_outline,
           color: AppColors.brandBlue,
           isLoading: isLoading,
-          onPressed: () => ref
-              .read(activeJobNotifierProvider(jobId).notifier)
-              .advanceStatus(),
+          onPressed: () {
+            log.d(_tag, 'action tap',
+                data: {'jobId': jobId, 'action': 'arrived_or_start'});
+            ref
+                .read(activeJobNotifierProvider(jobId).notifier)
+                .advanceStatus();
+          },
         ),
       ],
     );
@@ -428,6 +445,8 @@ class _InProgressActions extends ConsumerWidget {
 
   Future<void> _navigateToUploadPhotos(
       BuildContext context, WidgetRef ref) async {
+    log.d(_tag, 'action tap',
+        data: {'jobId': jobId, 'action': 'finish_upload'});
     await context.push('/provider/active-job/$jobId/after-photos');
     if (context.mounted) {
       ref.invalidate(activeJobNotifierProvider(jobId));

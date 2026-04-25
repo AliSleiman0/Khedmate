@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/back_chip.dart';
 import '../../booking/presentation/booking_provider.dart';
+
+const _tag = 'PaymentReceipt';
 
 class PaymentReceiptScreen extends ConsumerWidget {
   const PaymentReceiptScreen({super.key});
@@ -12,15 +16,21 @@ class PaymentReceiptScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = S.of(ref);
     final booking = ref.read(bookingNotifierProvider).valueOrNull;
+    log.d(_tag, 'open', data: {
+      'jobId': booking?.createdJobId,
+      'amount': booking?.chargedAmount ?? booking?.agreedAmount,
+    });
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.surface,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
@@ -133,6 +143,8 @@ class PaymentReceiptScreen extends ConsumerWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
+                      log.d(_tag, 'view order tap',
+                          data: {'jobId': booking?.createdJobId});
                       if (booking?.createdJobId != null) {
                         context.go('/customer/booking/confirmation');
                       } else {
@@ -169,7 +181,10 @@ class PaymentReceiptScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          ),
+              ),
+            ),
+            const BackChip(),
+          ],
         ),
       ),
     );

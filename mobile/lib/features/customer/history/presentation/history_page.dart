@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
+
+const _tag = 'HistoryPage';
 
 class _JobHistoryItem {
   final String id;
@@ -53,13 +57,16 @@ class _JobHistoryItem {
 }
 
 final _historyProvider = FutureProvider<List<_JobHistoryItem>>((ref) async {
+  log.d(_tag, 'load start');
   final client = ref.read(apiClientProvider);
   final response = await client.dio.get('/bookings/jobs');
   final data = response.data as Map<String, dynamic>;
   final items = data['data'] as List? ?? [];
-  return items
+  final list = items
       .map((e) => _JobHistoryItem.fromJson(e as Map<String, dynamic>))
       .toList();
+  log.i(_tag, 'load ok', data: {'count': list.length});
+  return list;
 });
 
 class HistoryPage extends ConsumerWidget {
@@ -74,6 +81,7 @@ class HistoryPage extends ConsumerWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
+          leading: const AppBackButton(),
           title: Text(s.historyTitle,
               style: const TextStyle(fontFamily: 'Cairo')),
           backgroundColor: AppColors.brandBlue,
@@ -154,7 +162,11 @@ class _HistoryCard extends ConsumerWidget {
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.push('/customer/history/${job.id}'),
+        onTap: () {
+          log.d(_tag, 'card tap',
+              data: {'jobId': job.id, 'status': job.status});
+          context.push('/customer/history/${job.id}');
+        },
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

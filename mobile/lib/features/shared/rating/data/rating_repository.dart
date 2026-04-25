@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/logging/app_logger.dart';
+
+const _tag = 'RatingRepo';
 
 class PendingRatingItem {
   final String jobId;
@@ -43,6 +46,11 @@ class RatingRepository {
     required bool isPositive,
     required List<String> tags,
   }) async {
+    log.d(_tag, 'submitRating start', data: {
+      'jobId': jobId,
+      'isPositive': isPositive,
+      'tagCount': tags.length,
+    });
     final response = await _api.dio.post('/ratings', data: {
       'jobId': jobId,
       'isPositive': isPositive,
@@ -53,6 +61,7 @@ class RatingRepository {
   }
 
   Future<List<PendingRatingItem>> getPendingRatings() async {
+    log.d(_tag, 'getPendingRatings start');
     final response = await _api.dio.get('/ratings/pending');
     final data = response.data as Map<String, dynamic>;
     final items = (data['data']['pendingRatings'] as List?) ?? [];

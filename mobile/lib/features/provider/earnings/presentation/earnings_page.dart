@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import 'earnings_provider.dart';
 
 class EarningsPage extends ConsumerWidget {
@@ -21,7 +22,7 @@ class EarningsPage extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
-          automaticallyImplyLeading: false,
+          leading: const AppBackButton(),
           title: Text(
             s.earningsTitle,
             style: const TextStyle(

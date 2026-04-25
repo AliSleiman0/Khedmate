@@ -4,9 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/logging/app_logger.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/providers/role_provider.dart';
+import '../../../core/widgets/app_back_button.dart';
 import 'auth_provider.dart';
+
+const _tag = 'LoginPage';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -50,9 +54,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _errorMessage = null;
       _showResendOtp = false;
     });
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      log.d(_tag, 'submit blocked', data: {'reason': 'validation_failed'});
+      return;
+    }
 
     final role = ref.read(roleProvider);
+    log.d(_tag, 'submit',
+        data: {'role': role?.name, 'mode': _useEmail ? 'email' : 'phone'});
     if (_useEmail) {
       final email = _emailController.text.trim();
       await ref.read(authNotifierProvider.notifier).loginWithEmail(
@@ -73,7 +82,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     authState.when(
       data: (state) {
         if (state is AuthAuthenticated) {
-          context.go(role == UserRole.provider ? '/provider/home' : '/customer/home');
+          final target =
+              role == UserRole.provider ? '/provider/home' : '/customer/home';
+          log.i(_tag, 'nav next', data: {'target': target});
+          context.go(target);
         }
       },
       loading: () {},
@@ -123,6 +135,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: const AppBackButton(color: AppColors.brandBlue),
         actions: [
           TextButton(
             onPressed: () {

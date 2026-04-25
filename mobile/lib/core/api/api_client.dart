@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:talker_dio_logger/talker_dio_logger.dart';
 import '../constants/app_config.dart';
+import '../logging/app_logger.dart';
+import '../logging/redact.dart';
 import '../providers/role_provider.dart';
 
 /// Thrown by the response interceptor when the backend returns
@@ -47,6 +50,12 @@ class ApiClient {
       },
     ));
 
+    log.i('ApiClient', 'init', data: {
+      'baseUrl': _baseUrl,
+      'appPackage': AppConfig.appPackage,
+      'appVersion': AppConfig.appVersion,
+    });
+
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -54,6 +63,11 @@ class ApiClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          log.d('ApiClient.onRequest', 'req start', data: {
+            'method': options.method,
+            'path': options.path,
+            'hasAuth': token != null,
+          });
           handler.next(options);
         },
         onResponse: (response, handler) {
@@ -61,6 +75,9 @@ class ApiClient {
           // Hard-cutover live path (426) is caught in onError below.
           final upgrade = _readUpgradeRequired(response.data);
           if (upgrade != null) {
+            log.w('ApiClient.onResponse', 'upgrade gate from 200', data: {
+              'storeUrl': redactUrl(upgrade.storeUrl),
+            });
             _ref?.read(upgradeRequiredProvider.notifier).state = upgrade;
           }
           handler.next(response);
@@ -70,8 +87,13 @@ class ApiClient {
           // UPGRADE_REQUIRED payload, raise the app-wide flag and bail out
           // without attempting a refresh (refresh would hit the same gate).
           final status = error.response?.statusCode;
+          final path = error.requestOptions.path;
           final upgrade = _readUpgradeRequired(error.response?.data);
           if (status == 426 || upgrade != null) {
+            log.w('ApiClient.onError', 'upgrade gate from 4xx', data: {
+              'status': status,
+              'storeUrl': redactUrl(upgrade?.storeUrl),
+            });
             _ref?.read(upgradeRequiredProvider.notifier).state =
                 upgrade ?? const AppUpgradeRequired();
             handler.next(error);
@@ -83,6 +105,8 @@ class ApiClient {
             try {
               final refreshToken = await _storage.read(key: 'refresh_token');
               if (refreshToken == null) {
+                log.w('ApiClient.onError',
+                    'refresh skipped — no refresh token');
                 await _clearTokens();
                 _isRefreshing = false;
                 handler.next(error);
@@ -90,12 +114,17 @@ class ApiClient {
               }
 
               final role = _ref?.read(roleProvider);
-              final path = role == UserRole.provider
+              final refreshPath = role == UserRole.provider
                   ? '/auth/providers/refresh'
                   : '/auth/customers/refresh';
 
+              log.w('ApiClient.onError', 'refresh start', data: {
+                'status': 401,
+                'pathHint': role?.name ?? 'unknown',
+              });
+
               final refreshResponse = await dio.post(
-                path,
+                refreshPath,
                 data: {'refreshToken': refreshToken},
                 options: Options(
                   extra: {'skipInterceptor': true},
@@ -112,20 +141,47 @@ class ApiClient {
               await _storage.write(key: 'access_token', value: newAccess);
               await _storage.write(key: 'refresh_token', value: newRefresh);
 
+              log.i('ApiClient.onError', 'refresh ok', data: {
+                'newToken': redactToken(newAccess),
+              });
+
               final opts = error.requestOptions;
               opts.headers['Authorization'] = 'Bearer $newAccess';
               final retryResponse = await dio.fetch(opts);
               _isRefreshing = false;
               handler.resolve(retryResponse);
-            } catch (_) {
+            } catch (e, st) {
+              log.e('ApiClient.onError', 'refresh failed',
+                  error: e, stack: st);
               await _clearTokens();
               _isRefreshing = false;
               handler.next(error);
             }
           } else {
+            log.d('ApiClient.onError', 'passthrough error', data: {
+              'status': status,
+              'path': path,
+            });
             handler.next(error);
           }
         },
+      ),
+    );
+
+    // TalkerDioLogger is added LAST so it sees the final outgoing request /
+    // incoming response (after our auth header / upgrade-gate logic). Bodies
+    // and auth headers are explicitly off — turning them on would leak OTPs,
+    // passwords, and bearer tokens into the log buffer.
+    dio.interceptors.add(
+      TalkerDioLogger(
+        talker: log.talker,
+        settings: const TalkerDioLoggerSettings(
+          printRequestData: false,
+          printResponseData: false,
+          printRequestHeaders: false,
+          printResponseHeaders: false,
+          printErrorMessage: true,
+        ),
       ),
     );
   }
@@ -145,6 +201,7 @@ class ApiClient {
   Future<void> _clearTokens() async {
     await _storage.delete(key: 'access_token');
     await _storage.delete(key: 'refresh_token');
+    log.i('ApiClient', 'tokens cleared');
   }
 }
 

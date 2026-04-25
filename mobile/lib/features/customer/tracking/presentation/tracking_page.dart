@@ -5,10 +5,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/services/signalr_service.dart';
+import '../../../../core/widgets/back_chip.dart';
 import '../../../shared/chat/presentation/chat_provider.dart';
 import '../../../shared/rating/presentation/rating_bottom_sheet.dart';
 import 'job_tracking_provider.dart';
+
+const _tag = 'TrackingPage';
 
 class TrackingPage extends ConsumerStatefulWidget {
   final String jobId;
@@ -27,9 +31,12 @@ class _TrackingPageState extends ConsumerState<TrackingPage> {
   }
 
   Future<void> _ensureSignalR() async {
+    log.d(_tag, 'open', data: {'jobId': widget.jobId});
     try {
       await ref.read(signalRServiceProvider).connect();
-    } catch (_) {}
+    } catch (e) {
+      log.w(_tag, 'signalr connect failed', error: e);
+    }
   }
 
   @override
@@ -48,9 +55,12 @@ class _TrackingPageState extends ConsumerState<TrackingPage> {
       final unreadCount = unreadAsync.valueOrNull ?? 0;
       chatFab = FloatingActionButton(
         backgroundColor: AppColors.brandBlue,
-        onPressed: () => context.push(
-          '/customer/chat/${widget.jobId}?name=${Uri.encodeComponent(tracking.providerName)}',
-        ),
+        onPressed: () {
+          log.d(_tag, 'chat fab tap', data: {'jobId': widget.jobId});
+          context.push(
+            '/customer/chat/${widget.jobId}?name=${Uri.encodeComponent(tracking.providerName)}',
+          );
+        },
         child: Stack(
           alignment: Alignment.topLeft,
           clipBehavior: Clip.none,
@@ -89,19 +99,24 @@ class _TrackingPageState extends ConsumerState<TrackingPage> {
       child: Scaffold(
         backgroundColor: AppColors.surface,
         floatingActionButton: chatFab,
-        body: asyncTracking.when(
-          loading: () => const Center(
-              child: CircularProgressIndicator(color: AppColors.brandBlue)),
-          error: (_, __) => _ErrorView(
-              onRetry: () => ref
-                  .read(jobTrackingNotifierProvider(widget.jobId).notifier)
-                  .refresh(widget.jobId)),
-          data: (tracking) => _TrackingBody(
-            tracking: tracking,
-            onRefresh: () => ref
-                .read(jobTrackingNotifierProvider(widget.jobId).notifier)
-                .refresh(widget.jobId),
-          ),
+        body: Stack(
+          children: [
+            asyncTracking.when(
+              loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppColors.brandBlue)),
+              error: (_, __) => _ErrorView(
+                  onRetry: () => ref
+                      .read(jobTrackingNotifierProvider(widget.jobId).notifier)
+                      .refresh(widget.jobId)),
+              data: (tracking) => _TrackingBody(
+                tracking: tracking,
+                onRefresh: () => ref
+                    .read(jobTrackingNotifierProvider(widget.jobId).notifier)
+                    .refresh(widget.jobId),
+              ),
+            ),
+            const BackChip(),
+          ],
         ),
       ),
     );
@@ -777,11 +792,14 @@ class _BottomActions extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ElevatedButton(
-            onPressed: () => RatingBottomSheet.show(
-              context,
-              jobId: jobId,
-              otherPartyName: providerName,
-            ),
+            onPressed: () {
+              log.d(_tag, 'rate tap', data: {'jobId': jobId});
+              RatingBottomSheet.show(
+                context,
+                jobId: jobId,
+                otherPartyName: providerName,
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.amber,
               padding: const EdgeInsets.symmetric(vertical: 16),

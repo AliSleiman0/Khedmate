@@ -7,9 +7,14 @@ import 'package:pinput/pinput.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/logging/app_logger.dart';
+import '../../../core/logging/redact.dart';
 import '../../../core/providers/role_provider.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../data/auth_repository.dart';
 import 'auth_provider.dart';
+
+const _tag = 'OtpScreen';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String phone;
@@ -36,6 +41,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   @override
   void initState() {
     super.initState();
+    final role = ref.read(roleProvider);
+    log.d(_tag, 'init', data: {
+      'phone': redactPhone(widget.phone),
+      'role': role?.name,
+    });
     _startTimer();
   }
 
@@ -62,12 +72,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         });
       } else {
         setState(() => _remainingSeconds--);
+        // Trace tick — verbose so it stays off by default in release.
+        log.v(_tag, 'resend tick',
+            data: {'secondsLeft': _remainingSeconds});
       }
     });
   }
 
   Future<void> _resendOtp() async {
     if (!_canResend) return;
+    log.d(_tag, 'resend tap');
     setState(() {
       _errorMessage = null;
       _isLocked = false;
@@ -77,14 +91,20 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     try {
       final repo = ref.read(authRepositoryProvider);
       await repo.resendOtp(widget.phone);
+      log.i(_tag, 'resend ok');
       _startTimer();
-    } catch (_) {
+    } on DioException catch (e) {
+      log.w(_tag, 'resend failed', data: {'code': _extractErrorCode(e)});
+      setState(() => _errorMessage = S.read(ref).otpResendError);
+    } catch (e, s) {
+      log.e(_tag, 'resend crashed', error: e, stack: s);
       setState(() => _errorMessage = S.read(ref).otpResendError);
     }
   }
 
   Future<void> _submitOtp(String otp) async {
     if (_isLocked) return;
+    log.d(_tag, 'verify tap', data: {'otpLen': otp.length});
     setState(() => _errorMessage = null);
 
     await ref.read(authNotifierProvider.notifier).verifyOtp(
@@ -103,9 +123,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             await _showReferralPromptIfNeeded();
           }
           if (!mounted) return;
-          context.go(role == UserRole.provider
+          final target = role == UserRole.provider
               ? '/provider/home'
-              : '/customer/home');
+              : '/customer/home';
+          log.i(_tag, 'nav next', data: {'target': target});
+          context.go(target);
         }
       },
       loading: () {},
@@ -221,6 +243,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.brandBlue,
         foregroundColor: Colors.white,
+        leading: const AppBackButton(),
         title: Text(
           s.otpTitle,
           style: const TextStyle(
@@ -367,6 +390,7 @@ class _ReferralCodeSheetState extends ConsumerState<_ReferralCodeSheet> {
       return;
     }
 
+    log.d(_tag, 'referral apply start', data: {'ref': code.toUpperCase()});
     setState(() {
       _isLoading = true;
       _error = null;
@@ -379,6 +403,7 @@ class _ReferralCodeSheetState extends ConsumerState<_ReferralCodeSheet> {
         '/customers/referral/apply',
         data: {'code': code.toUpperCase()},
       );
+      log.i(_tag, 'referral apply ok');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -394,6 +419,7 @@ class _ReferralCodeSheetState extends ConsumerState<_ReferralCodeSheet> {
         } catch (_) {}
         return '';
       }();
+      log.w(_tag, 'referral apply failed', data: {'code': errorCode});
       final s = S.read(ref);
       setState(() {
         _isLoading = false;
@@ -404,7 +430,8 @@ class _ReferralCodeSheetState extends ConsumerState<_ReferralCodeSheet> {
           _ => s.disputeGenericError,
         };
       });
-    } catch (_) {
+    } catch (e, st) {
+      log.e(_tag, 'referral apply crashed', error: e, stack: st);
       setState(() {
         _isLoading = false;
         _error = S.read(ref).disputeGenericError;

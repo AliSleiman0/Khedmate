@@ -4,7 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/logging/app_logger.dart';
+import '../../../core/logging/redact.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../data/auth_repository.dart';
+
+const _tag = 'ResetPassword';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   final String phone;
@@ -34,12 +39,16 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      log.d(_tag, 'submit blocked', data: {'reason': 'validation_failed'});
+      return;
+    }
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
+    log.d(_tag, 'submit', data: {'phone': redactPhone(widget.phone)});
     try {
       final repo = ref.read(authRepositoryProvider);
       await repo.resetPassword(
@@ -47,6 +56,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         otp: _otpController.text.trim(),
         newPassword: _passwordController.text,
       );
+      log.i(_tag, 'submit ok — nav login');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -63,6 +73,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       final code = (e.response?.data as Map<String, dynamic>?)?['error']
               as String? ??
           '';
+      log.w(_tag, 'submit failed', data: {'code': code});
       String message;
       switch (code) {
         case 'OTP_EXPIRED':
@@ -94,6 +105,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.brandBlue,
         foregroundColor: Colors.white,
+        leading: const AppBackButton(),
         title: Text(
           s.resetPasswordTitle,
           style: const TextStyle(

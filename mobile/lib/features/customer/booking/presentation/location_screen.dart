@@ -7,7 +7,12 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/logging/redact.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import 'booking_provider.dart';
+
+const _tag = 'LocationScreen';
 
 class LocationScreen extends ConsumerStatefulWidget {
   const LocationScreen({super.key});
@@ -47,6 +52,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
   }
 
   Future<void> _goToMyLocation() async {
+    log.d(_tag, 'gps tap');
     setState(() => _isLocating = true);
     try {
       LocationPermission permission = await Geolocator.checkPermission();
@@ -55,6 +61,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       }
       if (permission == LocationPermission.deniedForever ||
           permission == LocationPermission.denied) {
+        log.w(_tag, 'gps denied', data: {'permission': permission.name});
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -71,17 +78,21 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
         desiredAccuracy: LocationAccuracy.high,
       );
       final latLng = LatLng(pos.latitude, pos.longitude);
+      log.i(_tag, 'gps ok',
+          data: {'coords': redactLatLng(pos.latitude, pos.longitude)});
       setState(() => _center = latLng);
       _mapController.move(latLng, 16);
       await _reverseGeocode(latLng);
-    } catch (_) {
-      // silently ignore
+    } catch (e) {
+      log.w(_tag, 'gps failed', error: e);
     } finally {
       if (mounted) setState(() => _isLocating = false);
     }
   }
 
   Future<void> _reverseGeocode(LatLng latLng) async {
+    log.d(_tag, 'geocode start',
+        data: {'coords': redactLatLng(latLng.latitude, latLng.longitude)});
     setState(() => _isGeocodingLoading = true);
     try {
       final placemarks = await placemarkFromCoordinates(
@@ -92,8 +103,12 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
             .where((s) => s != null && s.isNotEmpty)
             .join('، ');
         _addressController.text = parts;
+        log.d(_tag, 'geocode ok', data: {'addrLen': parts.length});
+      } else {
+        log.w(_tag, 'geocode empty');
       }
-    } catch (_) {
+    } catch (e) {
+      log.w(_tag, 'geocode failed', error: e);
       _addressController.text =
           '${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}';
     } finally {
@@ -119,10 +134,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
             style: const TextStyle(
                 fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/customer/booking/description'),
-          ),
+          leading: const AppBackButton(),
         ),
         body: Column(
           children: [
@@ -231,6 +243,10 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                         onPressed: (_locationConfirmed ||
                                 _addressController.text.trim().isNotEmpty)
                             ? () {
+                                log.d(_tag, 'next tap', data: {
+                                  'coords': redactLatLng(
+                                      _center.latitude, _center.longitude),
+                                });
                                 ref
                                     .read(bookingNotifierProvider.notifier)
                                     .setLocation(

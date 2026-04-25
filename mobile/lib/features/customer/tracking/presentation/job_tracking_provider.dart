@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/logging/redact.dart';
 import '../../../../core/services/signalr_service.dart';
 import '../../../../core/utils/distance_utils.dart';
 import '../../booking/data/booking_repository.dart';
+
+const _tag = 'TrackingNotifier';
 
 class JobTrackingState {
   final String jobId;
@@ -69,13 +73,20 @@ class JobTrackingNotifier
     extends FamilyAsyncNotifier<JobTrackingState, String> {
   @override
   Future<JobTrackingState> build(String arg) async {
+    log.d(_tag, 'build', data: {'jobId': arg});
     _subscribeToStatusChanges(arg);
     _subscribeToProviderLocation(arg);
+    ref.onDispose(() => log.d(_tag, 'unsubscribed', data: {'jobId': arg}));
     final data = await ref.read(bookingRepositoryProvider).getJobStatus(arg);
-    return JobTrackingState.fromJson(data);
+    final initial = JobTrackingState.fromJson(data);
+    log.i(_tag, 'initial status',
+        data: {'jobId': arg, 'status': initial.status});
+    return initial;
   }
 
   void _subscribeToStatusChanges(String jobId) {
+    log.d(_tag, 'signalr subscribe',
+        data: {'event': 'JobStatusChanged', 'jobId': jobId});
     ref.read(signalRServiceProvider).on('JobStatusChanged', (args) {
       final data = args?[0] as Map<String, dynamic>?;
       if (data == null) return;
@@ -83,12 +94,16 @@ class JobTrackingNotifier
       final newStatus = data['status'] as String? ?? '';
       final current = state.valueOrNull;
       if (current != null) {
+        log.i(_tag, 'status transition',
+            data: {'jobId': jobId, 'from': current.status, 'to': newStatus});
         state = AsyncData(current.copyWith(status: newStatus));
       }
     });
   }
 
   void _subscribeToProviderLocation(String jobId) {
+    log.d(_tag, 'signalr subscribe',
+        data: {'event': 'ProviderLocationUpdated', 'jobId': jobId});
     ref.read(signalRServiceProvider).on('ProviderLocationUpdated', (args) {
       final data = args?[0] as Map<String, dynamic>?;
       if (data == null) return;
@@ -108,6 +123,18 @@ class JobTrackingNotifier
           newLng,
         );
 
+        final ageMs = current.lastLocationUpdate == null
+            ? null
+            : DateTime.now()
+                .difference(current.lastLocationUpdate!)
+                .inMilliseconds;
+        log.v(_tag, 'loc update', data: {
+          'jobId': jobId,
+          'coords': redactLatLng(newLat, newLng),
+          'distanceKm': distance.toStringAsFixed(2),
+          'ageMs': ageMs,
+        });
+
         state = AsyncData(current.copyWith(
           providerLatitude: newLat,
           providerLongitude: newLng,
@@ -119,6 +146,7 @@ class JobTrackingNotifier
   }
 
   Future<void> refresh(String jobId) async {
+    log.d(_tag, 'refresh', data: {'jobId': jobId});
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final data =

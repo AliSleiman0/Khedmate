@@ -6,7 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/logging/redact.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../jobs/presentation/active_job_provider.dart';
+
+const _tag = 'ProviderNav';
 
 class NavigationPage extends ConsumerStatefulWidget {
   final String jobId;
@@ -22,31 +27,49 @@ class _NavigationPageState extends ConsumerState<NavigationPage> {
   @override
   void initState() {
     super.initState();
+    log.d(_tag, 'init', data: {'jobId': widget.jobId});
     _fetchProviderLocation();
   }
 
   Future<void> _fetchProviderLocation() async {
+    log.d(_tag, 'permission check');
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.deniedForever) return;
+      if (permission == LocationPermission.deniedForever) {
+        log.w(_tag, 'permission denied', data: {'level': 'deniedForever'});
+        return;
+      }
+      if (permission == LocationPermission.denied) {
+        log.w(_tag, 'permission denied', data: {'level': 'denied'});
+        return;
+      }
+      log.i(_tag, 'permission ok');
 
+      log.d(_tag, 'get current position');
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
+      log.v(_tag, 'pos',
+          data: {'coords': redactLatLng(pos.latitude, pos.longitude)});
       if (mounted) {
         setState(
             () => _providerLocation = LatLng(pos.latitude, pos.longitude));
       }
-    } catch (_) {}
+    } catch (e, st) {
+      log.e(_tag, 'pos failed', error: e, stack: st);
+    }
   }
 
   Future<void> _advanceStatus() async {
     final job =
         ref.read(activeJobNotifierProvider(widget.jobId)).valueOrNull;
     if (job == null) return;
+
+    log.d(_tag, 'advance tap',
+        data: {'jobId': widget.jobId, 'status': job.status});
 
     if (job.status == 'InProgress') {
       if (mounted) {
@@ -74,12 +97,14 @@ class _NavigationPageState extends ConsumerState<NavigationPage> {
 
     return asyncJob.when(
       loading: () => Scaffold(
-        appBar: AppBar(title: Text(s.navPageTitle)),
+        appBar: AppBar(
+            leading: const AppBackButton(), title: Text(s.navPageTitle)),
         body: const Center(
             child: CircularProgressIndicator(color: AppColors.brandBlue)),
       ),
       error: (e, _) => Scaffold(
-        appBar: AppBar(title: Text(s.navPageTitle)),
+        appBar: AppBar(
+            leading: const AppBackButton(), title: Text(s.navPageTitle)),
         body: Center(child: Text(s.jobLoadError)),
       ),
       data: (job) {
@@ -100,7 +125,9 @@ class _NavigationPageState extends ConsumerState<NavigationPage> {
             job.status == 'EnRoute' || job.status == 'InProgress';
 
         return Scaffold(
-          appBar: AppBar(title: Text('${s.navPageTitle} #${widget.jobId}')),
+          appBar: AppBar(
+              leading: const AppBackButton(),
+              title: Text('${s.navPageTitle} #${widget.jobId}')),
           body: Stack(
             children: [
               FlutterMap(

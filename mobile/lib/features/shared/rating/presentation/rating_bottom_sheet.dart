@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/providers/role_provider.dart';
 import 'rating_provider.dart';
+
+const _tag = 'RatingSheet';
 
 const _customerTagKeys = [
   'arrived_on_time',
@@ -188,7 +191,11 @@ class RatingBottomSheet extends ConsumerWidget {
                   children: tagKeys.map((key) {
                     final isSelected = state.selectedTags.contains(key);
                     return GestureDetector(
-                      onTap: () => notifier.toggleTag(key),
+                      onTap: () {
+                        log.d(_tag, 'tag toggle',
+                            data: {'jobId': jobId, 'tag': key});
+                        notifier.toggleTag(key);
+                      },
                       child: Chip(
                         label: Text(
                           tagLabels[key] ?? key,
@@ -225,7 +232,11 @@ class RatingBottomSheet extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: state.isPositive == null || state.isSubmitting
                       ? null
-                      : notifier.submit,
+                      : () {
+                          log.d(_tag, 'submit tap',
+                              data: {'jobId': jobId});
+                          notifier.submit();
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: submitColor,
                     disabledBackgroundColor: Colors.grey.shade300,

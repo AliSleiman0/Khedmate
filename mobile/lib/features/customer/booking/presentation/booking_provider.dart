@@ -6,6 +6,10 @@ import 'package:dio/dio.dart';
 import '../data/booking_repository.dart';
 import '../../payments/data/payment_repository.dart';
 import '../../../../core/constants/app_config.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/logging/redact.dart';
+
+const _tag = 'BookingNotifier';
 
 class BookingState {
   final String? categoryId;
@@ -88,12 +92,14 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
   Future<BookingState> build() async => const BookingState();
 
   void setCategory(String id, String name) {
+    log.d(_tag, 'setCategory', data: {'id': id});
     final current = state.valueOrNull ?? const BookingState();
     state = AsyncValue.data(
         current.copyWith(categoryId: id, categoryName: name));
   }
 
   void setDescription(String text) {
+    log.d(_tag, 'setDescription', data: {'len': text.length});
     final current = state.valueOrNull ?? const BookingState();
     state = AsyncValue.data(current.copyWith(description: text));
   }
@@ -101,17 +107,21 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
   void addPhoto(File file) {
     final current = state.valueOrNull ?? const BookingState();
     if (current.photos.length >= 3) return;
+    log.d(_tag, 'addPhoto', data: {'count': current.photos.length + 1});
     state = AsyncValue.data(
         current.copyWith(photos: [...current.photos, file]));
   }
 
   void removePhoto(int index) {
+    log.d(_tag, 'removePhoto', data: {'index': index});
     final current = state.valueOrNull ?? const BookingState();
     final updated = [...current.photos]..removeAt(index);
     state = AsyncValue.data(current.copyWith(photos: updated));
   }
 
   void setLocation(double lat, double lng, String address) {
+    log.d(_tag, 'setLocation',
+        data: {'coords': redactLatLng(lat, lng)});
     final current = state.valueOrNull ?? const BookingState();
     state = AsyncValue.data(current.copyWith(
       latitude: lat,
@@ -121,6 +131,7 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
   }
 
   void setAmount(double amount) {
+    log.d(_tag, 'setAmount', data: {'amount': amount});
     final current = state.valueOrNull ?? const BookingState();
     state = AsyncValue.data(current.copyWith(agreedAmount: amount));
   }
@@ -137,7 +148,17 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
   /// without Stripe keys. Not for production.
   Future<void> submitBooking() async {
     final current = state.valueOrNull;
-    if (current == null) return;
+    if (current == null) {
+      log.w(_tag, 'submit blocked', data: {'reason': 'no_state'});
+      return;
+    }
+
+    log.i(_tag, 'submit start', data: {
+      'category': current.categoryId,
+      'amount': current.agreedAmount,
+      'photoCount': current.photos.length,
+      'bypass': AppConfig.bypassPayments,
+    });
 
     state = const AsyncValue.loading();
 
@@ -146,6 +167,10 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
       final bookingRepo = ref.read(bookingRepositoryProvider);
 
       if (AppConfig.bypassPayments) {
+        log.w(_tag, 'bypass path — no Stripe',
+            data: {'reason': 'qa_build'});
+        log.i(_tag, 'api start',
+            data: {'endpoint': '/bookings/jobs'});
         final jobResult = await bookingRepo.createJob(
           categoryId: current.categoryId!,
           description: current.description,
@@ -158,11 +183,15 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
         final jobData = jobResult['data'] as Map<String, dynamic>;
         final jobId = jobData['jobId'] as String;
         final refNumber = jobData['referenceNumber'] as String;
+        log.i(_tag, 'api ok', data: {'jobId': jobId, 'bypass': true});
 
         if (current.photos.isNotEmpty) {
           try {
             await bookingRepo.uploadPhotos(jobId, current.photos);
-          } catch (_) {}
+          } catch (e) {
+            log.w(_tag, 'photo upload failed (bypass) — ignored',
+                error: e, data: {'jobId': jobId});
+          }
         }
 
         state = AsyncValue.data(current.copyWith(
@@ -175,6 +204,8 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
         return;
       }
 
+      log.d(_tag, 'create intent start',
+          data: {'amount': current.agreedAmount});
       final intentData = await paymentRepo.createIntent(
         amount: current.agreedAmount!,
         currency: current.currency,
@@ -189,6 +220,15 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
           (intentData['creditAppliedAmount'] as num?)?.toDouble();
       final chargedAmount = (intentData['amount'] as num?)?.toDouble();
 
+      log.i(_tag, 'intent ok', data: {
+        'paymentIntentId': paymentIntentId,
+        'clientSecret': redactToken(clientSecret),
+        'chargedAmount': chargedAmount,
+        'referralDiscount': referralDiscount,
+        'creditApplied': creditApplied,
+      });
+
+      log.d(_tag, 'present sheet');
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
@@ -205,8 +245,12 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
       ));
 
       await Stripe.instance.presentPaymentSheet();
+      log.i(_tag, 'sheet confirmed');
 
       state = const AsyncValue.loading();
+
+      log.d(_tag, 'confirm start',
+          data: {'paymentIntentId': paymentIntentId});
 
       final jobResult = await bookingRepo.createJob(
         categoryId: current.categoryId!,
@@ -224,7 +268,10 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
       if (current.photos.isNotEmpty) {
         try {
           await bookingRepo.uploadPhotos(jobId, current.photos);
-        } catch (_) {}
+        } catch (e) {
+          log.w(_tag, 'photo upload failed — ignored',
+              error: e, data: {'jobId': jobId});
+        }
       }
 
       final confirmData = await paymentRepo.confirmPayment(
@@ -233,6 +280,8 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
       );
 
       final transactionId = confirmData['transactionId'] as String? ?? '';
+      log.i(_tag, 'confirm ok',
+          data: {'jobId': jobId, 'transactionId': transactionId});
 
       state = AsyncValue.data(current.copyWith(
         createdJobId: jobId,
@@ -244,18 +293,38 @@ class BookingNotifier extends AsyncNotifier<BookingState> {
         chargedAmount: chargedAmount,
       ));
     } on StripeException catch (e, st) {
+      log.e(_tag, 'stripe exception',
+          error: e,
+          stack: st,
+          data: {
+            'code': e.error.code.name,
+            'message': e.error.localizedMessage,
+          });
+      // `cancelled` arrives as a StripeException too; surface a softer log
+      // for grep-ability.
+      if (e.error.code == FailureCode.Canceled) {
+        log.w(_tag, 'sheet cancelled');
+      } else {
+        log.w(_tag, 'sheet failed', data: {'code': e.error.code.name});
+      }
       state = AsyncValue.error(
         e.error.localizedMessage ?? 'فشل الدفع، يرجى المحاولة مرة أخرى',
         st,
       );
     } on DioException catch (e, st) {
+      log.e(_tag, 'api failed',
+          error: e,
+          stack: st,
+          data: {'status': e.response?.statusCode});
       state = AsyncValue.error(e, st);
     } catch (e, st) {
+      log.e(_tag, 'submit crashed', error: e, stack: st);
       state = AsyncValue.error(e, st);
     }
   }
 
   void reset() {
+    log.d(_tag, 'reset');
     state = const AsyncValue.data(BookingState());
   }
 }

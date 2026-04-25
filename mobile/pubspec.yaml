@@ -35,10 +35,14 @@ dependencies:
   firebase_core: ^2.27.0
   firebase_messaging: ^14.9.0
   firebase_analytics: ^10.8.0
+  firebase_crashlytics: ^3.5.0
   flutter_local_notifications: ^17.0.0
   fl_chart: ^0.68.0
   intl: ^0.20.2
   app_links: ^6.1.4
+  talker_flutter: ^4.4.0
+  talker_dio_logger: ^4.4.0
+  talker_riverpod_logger: ^4.4.0
 
 dev_dependencies:
   flutter_test:

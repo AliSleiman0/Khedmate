@@ -70,6 +70,11 @@ lib/
 │   │   └── colors.dart              # AppColors — brand palette (brandBlue = #1B4F72, amber, etc.)
 │   ├── l10n/
 │   │   └── app_strings.dart         # S class — ~340 keys merged from both legacy apps
+│   ├── logging/                     # ← Logging Phase 01 — Talker-backed AppLogger
+│   │   ├── app_logger.dart          # log.v/d/i/w/e/c — singleton wrapper around Talker
+│   │   ├── app_logger_providers.dart # loggerProvider + talkerProvider (Riverpod)
+│   │   ├── log_viewer_screen.dart   # /debug/logs — TalkerScreen, kDebugMode-only
+│   │   └── redact.dart              # redactPhone / redactEmail / redactToken / redactLatLng / redactOtp
 │   ├── providers/
 │   │   ├── locale_provider.dart     # LocaleNotifier — shared_preferences-backed
 │   │   └── role_provider.dart       # RoleNotifier — FlutterSecureStorage-backed (new)
@@ -610,6 +615,486 @@ generated once the designer drops finals (see
   expected dimensions and safe-area rules.
 - Splash/adaptive-icon background is brand blue `#1B4F72`.
 
+## Logging (Phases 01 + 02 + 03 + 04 + 05 + 06)
+Plan: `mobile/docs/logging-plan/` (six phases — **all complete**).
+Phase 01 lays the foundation; Phase 02 instruments the seven
+core-infrastructure files that sit between every user tap and every
+observable side effect; Phase 03 wires the auth flow + the four
+shared role-agnostic features (chat / notifications / profile /
+rating); Phase 04 covers the full customer-only stack — booking
+wizard + Stripe (T3), live GPS tracking (T3), payments / history /
+home (selective T2), referral / reminders / dispute (T2); Phase 05
+covers the full provider-only stack — 2-min job countdown (T3),
+3-second EnRoute GPS broadcast (T3), active-job status machine
+(T3), skill test session (T3), Stripe SetupIntent subscription
+(T3), onboarding / navigation / earnings / analytics (T2);
+Phase 06 hardens everything for release — `kReleaseMode` gate on
+`v` / `d` / `i`, Firebase Crashlytics mirror for `e` / `c`,
+`/debug/logs` viewer reachable in debug builds only, PII sweep
+script, and `FlutterError` / `PlatformDispatcher` global error
+handlers wired to `log.e` / `log.c`.
+
+- **Library**: `talker_flutter: ^4.4.0` (core + UI),
+  `talker_dio_logger: ^4.4.0` (Dio interceptor),
+  `talker_riverpod_logger: ^4.4.0` (provider observer). Initialised by
+  `AppLogger.bootstrap()` as the **first line** of `main()` so the
+  pre-Firebase / pre-Stripe error paths route through it. The wrapper
+  is a singleton — every call site uses `log.v / d / i / w / e /
+  c(tag, msg, {data, error, stack})` from
+  `core/logging/app_logger.dart`.
+- **Format**: `[Tag] short message key=value key=value` — Tag is
+  PascalCase class or top-level-function name (`[ApiClient]`,
+  `[Router.redirect]`); message is imperative present-tense, no period;
+  values are primitives only (no serialised maps).
+- **Redaction policy** (codified in `core/logging/redact.dart`):
+  `redactPhone` → `+96650000****1234`; `redactEmail` →
+  `a***@example.com`; `redactToken` → `tok:<first8>`; `redactLatLng` →
+  2-decimal rounding (≈ 1.1 km); `redactOtp` → `*** (len=N)`;
+  `redactUrl` strips token / OTP / password / secret query keys
+  (case-insensitive — `ref=` survives because referral codes are not
+  secret). Passwords + Stripe client secrets are **never** logged. See
+  `mobile/docs/logging-plan/README.md` for the full table.
+- **Levels**: `verbose` (chatty per-tick — GPS broadcast, SignalR
+  heartbeat, off by default), `debug` (entry/exit/branch — most lines
+  land here), `info` (state transitions — login success, job accepted),
+  `warning` (recoverable oddities — token refresh kicked in), `error`
+  (caught exceptions — always pass `error` + `stack`), `critical`
+  (unrecoverable — corrupt token, redirect loop).
+- **Console + history**: `useConsoleLogs: kDebugMode` so release builds
+  don't hit `dart:developer.log`; `maxHistoryItems: 500` powers the
+  in-app viewer.
+- **Debug log viewer**: `LogViewerScreen` mounted at `/debug/logs` only
+  when `kDebugMode`. The redirect guard short-circuits on `/debug/`
+  prefixes so the viewer is reachable even when auth state is broken.
+  Open it with a long-press on the version label (`v1.0.0+1`) at the
+  bottom of the profile page (`features/shared/profile/presentation/profile_page.dart`).
+- **Riverpod**: `loggerProvider` (returns `AppLogger.instance`) +
+  `talkerProvider` (raw `Talker` for adapters that need the underlying
+  type). Override `loggerProvider` in tests with a fresh `AppLogger`
+  to assert on log output.
+- **Lints**: `analysis_options.yaml` has `analyzer.errors.avoid_print:
+  error`. Every existing `debugPrint(...)` call in `lib/` was migrated
+  in Phase 01. A repo-wide grep for `debugPrint(` or `print(` in
+  `mobile/lib/` should return zero results outside comments.
+
+### Phase 02 wiring
+- **`ApiClient`** — `TalkerDioLogger` is registered LAST in the
+  interceptor chain (so it sees the final outgoing request after our
+  auth-header / upgrade-gate logic) with bodies + headers OFF (PII
+  guard — turning them on would leak OTPs, passwords, bearer tokens).
+  Manual logs cover constructor `init`, request entry (`hasAuth`),
+  upgrade-gate hits from both 200 and 4xx, refresh start/ok/failed
+  (with `redactToken(newAccess)`), passthrough errors, and `tokens
+  cleared`.
+- **`SignalRService`** — `connect` logs `init` with `hasToken`;
+  `onclose` / `onreconnecting` / `onreconnected` are wired before
+  `start()`; `joinProviderGroups` logs entry + per-group `join ok` /
+  `join failed`; `disconnect` logs `stop on dispose`.
+- **`fcm_service`** — `initLocalNotifications` rethrows after logging
+  (so `main.dart`'s graceful try/catch still skips FCM if it fails);
+  `setupFcmListeners` logs `listeners wired` + per-event lines for
+  `fg msg` / `tap opened app` / `tap cold start`; `registerFcmToken`
+  logs start / ok / failed and `token rotated, re-registering` on
+  refresh. **The FCM token is never logged.**
+- **`NotificationHandler`** — every dispatched route emits
+  `[NotifHandler] route target=… source=fcm:<TYPE>` or
+  `source=deeplink:<HOST>`; `handleFcmTap` and `handleDeepLink` log
+  entry with type / host / `redactUrl(uri)`; unknown type / host
+  branches emit `w` (instead of the Phase-01 `debugPrint` swap).
+- **`router.dart`** — every redirect entry logs `v` with path / token
+  presence / role / tier; every branch return logs `d` with
+  `from` / `to` / `reason` (`no_token`, `public`, `wrong_role`,
+  `tier_gate`, `corrupt_state`, `authed_on_public`,
+  `provider_no_password_recovery`, `allow`); `refreshListenable`
+  pulses log `refresh pulse reason=role_change prev=… next=…`;
+  corrupt-state token wipe logs `w 'corrupt state, clearing tokens'`;
+  `TalkerRouteObserver(log.talker)` is installed on the root
+  `GoRouter` so push / pop / replace events show up automatically.
+- **`role_provider`** — `setRole` / `clear` log at `info`; `_hydrate`
+  logs at `debug`. **`locale_provider`** — `setLocale` logs at
+  `info`; `loadPersisted` logs at `debug`.
+- **Riverpod observer** — `TalkerRiverpodObserver(talker: log.talker)`
+  is registered on the **single** root `ProviderContainer` (built
+  before `runApp`) so provider build / dispose / state changes /
+  errors all converge on the same Talker history as Dio, SignalR,
+  FCM, and router events. Default settings log every category — tighten
+  via `TalkerRiverpodLoggerSettings` if the volume becomes noisy.
+
+### Phase 03 wiring
+Tag → file map (every line is `[Tag] message key=value …`):
+
+| Tag | File | Tier |
+|---|---|---|
+| `AuthRepo` | `features/auth/data/auth_repository.dart` | T3 |
+| `AuthNotifier` | `features/auth/presentation/auth_provider.dart` | T3 |
+| `WelcomeScreen` | `features/auth/presentation/welcome_screen.dart` | T1 |
+| `LoginPage` | `features/auth/presentation/login_page.dart` | T2 |
+| `RegisterScreen` | `features/auth/presentation/register_screen.dart` | T2 |
+| `OtpScreen` | `features/auth/presentation/otp_screen.dart` | T3 |
+| `ForgotPassword` | `features/auth/presentation/forgot_password_screen.dart` | T1 |
+| `ResetPassword` | `features/auth/presentation/reset_password_screen.dart` | T1 |
+| `ChatRepo` | `features/shared/chat/data/chat_repository.dart` | T1 |
+| `ChatNotifier` | `features/shared/chat/presentation/chat_provider.dart` | T3 |
+| `ChatScreen` | `features/shared/chat/presentation/chat_screen.dart` | T1 |
+| `NotifRepo` | `features/shared/notifications/data/notification_repository.dart` | T1 |
+| `NotifNotifier` | `features/shared/notifications/presentation/notifications_provider.dart` | T2 |
+| `NotifList` | `features/shared/notifications/presentation/notifications_screen.dart` | T2 |
+| `ProfilePage` | `features/shared/profile/presentation/profile_page.dart` | T2 |
+| `ProfileTilesC` | `features/shared/profile/presentation/profile_tiles_customer.dart` | T1 |
+| `ProfileTilesP` | `features/shared/profile/presentation/profile_tiles_provider.dart` | T2 |
+| `EditProfile` | `features/shared/profile/presentation/edit_profile_screen.dart` | T2 |
+| `DeleteAccount` | `features/shared/profile/presentation/delete_account_action.dart` | T3 |
+| `RatingRepo` | `features/shared/rating/data/rating_repository.dart` | T1 |
+| `RatingNotifier` | `features/shared/rating/presentation/rating_provider.dart` | T2 |
+| `RatingSheet` | `features/shared/rating/presentation/rating_bottom_sheet.dart` | T1 |
+
+- **Auth repo (T3)** — every public method emits `d '<m> start' role=…
+  endpoint=…` with redacted phone / email / OTP, then `i '<m> ok'` (with
+  `redactToken(accessToken)` + `userId` for login/loginWithEmail/verifyOtp)
+  on 2xx, or `e '<m> failed' code=$serverCode` on `DioException`, or
+  `e '<m> crashed'` (with stack) on unexpected throws. `logout` adds
+  `i 'tokens cleared'`; `deleteAccount` adds `i 'tokens cleared after
+  delete'`. `loginWithEmail` / `forgotPassword` / `resetPassword` log
+  `w '<m> blocked'` instead when `role == provider`.
+- **AuthNotifier (T3)** — `build` logs `d 'build' hasToken=$b role=$role`
+  then either `i 'no session'`, `w 'token without role — forcing
+  re-auth'`, `i 'fetchMe ok'`, or `w 'fetchMe failed — treating as
+  unauthenticated'`. Each method follows the
+  `d '<m> start' → i '<m> ok' / w '<m> failed' code=$code` pattern.
+  Riverpod observer from Phase 02 already covers the resulting
+  `state =` emissions.
+- **OtpScreen (T3)** — `init` logs the redacted phone + role; the
+  per-second timer emits `v 'resend tick' secondsLeft=$n` (verbose so
+  it stays off by default in release); `resend tap → resend ok / w
+  resend failed code=$code`; `verify tap` includes only `otpLen`
+  (never the value); on success `i 'nav next' target=…`. The customer
+  referral bottom-sheet — also under tag `OtpScreen` — logs `d
+  'referral apply start' ref=$code` then `i ok / w failed code=$code /
+  e crashed`.
+- **Login / Register / ForgotPassword / ResetPassword** — each
+  `_submit` first emits `d 'submit blocked' reason=validation_failed`
+  if `formKey.validate()` returns false; otherwise `d 'submit'` with
+  the relevant context (mode, role, redacted phone) and on success an
+  `i 'nav next' target=…` line. Failures emit `w 'submit failed'`
+  (for login/register/reset, with `code=$serverCode`) or rely on
+  `AuthNotifier`'s own logs.
+- **Chat** — `ChatRepo` logs `getMessages / sendMessage / markAsRead`
+  start lines (no message text). `ChatNotifier` logs `build`, `load
+  page ok` / `load failed`, `signalr subscribe` / `signalr msg`, `send
+  start` / `send ok` / `w 'send failed' code=SEND_FAILED`, and
+  `mark read`. `ChatScreen` logs `load prev page tap` and `send button
+  tap` (length only, never text).
+- **Notifications** — `NotifRepo.getNotifications` logs page + role;
+  `NotifNotifier` logs `refresh`, `load ok count=$n totalCount=$t`, or
+  `load failed`. `NotifList.tap` logs `type=$type jobId=$jobId`
+  immediately before calling `handleNotificationTap` — which itself is
+  already logged by `NotificationHandler` in Phase 02 when invoked
+  from FCM (the in-app list re-uses the same dispatcher).
+- **Profile** — `ProfilePage` logs `logout tap` + the long-press →
+  `/debug/logs`. Customer + provider tile lists log `tile tap
+  tile=<name>` for every row, including a separate `(coming soon)`
+  variant for the placeholder rows. `EditProfile` logs `open` (with
+  redacted email + role), `save tap nameChanged=$b emailChanged=$b`,
+  then `save ok / w save failed code=$code / e save crashed`.
+  `DeleteAccount` (Apple 5.1.1(v)) traces every step: `dialog shown
+  → confirm tap → api start (role + endpoint) → api ok / e api failed
+  code=$code / e api crashed → nav welcome`.
+- **Rating** — `RatingRepo.submitRating` logs `jobId / isPositive /
+  tagCount`. `RatingNotifier.submit` emits the canonical line
+  `d 'submit start' jobId=… thumbsUp=… tags=…` then `i 'submit ok'`
+  / `w 'submit failed' code=SEND_FAILED` / `e 'submit crashed'`.
+  `RatingSheet` logs `tag toggle` + `submit tap` taps.
+- **Validation-error policy**: client-side validation failures log the
+  *reason* (e.g. `reason=validation_failed`, `reason=no_categories`),
+  never the offending value. PII still routes through Phase 01
+  `redactPhone` / `redactEmail` / `redactOtp` / `redactToken` helpers.
+
+### Phase 04 wiring
+Tag → file map for `lib/features/customer/**`:
+
+| Tag | File | Tier |
+|---|---|---|
+| `BookingRepo` | `customer/booking/data/booking_repository.dart` | T2 |
+| `AiRepo` | `customer/booking/data/ai_repository.dart` | T1 |
+| `BookingNotifier` | `customer/booking/presentation/booking_provider.dart` | T3 |
+| `CategoryScreen` | `customer/booking/presentation/category_screen.dart` | T1 |
+| `JobDescription` | `customer/booking/presentation/job_description_screen.dart` | T2 |
+| `LocationScreen` | `customer/booking/presentation/location_screen.dart` | T2 |
+| `BookingSummary` | `customer/booking/presentation/booking_summary_screen.dart` | T3 |
+| `BookingConfirm` | `customer/booking/presentation/booking_confirmation_screen.dart` | T1 |
+| `CustomerHome` | `customer/home/home_page.dart` | T2 (narrow) |
+| `TrackingNotifier` | `customer/tracking/presentation/job_tracking_provider.dart` | T3 |
+| `TrackingPage` | `customer/tracking/presentation/tracking_page.dart` | T2 |
+| `PaymentRepo` | `customer/payments/data/payment_repository.dart` | T1 |
+| `PaymentReceipt` | `customer/payments/presentation/payment_receipt_screen.dart` | T1 |
+| `PaymentStatus` | `customer/payments/presentation/payment_status_screen.dart` | T1 |
+| `HistoryPage` | `customer/history/presentation/history_page.dart` | T1 |
+| `JobDetail` | `customer/history/presentation/job_detail_page.dart` | T2 |
+| `ReferralRepo` | `customer/referral/data/referral_repository.dart` | T1 |
+| `ReferralNotifier` | `customer/referral/presentation/referral_provider.dart` | T2 |
+| `ReferralScreen` | `customer/referral/presentation/referral_screen.dart` | T1 |
+| `RemindersRepo` | `customer/reminders/data/reminders_repository.dart` | T1 |
+| `RemindersNotifier` | `customer/reminders/presentation/reminders_provider.dart` | T2 |
+| `RaiseDispute` | `customer/dispute/presentation/raise_dispute_screen.dart` | T2 |
+
+- **BookingNotifier (T3)** — every state-machine setter (`setCategory`,
+  `setDescription`, `setLocation`, `setAmount`, `addPhoto`, `removePhoto`,
+  `reset`) emits a `d` line with the relevant primitive. `submitBooking`
+  begins with `i 'submit start' category=… amount=… bypass=…` and then
+  branches:
+  - **Bypass path** (`AppConfig.bypassPayments == true`):
+    `w 'bypass path — no Stripe' reason=qa_build` →
+    `i 'api start' endpoint=/bookings/jobs` →
+    `i 'api ok' jobId=$id bypass=true`. Photo upload failures log
+    `w 'photo upload failed (bypass) — ignored'` but never abort the
+    flow (matches Phase 11 QA-build behaviour).
+  - **Stripe path**: `d 'create intent start' amount=…` →
+    `i 'intent ok' paymentIntentId=… clientSecret=${redactToken(...)} chargedAmount=… referralDiscount=… creditApplied=…`
+    → `d 'present sheet'` → `i 'sheet confirmed'` →
+    `d 'confirm start' paymentIntentId=…` → `i 'confirm ok' jobId=… transactionId=…`.
+  - `StripeException` always logs `e 'stripe exception'
+    code=${error.code.name}` plus a softer `w 'sheet cancelled'` /
+    `w 'sheet failed'` for grep-ability.
+  - `DioException` logs `e 'api failed' status=…`; bare throws log
+    `e 'submit crashed'` with stack.
+  - **Stripe redaction**: `clientSecret` always passes through
+    `redactToken(...)`; `paymentMethod` / `customerId` / Stripe object
+    payloads are **never** logged in any form. The bypass sentinel
+    `BYPASSED` is logged literally (so post-hoc analysis can tell a QA
+    transaction from a real one).
+- **TrackingNotifier (T3)** — `build` logs `d 'build' jobId=…` then
+  `i 'initial status' status=…` once the API returns. SignalR
+  subscriptions log `d 'signalr subscribe' event=JobStatusChanged|ProviderLocationUpdated`.
+  Every status delta logs `i 'status transition' from=$old to=$new`.
+  Every GPS frame logs `v 'loc update' coords=${redactLatLng(...)} distanceKm=… ageMs=…`
+  — verbose so the 3-second cadence stays off by default in release.
+  `ref.onDispose` logs `d 'unsubscribed'`.
+- **CustomerHome (T2 narrow)** — only the side-effectful spots get logs
+  to keep the 1.2k-line file readable: `d 'search changed' len=$n` (no
+  value), `d 'category tap' id=$id bypassPicker=true source=…`
+  (sources: `context_chip` / `grid` / `book_again` / `search_filtered`),
+  `d 'fab tap' source=emergency_chip`,
+  `d 'rating banner tap' jobId=$id` / `'rating banner dismiss'`. Pure
+  presentational widgets get nothing.
+- **Booking screens** — `JobDescription` traces the AI helper
+  end-to-end (`d 'improve start' inputLen=… category=…` →
+  `i 'improve ok' outputLen=…` / `w 'improve failed'`) and logs
+  `d 'ai use tap' len=…` + `d 'next tap' len=…`. `LocationScreen`
+  logs `d 'gps tap'`, `i 'gps ok' coords=${redactLatLng(...)}` /
+  `w 'gps denied'` / `w 'gps failed'`, plus
+  `d 'geocode start' coords=… → d 'geocode ok' addrLen=… / w 'geocode empty' / w 'geocode failed'`.
+  `BookingSummary` logs `d 'pay tap' amount=… bypass=…` /
+  `d 'pay blocked' reason=validation_failed`, then on completion
+  `i 'nav next' target=/customer/payment/receipt jobId=…`.
+  `BookingConfirm` traces the SignalR path: `d 'join job group'`,
+  `i 'job accepted' jobId=…` / `w 'job expired' jobId=…` plus
+  `w 'signalr connect failed'` / `w 'JobAccepted parse failed'` /
+  `w 'JobExpired parse failed'` for the catch arms.
+- **Referral / Reminders / Dispute (T2)** — repositories log every
+  start line; notifiers wrap each method with
+  `d '<m> start' → i '<m> ok' / w '<m> failed' code=<server-code>`.
+  Concretely: `ReferralNotifier` logs `apply ok' discountPct=…` and
+  `apply failed' code=REFERRAL_CODE_NOT_FOUND|REFERRAL_ALREADY_USED|REFERRAL_SELF_REFERRAL|REFERRAL_CODE_EXPIRED`;
+  `RemindersNotifier.snooze` blocks days > 30 with
+  `w 'snooze blocked' reason=SNOOZE_DAYS_EXCEEDED` (the `markBooked`
+  deep-link emits `i 'deep link to booking' id=…`);
+  `RaiseDispute` logs `submit start jobId=… reasonLen=…` →
+  `i 'submit ok' disputeId=…` /
+  `w 'submit failed' code=DISPUTE_WINDOW_CLOSED|DISPUTE_ALREADY_EXISTS|DISPUTE_NOT_ALLOWED_IN_CURRENT_STATUS`.
+- **Payments (T1)** — `PaymentRepo` logs `createIntent / confirmPayment / getMyTransactions`
+  start lines with primitives only. `PaymentReceipt` logs `open` +
+  `view order tap` (job id only). `PaymentStatus` logs
+  `load start jobId=… → load ok found=$bool status=… / w 'load failed'`.
+- **History / Job detail (T2)** — `HistoryPage` logs the list-load
+  count and each card tap with `jobId / status`. `JobDetail` logs
+  `load ok jobId=… status=… beforeCount=… afterCount=… hasOpenDispute=…`
+  plus `d 'raise dispute tap' jobId=…`.
+- **Stripe redaction reminder**: anywhere a Stripe payload is touched
+  outside `BookingNotifier`, route through `redactToken(...)`. Logging
+  a raw `clientSecret`, `paymentMethod`, or full Stripe response object
+  is treated as a Phase-04 regression.
+
+### Phase 05 wiring
+Tag → file map for `lib/features/provider/**`:
+
+| Tag | File | Tier |
+|---|---|---|
+| `JobRepo` | `provider/jobs/data/job_repository.dart` | T2 |
+| `JobFeedNotifier` | `provider/jobs/presentation/job_feed_provider.dart` | T2 |
+| `JobDetailNotifier` | `provider/jobs/presentation/job_detail_provider.dart` | T3 |
+| `ActiveJobNotifier` | `provider/jobs/presentation/active_job_provider.dart` | T3 |
+| `CompletedJobs` | `provider/jobs/presentation/completed_jobs_provider.dart` | T1 |
+| `JobFeedScreen` | `provider/jobs/presentation/job_feed_screen.dart` | T2 |
+| `JobDetailScreen` | `provider/jobs/presentation/job_detail_screen.dart` | T2 |
+| `ActiveJobsScreen` | `provider/jobs/presentation/active_jobs_screen.dart` | T1 |
+| `ActiveJobDetail` | `provider/jobs/presentation/active_job_detail_screen.dart` | T3 |
+| `UploadAfterPhotos` | `provider/jobs/presentation/upload_after_photos_screen.dart` | T2 |
+| `OnboardingApi` | `provider/onboarding/data/onboarding_api_service.dart` | T2 |
+| `OnboardingHub` | `provider/onboarding/presentation/onboarding_hub_screen.dart` | T2 |
+| `IdUploadScreen` | `provider/onboarding/presentation/id_upload_screen.dart` | T2 |
+| `SkillTest` | `provider/onboarding/presentation/skill_test_screen.dart` | T3 |
+| `ProviderNav` | `provider/navigation/presentation/navigation_page.dart` | T2 |
+| `EarningsRepo` | `provider/earnings/data/earnings_repository.dart` | T2 |
+| `EarningsNotifier` | `provider/earnings/presentation/earnings_provider.dart` | T2 |
+| `PayoutStatus` | `provider/earnings/presentation/payout_status_screen.dart` | T2 |
+| `SubscriptionRepo` | `provider/subscription/data/subscription_repository.dart` | T2 |
+| `SubscriptionNotifier` | `provider/subscription/presentation/subscription_provider.dart` | T3 |
+| `Subscription` | `provider/subscription/presentation/subscription_screen.dart` | T3 |
+| `AnalyticsRepo` | `provider/analytics/data/analytics_repository.dart` | T1 |
+| `AnalyticsNotifier` | `provider/analytics/presentation/analytics_provider.dart` | T2 |
+| `AnalyticsScreen` | `provider/analytics/presentation/analytics_screen.dart` | T1 |
+
+- **JobDetailNotifier (T3)** — `build` logs `d 'build' jobId=…`; the
+  initial countdown emits `i 'countdown start' jobId=… seconds=120`;
+  every per-second tick logs `v 'tick' remaining=…` (verbose so it
+  stays out of the default view); expiry logs
+  `w 'expired' jobId=…`. `accept` and `reject` follow the canonical
+  `d '<m> start' → i '<m> ok' / e '<m> failed' / w 'reject failed'`
+  shape.
+- **ActiveJobNotifier (T3)** — every status change is logged once with
+  `i 'status' from=… to=… source=signalr|advance_api`. The 3-second
+  GPS broadcast emits `i 'gps broadcast start' intervalMs=3000` on
+  entering EnRoute, then per-frame
+  `v 'gps push' coords=${redactLatLng(...)}` (verbose), and
+  `i 'gps broadcast stop' reason=arrived|disposed|restart` when the
+  timer is torn down. GPS errors log `e 'gps failed'` with stack;
+  permission denials log `w 'gps permission denied'`.
+- **ActiveJobDetail (T3)** — every status-machine CTA logs
+  `d 'action tap' action=enroute|arrived_or_start|finish_upload`.
+  The chat FAB tap logs `d 'chat fab tap' jobId=…`. The actual API
+  result is logged by `ActiveJobNotifier`'s `status` transition line,
+  so the screen only emits user-intent.
+- **UploadAfterPhotos (T2)** — `d 'pick image' source=camera|gallery
+  → d 'pick ok' bytes=… count=…` or
+  `w 'pick rejected' reason=too_large bytes=…`. The
+  upload + advance gate emits `d 'advance blocked' reason=no_after_photo`
+  when the list is empty, otherwise
+  `d 'upload start' count=… → i 'upload ok' / e 'upload failed'`.
+- **OnboardingApi (T2)** — every method follows the canonical
+  `d '<m> start' → i '<m> ok' / e '<m> failed'` shape with no PII
+  (only doc type + total bytes for `submitDocuments`). The persisted-
+  tier write inside `onboardingStatusProvider` logs
+  `i 'tier bumped' from=… to=…` whenever the new tier differs from the
+  stored value, so the post-skill-test `provider_tier` change is
+  traceable into the next router redirect.
+- **SkillTest (T3)** — `d 'init' category=…` →
+  `i 'session start' sessionId=… category=… total=…`; per-question
+  `d 'answer' q=$idx optionId=…`; `d 'submit start' sessionId=…` →
+  `i 'session ok' score=… total=… passed=…` or
+  `w 'session failed cooldown' nextRetryAt=…` for failed attempts.
+  Errors log `e 'submit failed'` / `w 'session start failed'` with
+  the category context.
+- **ProviderNav (T2)** — `d 'init' jobId=…`;
+  `d 'permission check' → i 'permission ok' / w 'permission denied' level=denied|deniedForever`;
+  `d 'get current position' → v 'pos' coords=${redactLatLng(...)} / e 'pos failed'`.
+  The advance-status CTA logs `d 'advance tap' jobId=… status=…`
+  before delegating to `ActiveJobNotifier` (which handles the actual
+  status transition logging).
+- **Subscription (T3)** — full Stripe SetupIntent trace:
+  `i 'subscribe start' → d 'setup intent start' → i 'setup intent ok'
+  clientSecret=${redactToken(secret)} → d 'sheet present' →
+  i 'sheet confirmed' → activate via SubscriptionNotifier
+  (d 'activate api start' → i 'activate ok' status=Active /
+  w 'activate failed' code=PROVIDER_NOT_ACTIVE|ALREADY_SUBSCRIBED|PAYMENT_METHOD_INVALID|STRIPE_ERROR)`.
+  `StripeException` always logs `e 'sheet failed' code=${error.code.name}`,
+  with a softer `w 'sheet cancelled'` for `FailureCode.Canceled` so
+  cancellations are easy to grep. Cancellation flow logs
+  `d 'cancel start' → i 'cancel ok' cancelsAt=…` /
+  `w 'cancel failed' code=…`. **Stripe redaction:** `clientSecret`
+  and `paymentMethodId` always pass through `redactToken(...)`; the
+  derived `siId` (from `clientSecret.split('_secret_')`) is the
+  Stripe SetupIntent id, safe to log in full.
+- **Analytics (T2)** — `AnalyticsNotifier.load` emits
+  `d 'load start' period=… cache=miss` →
+  `d 'parallel fetch start' → i 'parallel fetch ok' period=…` or
+  `e 'parallel fetch failed'`. `AnalyticsScreen` logs each period
+  chip tap with `d 'period chip tap' period=…`. The 5-min keepAlive
+  cache is documented but not logged on hit (the FutureProvider only
+  rebuilds on miss, so seeing a `load start` line *is* a cache miss).
+- **Earnings (T2)** — `EarningsRepo` logs every method start;
+  `EarningsNotifier.build` adds
+  `i 'load summary ok' pending=… available=… stripe=…`;
+  `PayoutStatus` traces the Stripe Connect onboarding link launch:
+  `d 'connect tap' → i 'open external' url=${redactUrl(url)}` (the
+  URL is from Stripe and contains a one-shot account-link token —
+  `redactUrl` keeps the host + path but strips any sensitive query
+  keys).
+- **Provider-tier gate**: Phase 02 router redirect logs cover the
+  redirect to `/provider/onboarding`; Phase 05 adds the
+  `OnboardingApi` `tier bumped` line so a successful skill test or
+  ID approval that bumps the persisted tier is traceable into the
+  next router redirect.
+- **Stripe redaction reminder (Phase 05 surface)**: anywhere a
+  `clientSecret` or `paymentMethodId` is touched in
+  `subscription_repository.dart` / `subscription_screen.dart` /
+  `subscription_provider.dart`, route through `redactToken(...)`.
+  Same rule as Phase 04 — logging a raw secret is treated as a
+  regression.
+
+### Phase 06 wiring
+- **Release log gate** — `AppLogger.v` / `d` / `i` early-return
+  when `kReleaseMode` is true, so `verbose` / `debug` / `info`
+  emit nothing in a release APK / IPA. `w` / `e` / `c` keep
+  firing — they're the levels operators care about. Talker
+  history still respects `maxHistoryItems: 500` for the in-app
+  viewer (debug only) but the release no-op short-circuits before
+  the `_format` / `_emit` work, so there's no string-concat cost
+  in release.
+- **Crashlytics sink** — `lib/core/logging/crashlytics_sink.dart`
+  wraps `FirebaseCrashlytics.recordError(...)`. Wired by
+  `AppLogger.attachCrashlytics(...)` from `main.dart`, but only
+  when **(a)** `Firebase.initializeApp()` succeeded *and* **(b)**
+  `kReleaseMode` is true — debug crashes stay local, the
+  Crashlytics dashboard is for production traffic only.
+  `error`-level logs go through `recordError(fatal: false)`;
+  `critical`-level logs go through `recordError(fatal: true)` so
+  they surface alongside hard crashes. The `data` map (already
+  redacted at the call site) is flattened to `key=value` strings
+  and attached as `information`. Sink reference is held on the
+  `AppLogger` instance and cleared via the `@visibleForTesting`
+  `detachCrashlytics()` hook.
+- **Global error handlers** — `main.dart` installs
+  `FlutterError.onError` (→ `log.e('FlutterError', …)`) and
+  `PlatformDispatcher.instance.onError` (→ `log.c('PlatformError', …)`)
+  before any other init, so a Stripe / Firebase / deep-link
+  bootstrap throw lands in the same Talker history as runtime
+  errors and is mirrored to Crashlytics in release.
+- **Debug log viewer gating** — `/debug/logs` `GoRoute` is
+  registered inside `if (kDebugMode)` in `lib/app/router.dart`,
+  and the redirect guard short-circuits on `/debug/` prefixes
+  with the same gate. In a release build the route is unknown to
+  GoRouter and resolves to the standard error page — there is no
+  way to reach the Talker UI from a shipped app.
+- **PII sweep script** — `mobile/docs/logging-plan/check_pii.sh`
+  greps `mobile/lib/` (excluding `core/logging/redact.dart`) for
+  bearer tokens, Stripe `pi_…` / `seti_…` / `sk_(live|test)_…`
+  identifiers, and raw `print(` / `debugPrint(` calls. Exits 0
+  on a clean tree, 2 on a finding. Run locally before merging
+  any logging-plan PR; wire into CI when the project gets a
+  pipeline. Uses `rg` if available, `grep -r` as a fallback.
+- **`firebase_crashlytics: ^3.5.0`** added to `pubspec.yaml`
+  alongside the existing `firebase_core` / `firebase_messaging` /
+  `firebase_analytics` deps. The Android Gradle Crashlytics
+  plugin still needs to be wired in `android/build.gradle.kts` +
+  the iOS Run Script phase added in Xcode before symbol uploads
+  start working — both are documented but not yet executed
+  because they require the real `google-services.json` /
+  `GoogleService-Info.plist` (still git-ignored placeholders).
+  Until those land, `attachCrashlytics()` is reached but the
+  underlying `FirebaseCrashlytics.instance` calls degrade to
+  no-ops on the wire — no exception, no error.
+- **Acceptance criteria status**:
+  - ✅ release-build no-op confirmed by code (`kReleaseMode`
+    early-return in `app_logger.dart`); empirical verification
+    (`adb logcat | grep -i khudmati` after release install)
+    pending the same device test pass that ships Phase 11.
+  - 🟡 Crashlytics end-to-end delivery (button-tap throw → dashboard
+    in 5 min) requires real Firebase config — scaffolded, not
+    runtime-verified.
+  - ✅ `check_pii.sh` returns 0 on the current tree.
+  - ✅ This section updates `mobile/CLAUDE.md`.
+  - ✅ Debug log viewer is unreachable in release builds.
+
 ## Migration status
 See `migration-plan/README.md` for the full 14-phase plan. Phase-by-phase
 completion is tracked in git history on branch `feat/unified-app`.
@@ -632,11 +1117,18 @@ completion is tracked in git history on branch `feat/unified-app`.
 | 13 | Deprecate legacy apps | ⏳ queued |
 
 ## Verification
-- `flutter analyze` → 0 errors / 0 warnings; 58 `info`-level lints (mostly
+- `flutter analyze` → 0 errors / 0 warnings; 60 `info`-level lints (mostly
   `withOpacity` deprecations from the Flutter SDK upgrade — non-blocking
   for release builds, slated for a follow-up cleanup ticket).
 - `flutter test` → `test/widget_test.dart` exercises the role_provider
   read/write/clear cycle against an in-memory `FlutterSecureStorage` fake.
+  `setUpAll(AppLogger.bootstrap)` initialises the singleton before the
+  role-provider helpers fire their `[RoleProvider] set role` /
+  `[RoleProvider] hydrate` lines (instrumented in Phase 02).
+- `mobile/docs/logging-plan/check_pii.sh` (Phase 06) — run from any cwd
+  to grep `lib/` for bearer tokens, Stripe `pi_…` / `seti_…` /
+  `sk_(live|test)_…` identifiers, and raw `print(` / `debugPrint(`
+  calls. Exits 0 on a clean tree, 2 on a finding. Currently clean.
 - Phase 11 device test matrix lives at `docs/verification-checklist.md` —
   derived from `migration-plan/phase-11-verification.md`, organised per
   flow / role / platform (`EN-A` / `AR-A` / `EN-i` / `AR-i`) with

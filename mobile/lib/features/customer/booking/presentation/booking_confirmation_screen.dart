@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/services/signalr_service.dart';
+import '../../../../core/widgets/back_chip.dart';
 import 'booking_provider.dart';
+
+const _tag = 'BookingConfirm';
 
 class _ConfirmationStatus {
   final bool isSearching;
@@ -63,14 +67,19 @@ class _BookingConfirmationScreenState
     final service = ref.read(signalRServiceProvider);
     try {
       await service.connect();
-    } catch (_) {
+    } catch (e) {
+      log.w(_tag, 'signalr connect failed', error: e);
       return;
     }
 
     final booking = ref.read(bookingNotifierProvider).valueOrNull;
     final jobId = booking?.createdJobId;
-    if (jobId == null) return;
+    if (jobId == null) {
+      log.w(_tag, 'connectSignalR no jobId');
+      return;
+    }
 
+    log.d(_tag, 'join job group', data: {'jobId': jobId});
     await service.invoke('JoinJobGroup', [jobId]);
 
     service.on('JobAccepted', (args) {
@@ -80,6 +89,7 @@ class _BookingConfirmationScreenState
         if (data == null) return;
         if (data['jobId'].toString() != jobId) return;
 
+        log.i(_tag, 'job accepted', data: {'jobId': jobId});
         setState(() {
           _status = _ConfirmationStatus(
             isSearching: false,
@@ -89,7 +99,9 @@ class _BookingConfirmationScreenState
             providerRating: (data['providerRating'] as num?)?.toDouble(),
           );
         });
-      } catch (_) {}
+      } catch (e) {
+        log.w(_tag, 'JobAccepted parse failed', error: e);
+      }
     });
 
     service.on('JobExpired', (args) {
@@ -99,11 +111,14 @@ class _BookingConfirmationScreenState
         if (data == null) return;
         if (data['jobId'].toString() != jobId) return;
 
+        log.w(_tag, 'job expired', data: {'jobId': jobId});
         setState(() {
           _status = const _ConfirmationStatus(
               isSearching: false, isExpired: true);
         });
-      } catch (_) {}
+      } catch (e) {
+        log.w(_tag, 'JobExpired parse failed', error: e);
+      }
     });
   }
 
@@ -119,26 +134,32 @@ class _BookingConfirmationScreenState
         canPop: false,
         child: Scaffold(
           backgroundColor: AppColors.surface,
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: _status.isAccepted
-                  ? _AcceptedBody(
-                      refNumber: refNumber,
-                      jobId: jobId,
-                      status: _status,
-                    )
-                  : _status.isExpired
-                      ? _ExpiredBody(
-                          onRetry: () {
-                            ref
-                                .read(bookingNotifierProvider.notifier)
-                                .reset();
-                            context.go('/customer/booking/category');
-                          },
+          body: Stack(
+            children: [
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: _status.isAccepted
+                      ? _AcceptedBody(
+                          refNumber: refNumber,
+                          jobId: jobId,
+                          status: _status,
                         )
-                      : _SearchingBody(refNumber: refNumber, jobId: jobId),
-            ),
+                      : _status.isExpired
+                          ? _ExpiredBody(
+                              onRetry: () {
+                                ref
+                                    .read(bookingNotifierProvider.notifier)
+                                    .reset();
+                                context.go('/customer/booking/category');
+                              },
+                            )
+                          : _SearchingBody(
+                              refNumber: refNumber, jobId: jobId),
+                ),
+              ),
+              const BackChip(),
+            ],
           ),
         ),
       ),

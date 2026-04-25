@@ -5,8 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../domain/analytics_models.dart';
 import 'analytics_provider.dart';
+
+const _tag = 'AnalyticsScreen';
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
@@ -24,6 +28,7 @@ class AnalyticsScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.analyticsTitle,
             style: const TextStyle(
@@ -110,8 +115,10 @@ class _PeriodSelector extends ConsumerWidget {
                   ),
                 ),
                 selected: isSelected,
-                onSelected: (_) =>
-                    ref.read(analyticsPeriodProvider.notifier).state = p.$1,
+                onSelected: (_) {
+                  log.d(_tag, 'period chip tap', data: {'period': p.$1});
+                  ref.read(analyticsPeriodProvider.notifier).state = p.$1;
+                },
                 selectedColor: AppColors.brandBlue,
                 checkmarkColor: Colors.white,
                 backgroundColor: AppColors.surface,

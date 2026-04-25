@@ -6,8 +6,12 @@ import 'package:latlong2/latlong.dart';
 import '../../../../core/constants/app_config.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import 'job_detail_provider.dart';
 import 'job_feed_provider.dart';
+
+const _tag = 'JobDetailScreen';
 
 class JobDetailScreen extends ConsumerWidget {
   final String jobId;
@@ -31,10 +35,7 @@ class JobDetailScreen extends ConsumerWidget {
             style: const TextStyle(
                 fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/provider/jobs'),
-          ),
+          leading: const AppBackButton(),
         ),
         body: asyncState.when(
           loading: () => const Center(
@@ -63,10 +64,14 @@ class JobDetailScreen extends ConsumerWidget {
 
             return _JobDetailBody(
               state: state,
-              onAccept: () => ref
-                  .read(jobDetailNotifierProvider(jobId).notifier)
-                  .acceptJob(),
+              onAccept: () {
+                log.d(_tag, 'accept tap', data: {'jobId': jobId});
+                ref
+                    .read(jobDetailNotifierProvider(jobId).notifier)
+                    .acceptJob();
+              },
               onReject: () async {
+                log.d(_tag, 'reject tap', data: {'jobId': jobId});
                 await ref
                     .read(jobDetailNotifierProvider(jobId).notifier)
                     .rejectJob();

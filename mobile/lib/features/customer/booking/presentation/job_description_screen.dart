@@ -5,8 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../data/ai_repository.dart';
 import 'booking_provider.dart';
+
+const _tag = 'JobDescription';
 
 class JobDescriptionScreen extends ConsumerStatefulWidget {
   const JobDescriptionScreen({super.key});
@@ -41,11 +45,16 @@ class _JobDescriptionScreenState
 
   Future<void> _improveWithAi() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty) {
+      log.d(_tag, 'improve blocked', data: {'reason': 'empty'});
+      return;
+    }
 
     final categoryName =
         ref.read(bookingNotifierProvider).valueOrNull?.categoryName ?? '';
 
+    log.d(_tag, 'improve start',
+        data: {'inputLen': text.length, 'category': categoryName});
     setState(() => _isImprovingWithAi = true);
 
     try {
@@ -55,8 +64,10 @@ class _JobDescriptionScreenState
         categoryName: categoryName,
       );
       if (!mounted) return;
+      log.i(_tag, 'improve ok', data: {'outputLen': improved.length});
       _showAiPreviewSheet(improved);
-    } catch (_) {
+    } catch (e) {
+      log.w(_tag, 'improve failed', error: e);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -158,6 +169,8 @@ class _JobDescriptionScreenState
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
+                        log.d(_tag, 'ai use tap',
+                            data: {'len': improved.length});
                         _controller.text = improved;
                         ref
                             .read(bookingNotifierProvider.notifier)
@@ -220,10 +233,7 @@ class _JobDescriptionScreenState
             style: const TextStyle(
                 fontFamily: 'Cairo', fontWeight: FontWeight.bold),
           ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go('/customer/booking/category'),
-          ),
+          leading: const AppBackButton(),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -424,6 +434,8 @@ class _JobDescriptionScreenState
                 child: ElevatedButton(
                   onPressed: _isValid
                       ? () {
+                          log.d(_tag, 'next tap',
+                              data: {'len': _controller.text.trim().length});
                           ref
                               .read(bookingNotifierProvider.notifier)
                               .setDescription(_controller.text.trim());

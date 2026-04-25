@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/logging/app_logger.dart';
 import 'package:mobile/core/providers/role_provider.dart';
 
 class _InMemoryStorage implements FlutterSecureStorage {
@@ -51,6 +52,8 @@ class _InMemoryStorage implements FlutterSecureStorage {
 }
 
 void main() {
+  setUpAll(AppLogger.bootstrap);
+
   test('roleProvider starts null and can be written/cleared', () async {
     final storage = _InMemoryStorage();
     final container = ProviderContainer(

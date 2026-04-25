@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/signalr_service.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../widgets/chat_input_bar.dart';
 import '../widgets/chat_message_list.dart';
 import 'chat_provider.dart';
+
+const _tag = 'ChatScreen';
 
 /// Unified chat screen used by both roles. The sender bubble alignment is
 /// determined by the current `roleProvider` value.
@@ -42,6 +46,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _onScroll() {
     if (_scrollController.position.pixels <= 50) {
+      log.d(_tag, 'load prev page tap', data: {'jobId': widget.jobId});
       ref.read(chatNotifierProvider(widget.jobId).notifier).loadPreviousPage();
     }
   }
@@ -86,6 +91,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Row(
             children: [
               const CircleAvatar(
@@ -211,6 +217,8 @@ class _ChatBody extends ConsumerWidget {
         ChatInputBar(
           isSending: chatState.isSending,
           onSend: (text) {
+            log.d(_tag, 'send button tap',
+                data: {'jobId': jobId, 'len': text.length});
             ref
                 .read(chatNotifierProvider(jobId).notifier)
                 .sendMessage(text)

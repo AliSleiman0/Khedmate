@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../data/onboarding_api_service.dart';
+
+const _tag = 'IdUploadScreen';
 
 class IdUploadScreen extends ConsumerStatefulWidget {
   const IdUploadScreen({super.key});
@@ -24,6 +28,7 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
     final s = S.of(ref);
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: Text(s.idUploadTitle),
         centerTitle: true,
       ),
@@ -185,6 +190,8 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
 
     if (source == null) return;
 
+    log.d(_tag, 'pick image',
+        data: {'source': source.name, 'side': front ? 'front' : 'back'});
     final image = await _picker.pickImage(source: source);
     if (image != null) {
       setState(() {
@@ -205,6 +212,8 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
   }
 
   Future<void> _submitDocuments() async {
+    log.d(_tag, 'submit tap',
+        data: {'type': _documentType, 'hasBack': _backImage != null});
     setState(() => _isSubmitting = true);
 
     try {
@@ -217,6 +226,7 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
 
       if (!mounted) return;
 
+      log.i(_tag, 'submit ok', data: {'type': _documentType});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(S.read(ref).idSubmitSuccess),
@@ -227,6 +237,7 @@ class _IdUploadScreenState extends ConsumerState<IdUploadScreen> {
       ref.invalidate(onboardingStatusProvider);
       Navigator.of(context).pop();
     } catch (e) {
+      log.w(_tag, 'submit failed', error: e);
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(

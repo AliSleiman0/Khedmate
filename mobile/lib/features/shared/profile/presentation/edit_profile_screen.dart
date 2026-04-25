@@ -4,9 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/logging/redact.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../../../auth/data/auth_repository.dart';
 import '../../../auth/presentation/auth_provider.dart';
+
+const _tag = 'EditProfile';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -31,6 +36,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _nameController = TextEditingController(text: user?.fullName ?? '');
     _emailController = TextEditingController(text: user?.email ?? '');
     _phone = user?.phone ?? '';
+    final role = ref.read(roleProvider);
+    log.d(_tag, 'open', data: {
+      'role': role?.name,
+      'name': user?.fullName ?? 'null',
+      'email': redactEmail(user?.email),
+    });
   }
 
   @override
@@ -41,7 +52,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      log.d(_tag, 'save blocked', data: {'reason': 'validation_failed'});
+      return;
+    }
     setState(() {
       _isSaving = true;
       _errorMessage = null;
@@ -50,23 +64,35 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     try {
       final repo = ref.read(authRepositoryProvider);
       final role = ref.read(roleProvider) ?? UserRole.customer;
+      final authState = ref.read(authNotifierProvider).valueOrNull;
+      final priorUser =
+          authState is AuthAuthenticated ? authState.user : null;
       final emailArg = role == UserRole.customer
           ? (_emailController.text.trim().isEmpty
               ? null
               : _emailController.text.trim())
           : null;
+      log.d(_tag, 'save tap', data: {
+        'role': role.name,
+        'nameChanged':
+            priorUser != null && priorUser.fullName != _nameController.text.trim(),
+        'emailChanged': priorUser != null && priorUser.email != emailArg,
+      });
       await repo.updateProfile(
         fullName: _nameController.text.trim(),
         email: emailArg,
       );
+      log.i(_tag, 'save ok', data: {'role': role.name});
       ref.invalidate(authNotifierProvider);
       if (mounted) context.pop();
     } on DioException catch (e) {
       final errCode = (e.response?.data as Map<String, dynamic>?)?['error']
               as String? ??
           'ERROR';
+      log.w(_tag, 'save failed', data: {'code': errCode});
       setState(() => _errorMessage = errCode);
-    } catch (_) {
+    } catch (e, st) {
+      log.e(_tag, 'save crashed', error: e, stack: st);
       final s = S.read(ref);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -97,6 +123,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.brandBlue,
           foregroundColor: Colors.white,
+          leading: const AppBackButton(),
           title: Text(
             s.editProfileTitle,
             style: const TextStyle(

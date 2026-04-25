@@ -7,6 +7,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/constants/app_config.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/providers/locale_provider.dart';
+import '../../../core/widgets/back_chip.dart';
 
 /// Defensive full-screen shown when any HTTP call returns `UPGRADE_REQUIRED`.
 /// Under the Phase 10 hard-cutover strategy this should only ever fire on the
@@ -38,10 +39,13 @@ class UpgradeRequiredScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.brandBlue,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-          child: Column(
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
@@ -105,7 +109,13 @@ class UpgradeRequiredScreen extends ConsumerWidget {
               ),
             ],
           ),
-        ),
+            ),
+          ),
+          const BackChip(
+            background: Colors.white,
+            iconColor: AppColors.brandBlue,
+          ),
+        ],
       ),
     );
   }

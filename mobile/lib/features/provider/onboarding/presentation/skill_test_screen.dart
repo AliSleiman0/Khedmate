@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/widgets/app_back_button.dart';
 import '../data/onboarding_api_service.dart';
 import '../domain/skill_test.dart';
+
+const _tag = 'SkillTest';
 
 class SkillTestScreen extends ConsumerStatefulWidget {
   const SkillTestScreen({super.key});
@@ -37,6 +41,7 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: Text(s.skillTestTitle),
         centerTitle: true,
       ),
@@ -84,6 +89,7 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: Text(
           s.skillTestQuestion(
               _currentQuestionIndex + 1, _test!.questions.length),
@@ -115,6 +121,10 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: ElevatedButton(
                         onPressed: () {
+                          log.d(_tag, 'answer', data: {
+                            'q': _currentQuestionIndex,
+                            'optionId': option.key,
+                          });
                           setState(() {
                             _answers[question.id] = option.key;
                           });
@@ -173,17 +183,25 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
   }
 
   Future<void> _startTest(String categoryId) async {
+    log.d(_tag, 'init', data: {'category': categoryId});
     setState(() => _isLoading = true);
 
     try {
       final service = ref.read(onboardingApiServiceProvider);
       final test = await service.getSkillTest(categoryId);
+      log.i(_tag, 'session start', data: {
+        'sessionId': test.testId,
+        'category': categoryId,
+        'total': test.questions.length,
+      });
       setState(() {
         _test = test;
         _selectedCategory = categoryId;
         _isLoading = false;
       });
     } catch (e) {
+      log.w(_tag, 'session start failed',
+          error: e, data: {'category': categoryId});
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -204,6 +222,7 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
   }
 
   Future<void> _submitTest() async {
+    log.d(_tag, 'submit start', data: {'sessionId': _test?.testId});
     setState(() => _isSubmitting = true);
 
     try {
@@ -217,6 +236,17 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
         testId: _test!.testId,
         answers: answers,
       );
+
+      log.i(_tag, 'session ok', data: {
+        'sessionId': _test?.testId,
+        'score': result.score,
+        'total': result.totalQuestions,
+        'passed': result.passed,
+      });
+      if (!result.passed) {
+        log.w(_tag, 'session failed cooldown',
+            data: {'nextRetryAt': result.nextRetryAt?.toIso8601String()});
+      }
 
       if (!mounted) return;
 
@@ -261,6 +291,8 @@ class _SkillTestScreenState extends ConsumerState<SkillTestScreen> {
         ),
       );
     } catch (e) {
+      log.e(_tag, 'submit failed',
+          error: e, data: {'sessionId': _test?.testId});
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
