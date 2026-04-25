@@ -7,80 +7,75 @@ npm run dev   # http://localhost:3000
 ```
 
 ## Purpose
-Public-facing landing page for Khudmati. No authentication required. Targets both customers and potential providers.
+Public-facing landing page for Khudmati. No authentication required.
+Targets both customers (homeowners) and potential providers in **Lebanon**.
 
 ## Stack
-React 18 + TypeScript + Vite + **no Tailwind** (inline styles / CSS variables only) + i18next (AR/EN)
+React 18 + TypeScript + Vite. **Inline styles + CSS variables — no Tailwind, no i18n, no framer-motion.**
 
-## i18n
-- Default language: Arabic (`ar`)
-- Fallback: English (`en`)
-- Translation files: `src/i18n/ar.json`, `src/i18n/en.json`
-- Config: `src/i18n/config.ts` — do not modify
-- Language direction switches between RTL (AR) and LTR (EN) via `dir` on `<html>`
+## Design system
+- Built from a Claude Design handoff (April 2026 — see `design-handoff/khudmati-landing/` at the repo root).
+- Hero direction: **A · Split editorial** — phone mockup on right showing live booking state.
+- Provider CTA direction: **V2 · Live earnings cinema** — Bloomberg-terminal aesthetic with live job feed and ticking earnings counter.
+- Tokens: full design-token system in `src/styles/globals.css` (CSS variables — `--kh-primary-700`, `--kh-amber-500`, type/spacing/radius/shadow scales) + a small set of utility classes (`kh-btn`, `kh-card`, `kh-badge`, `kh-input`, `kh-fade-up`, `kh-eyebrow`, etc.). Do not modify token values; do not introduce a separate styling layer.
+- Fonts: **Inter** (UI) + **Fraunces italic** (display accent — used inline via `<em>` or `font-family: Fraunces`). Loaded once from Google Fonts in `index.html`.
+- Brand colors: primary blue `#1B4F72`, accent amber `#F39C12`.
 
-## CSS conventions
-- CSS variables defined in `src/styles/globals.css`: `--brand-blue: #1B4F72`, `--amber: #F39C12`, `--surface: #F5F7FA`, `--text-primary: #2C3E50`, `--text-secondary: #7F8C8D`
-- Do not modify `src/styles/globals.css`
-- Use inline styles or component-scoped CSS; no Tailwind classes
+## Language
+**English only.** Lebanon-based; copy references Beirut + Tripoli, Saida, Jounieh, Zahle, Byblos. Western numerals throughout.
+The legacy AR/EN i18next setup has been removed — there is no language toggle, no RTL.
+
+The bilingual `public/privacy.html` + `public/terms.html` legal pages remain (Apple/Google compliance) — they are static HTML untouched by this redesign.
 
 ## Structure
 ```
 src/
+├── App.tsx                    # Composition: Hero → Services → HowItWorks → PlatformStats → ProviderCTA → ContactForm
+├── main.tsx                   # ReactDOM.render — no providers
+├── hooks/
+│   └── useIsMobile.ts         # window.matchMedia('(max-width: 768px)')
 ├── components/
+│   ├── ui/
+│   │   ├── Icons.tsx          # KhIcon set (Cleaning, Plumbing, …, Verified)
+│   │   ├── Brand.tsx          # Logo, Stars, Avatar, AppStoreBadge
+│   │   └── PhoneMock.tsx      # Hero phone mockup (booking #4827, EnRoute state)
 │   ├── layout/
-│   │   ├── Header.tsx         # Scroll-aware shadow (> 10px), anchor nav links (desktop only)
-│   │   └── Footer.tsx         # Dynamic year, Privacy Policy + Terms links, social icons
+│   │   ├── Header.tsx         # Sticky, scroll-aware: dark+transparent over hero, light+solid past 100px
+│   │   └── Footer.tsx         # Trust bar + 4 columns + app store badges + /privacy.html + /terms.html
 │   └── sections/
-│       ├── Hero.tsx            # Full-width hero (do not modify)
-│       ├── HowItWorks.tsx      # id="how-it-works" anchor (do not modify)
-│       ├── Services.tsx        # id="services" anchor (do not modify)
-│       ├── TrustBadges.tsx     # i18n-aware badge list (5 badges)
-│       ├── PlatformStats.tsx   # 4 live stat cards fetched from GET /api/landing/stats
-│       ├── ProviderCTA.tsx     # i18n-aware provider pitch + "Join as Provider" CTA
-│       └── ContactForm.tsx     # id="contact" anchor; wired to POST /api/landing/contact
-└── i18n/
-    ├── ar.json                 # Arabic translations (RTL)
-    └── en.json                 # English translations (LTR)
+│       ├── Hero.tsx            # id="top" — gradient + phone mockup
+│       ├── Services.tsx        # id="services" — 7 cards, "Cleaning" spans 2 cols on desktop
+│       ├── HowItWorks.tsx      # id="how-it-works" — 4-step numbered timeline + "54 seconds" pill
+│       ├── PlatformStats.tsx   # 4 stat cards + 6-city strip — wired to GET /api/landing/stats
+│       ├── ProviderCTA.tsx     # id="providers" — V2 Live earnings cinema (live counter, job feed)
+│       └── ContactForm.tsx     # id="contact" — 2-col layout, wired to POST /api/landing/contact
+└── styles/
+    └── globals.css            # All design tokens + utility classes
 ```
 
 ## Section order in App.tsx
 ```
-Hero → HowItWorks → Services → TrustBadges → PlatformStats → ProviderCTA → ContactForm
+Hero → Services → HowItWorks → PlatformStats → ProviderCTA → ContactForm
 ```
 
 ## API calls (public, no auth)
 | Method | URL | Purpose |
 |---|---|---|
-| GET | `/api/landing/stats` | Fetch live platform stats for PlatformStats section |
-| POST | `/api/landing/contact` | Submit contact form → `public.contact_inquiries` |
+| GET | `/api/landing/stats` | Live platform stats (totalProviders / totalBookings / avgRating / citiesCovered). PlatformStats falls back to design figures when the API returns 0 (early-launch). |
+| POST | `/api/landing/contact` | Contact form → `public.contact_inquiries`. Backend also sends a bilingual acknowledgement email + admin notification with Reply-To = user. |
 
-- Use native `fetch` — no Axios
-- `PlatformStats`: fail silently (hide section on error)
-- `ContactForm`: show inline error message on failure; disable button during in-flight request
+- Use native `fetch` — no Axios.
+- `PlatformStats`: keep design fallback values on error or zero.
+- `ContactForm`: inline error message on failure; disabled button + "Sending…" label while in-flight.
+
+## Conventions
+- Mobile breakpoint: 768 px (use `useIsMobile()` hook, not media queries in JS).
+- Anchor navigation: header items link to `#how-it-works`, `#services`, `#providers`, `#contact`.
+- The hero pulls the (transparent) sticky header into its dark gradient via `marginTop: -65; paddingTop: 65` so the header reads as part of the hero on first paint.
+- Motion: respects `prefers-reduced-motion` via the `.kh-fade-up` utility + a global rule in `globals.css`.
 
 ## SEO
-- `index.html` has `<title>`, `<meta name="description">`, Open Graph tags (`og:title`, `og:description`, `og:type`, `og:locale`), and `<link rel="canonical">`
+- `index.html` has `<title>`, `<meta name="description">`, Open Graph tags (`og:title` / `og:description` / `og:type` / `og:locale=en_LB`), and `<link rel="canonical">`.
 
 ## No auth needed
 This is the only platform in the project with no authentication. Do not add protected routes.
-
-## Static legal pages (Phase 12)
-- `public/privacy.html` — bilingual (EN + AR) Khudmati privacy policy.
-  Served at `/privacy.html` in dev and (with clean-URL hosting at
-  `/privacy`) in production. Effective 2026-04-24; pending legal
-  review before the first Apple / Google submission.
-- `public/terms.html` — bilingual terms of service. Same serving
-  model; same review pending.
-- Both files are plain static HTML with inline CSS — no React, no
-  i18next integration, no router. Each page has a brand-blue header,
-  a language-toggle strip linking to `#english` and `#arabic`, and
-  the same CSS variables as the rest of the site.
-- `components/layout/Footer.tsx` — the "Privacy Policy" and "Terms
-  of Service" footer links now point at `/privacy.html` and
-  `/terms.html` (previously `href="#"`).
-- Why static: Apple and Google reviewers expect these URLs to return
-  200 OK with valid HTML. Building them in as separate React routes
-  would require adding React Router (and rebuilding the landing
-  page's section-based SPA structure). Static pages are faster to
-  ship and don't touch the existing SPA.
