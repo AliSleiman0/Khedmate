@@ -362,6 +362,19 @@ AppDbContext.AdditionalModelConfiguration = modelBuilder =>
         e.HasIndex(x => x.Category).IsUnique();
     });
 
+    // Service categories (bookings schema — admin-managed lookup)
+    modelBuilder.Entity<ServiceCategory>(e =>
+    {
+        e.ToTable("categories", "bookings");
+        e.Property(x => x.Slug).HasMaxLength(50).IsRequired();
+        e.Property(x => x.NameEn).HasMaxLength(100).IsRequired();
+        e.Property(x => x.NameAr).HasMaxLength(100).IsRequired();
+        e.Property(x => x.IconKey).HasMaxLength(50).IsRequired();
+        e.Property(x => x.IconUrl).HasColumnType("text");
+        e.HasIndex(x => x.Slug).IsUnique();
+        e.HasIndex(x => new { x.IsActive, x.DisplayOrder });
+    });
+
     // Ensure the bookings schema and sequence exist (idempotent raw SQL via migration)
     // Sequence is created in the migration — not here.
 };
@@ -529,6 +542,26 @@ using (var scope = app.Services.CreateScope())
     ");
     // bookings.job_rejections table doesn't need a sequence
     await db.Database.EnsureCreatedAsync();
+
+    // Seed the 6 existing service categories — idempotent. The constraint
+    // "ON CONFLICT (Slug) DO NOTHING" guarantees we never overwrite admin
+    // edits to NameEn/NameAr/IconKey on subsequent boots. New rows are
+    // created with IsActive=true so the seeded slugs match what the legacy
+    // mobile apps (and existing jobs/providers/reminder_rules) expect.
+    await db.Database.ExecuteSqlRawAsync(@"
+        INSERT INTO bookings.categories
+          (""Id"", ""Slug"", ""NameEn"", ""NameAr"", ""IconKey"", ""DisplayOrder"",
+           ""IsActive"", ""RequiresSkillTest"", ""CreatedAt"", ""UpdatedAt"")
+        VALUES
+          (gen_random_uuid(), 'plumbing',       'Plumbing',       'السباكة',       'plumbing',          10, TRUE, TRUE,  now(), now()),
+          (gen_random_uuid(), 'electrical',     'Electrical',     'الكهرباء',      'electric_bolt',     20, TRUE, TRUE,  now(), now()),
+          (gen_random_uuid(), 'cleaning',       'Cleaning',       'التنظيف',       'cleaning_services', 30, TRUE, TRUE,  now(), now()),
+          (gen_random_uuid(), 'carpentry',      'Carpentry',      'النجارة',       'handyman',          40, TRUE, TRUE,  now(), now()),
+          (gen_random_uuid(), 'painting',       'Painting',       'الدهان',        'format_paint',      50, TRUE, TRUE,  now(), now()),
+          (gen_random_uuid(), 'ac_maintenance', 'AC Maintenance', 'صيانة المكيفات', 'ac_unit',           60, TRUE, FALSE, now(), now()),
+          (gen_random_uuid(), 'moving',         'Moving',         'النقل',          'local_shipping',    70, TRUE, FALSE, now(), now())
+        ON CONFLICT (""Slug"") DO NOTHING;
+    ");
 }
 
 // ── Seed superadmin ───────────────────────────────────────────────────────────

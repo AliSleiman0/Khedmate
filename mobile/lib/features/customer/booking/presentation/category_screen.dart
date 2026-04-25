@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/constants/colors.dart';
+import '../../../../core/domain/service_category.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/providers/categories_provider.dart';
+import '../../../../core/providers/locale_provider.dart';
 import 'booking_provider.dart';
 
-class _Category {
-  final String id;
-  final String label;
-  final IconData icon;
-
-  const _Category(this.id, this.label, this.icon);
-}
+const _tag = 'CategoryScreen';
 
 class CategoryScreen extends ConsumerWidget {
   const CategoryScreen({super.key});
@@ -19,14 +18,8 @@ class CategoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = S.of(ref);
-    final categories = [
-      _Category('plumbing',       s.catPlumbing,   Icons.plumbing),
-      _Category('electrical',     s.catElectrical, Icons.electric_bolt),
-      _Category('cleaning',       s.catCleaning,   Icons.cleaning_services),
-      _Category('carpentry',      s.catCarpentry,  Icons.carpenter),
-      _Category('painting',       s.catPainting,   Icons.format_paint),
-      _Category('ac_maintenance', s.catAC,         Icons.ac_unit),
-    ];
+    final asyncCategories = ref.watch(categoriesProvider);
+    final locale = ref.watch(localeProvider);
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -63,27 +56,80 @@ class CategoryScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: GridView.builder(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.1,
+                child: RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(categoriesProvider),
+                  child: asyncCategories.when(
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    error: (err, _) => ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        const SizedBox(height: 80),
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(
+                              locale.languageCode == 'ar'
+                                  ? 'تعذر تحميل القائمة. اسحب للأسفل للتحديث.'
+                                  : 'Failed to load. Pull down to refresh.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    data: (categories) {
+                      if (categories.isEmpty) {
+                        return ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            const SizedBox(height: 80),
+                            Center(
+                              child: Text(
+                                s.catScreenTitle,
+                                style: const TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                      return GridView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.1,
+                        ),
+                        itemCount: categories.length,
+                        itemBuilder: (context, i) {
+                          final cat = categories[i];
+                          final label = cat.localizedName(locale);
+                          return _CategoryCard(
+                            category: cat,
+                            label: label,
+                            onTap: () {
+                              log.d(_tag, 'category tap',
+                                  data: {'id': cat.slug});
+                              ref
+                                  .read(bookingNotifierProvider.notifier)
+                                  .setCategory(cat.slug, label);
+                              context.go('/customer/booking/description');
+                            },
+                          );
+                        },
+                      );
+                    },
                   ),
-                  itemCount: categories.length,
-                  itemBuilder: (context, i) {
-                    final cat = categories[i];
-                    return _CategoryCard(
-                      category: cat,
-                      onTap: () {
-                        ref
-                            .read(bookingNotifierProvider.notifier)
-                            .setCategory(cat.id, cat.label);
-                        context.go('/customer/booking/description');
-                      },
-                    );
-                  },
                 ),
               ),
             ],
@@ -95,10 +141,15 @@ class CategoryScreen extends ConsumerWidget {
 }
 
 class _CategoryCard extends StatelessWidget {
-  final _Category category;
+  final ServiceCategory category;
+  final String label;
   final VoidCallback onTap;
 
-  const _CategoryCard({required this.category, required this.onTap});
+  const _CategoryCard({
+    required this.category,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -114,14 +165,14 @@ class _CategoryCard extends StatelessWidget {
               height: 70,
               color: AppColors.brandBlue,
               child: Center(
-                child:
-                    Icon(category.icon, size: 36, color: AppColors.amber),
+                child: Icon(category.iconData,
+                    size: 36, color: AppColors.amber),
               ),
             ),
             Expanded(
               child: Center(
                 child: Text(
-                  category.label,
+                  label,
                   style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,

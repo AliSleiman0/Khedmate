@@ -3,12 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/domain/service_category.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/logging/app_logger.dart';
+import '../../../core/providers/categories_provider.dart';
+import '../../../core/providers/locale_provider.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../shared/notifications/presentation/notifications_provider.dart';
 import '../../shared/rating/data/rating_repository.dart';
 import '../../shared/rating/presentation/rating_bottom_sheet.dart';
 import '../booking/presentation/booking_provider.dart';
+
+const _tag = 'CustomerHome';
 
 /// Holds the home ask-bar query. Empty string = show full home layout.
 final _searchQueryProvider = StateProvider<String>((ref) => '');
@@ -104,6 +110,8 @@ class HomePage extends ConsumerWidget {
                   pendingLabel: s.homePendingRating,
                   rateNowLabel: s.homeRateNow,
                   onRate: () async {
+                    log.d(_tag, 'rating banner tap',
+                        data: {'jobId': first.jobId});
                     await RatingBottomSheet.show(
                       context,
                       jobId: first.jobId,
@@ -111,7 +119,11 @@ class HomePage extends ConsumerWidget {
                     );
                     ref.invalidate(pendingRatingsProvider);
                   },
-                  onDismiss: () => ref.invalidate(pendingRatingsProvider),
+                  onDismiss: () {
+                    log.d(_tag, 'rating banner dismiss',
+                        data: {'jobId': first.jobId});
+                    ref.invalidate(pendingRatingsProvider);
+                  },
                 );
               },
             ),
@@ -407,9 +419,11 @@ class _AskSectionState extends ConsumerState<_AskSection> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    onChanged: (v) => ref
-                        .read(_searchQueryProvider.notifier)
-                        .state = v,
+                    onChanged: (v) {
+                      log.d(_tag, 'search changed',
+                          data: {'len': v.length});
+                      ref.read(_searchQueryProvider.notifier).state = v;
+                    },
                     onSubmitted: (_) {
                       FocusScope.of(context).unfocus();
                       widget.onSpeak();
@@ -498,6 +512,8 @@ class _ContextChips extends StatelessWidget {
   @override
   Widget build(BuildContext _) {
     void preselect(String id, String label) {
+      log.d(_tag, 'category tap',
+          data: {'id': id, 'bypassPicker': true, 'source': 'context_chip'});
       ref.read(bookingNotifierProvider.notifier).setCategory(id, label);
       this.context.go('/customer/booking/description');
     }
@@ -507,7 +523,10 @@ class _ContextChips extends StatelessWidget {
         label: s.homeChipEmergency,
         amber: true,
         iconEmoji: '🚨',
-        onTap: () => this.context.go('/customer/booking/category'),
+        onTap: () {
+          log.d(_tag, 'fab tap', data: {'source': 'emergency_chip'});
+          this.context.go('/customer/booking/category');
+        },
       ),
       _ChipSpec(
         label: s.homeChipPreGuest,
@@ -614,16 +633,32 @@ class _BrowseSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext _) {
-    final cats = <({String id, String label, IconData icon})>[
-      (id: 'cleaning',     label: s.catCleaning,   icon: Icons.cleaning_services),
-      (id: 'plumbing',     label: s.catPlumbing,   icon: Icons.plumbing),
-      (id: 'electrical',   label: s.catElectrical, icon: Icons.electric_bolt),
-      (id: 'moving',       label: s.catMoving,     icon: Icons.local_shipping),
-      (id: 'painting',     label: s.catPainting,   icon: Icons.format_paint),
-      (id: 'carpentry',    label: s.catCarpentry,  icon: Icons.carpenter),
+    final asyncCategories = ref.watch(categoriesProvider);
+    final locale = ref.watch(localeProvider);
+
+    // Hardcoded fallback used while the API call is in flight or fails on a
+    // cold start with no cached value. Renders an immediate 6-tile grid using
+    // the existing `s.catX` keys + Material icons so the home screen never
+    // shows an empty state. Once `categoriesProvider` resolves, the dynamic
+    // list takes over.
+    final fallback = <ServiceCategory>[
+      const ServiceCategory(slug: 'cleaning', nameEn: 'Cleaning', nameAr: 'التنظيف', iconKey: 'cleaning_services', iconUrl: null, requiresSkillTest: true),
+      const ServiceCategory(slug: 'plumbing', nameEn: 'Plumbing', nameAr: 'السباكة', iconKey: 'plumbing', iconUrl: null, requiresSkillTest: true),
+      const ServiceCategory(slug: 'electrical', nameEn: 'Electrical', nameAr: 'الكهرباء', iconKey: 'electrical_bolt', iconUrl: null, requiresSkillTest: true),
+      const ServiceCategory(slug: 'moving', nameEn: 'Moving', nameAr: 'النقل', iconKey: 'local_shipping', iconUrl: null, requiresSkillTest: false),
+      const ServiceCategory(slug: 'painting', nameEn: 'Painting', nameAr: 'الدهان', iconKey: 'format_paint', iconUrl: null, requiresSkillTest: true),
+      const ServiceCategory(slug: 'carpentry', nameEn: 'Carpentry', nameAr: 'النجارة', iconKey: 'handyman', iconUrl: null, requiresSkillTest: true),
     ];
 
+    final allCategories = asyncCategories.valueOrNull ?? fallback;
+    // The FeatureTile above the grid handles `ac_maintenance` exclusively.
+    final cats = allCategories
+        .where((c) => c.slug != 'ac_maintenance')
+        .toList(growable: false);
+
     void onPick(String id, String label) {
+      log.d(_tag, 'category tap',
+          data: {'id': id, 'bypassPicker': true, 'source': 'grid'});
       ref.read(bookingNotifierProvider.notifier).setCategory(id, label);
       this.context.go('/customer/booking/description');
     }
@@ -647,7 +682,8 @@ class _BrowseSection extends StatelessWidget {
                 ),
               ),
               Text(
-                s.homeCategoriesCount(7),
+                // +1 for the AC FeatureTile above the grid.
+                s.homeCategoriesCount(cats.length + 1),
                 style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.inkSoft,
@@ -659,7 +695,23 @@ class _BrowseSection extends StatelessWidget {
           const SizedBox(height: 12),
           _FeatureTile(
             s: s,
-            onTap: () => onPick('ac_maintenance', s.catAC),
+            onTap: () {
+              // Resolve the AC category's localized name dynamically when
+              // available; fall back to the seeded `s.catAC` string so the
+              // booking summary still reads correctly on a cold start.
+              final ac = allCategories.firstWhere(
+                (c) => c.slug == 'ac_maintenance',
+                orElse: () => const ServiceCategory(
+                  slug: 'ac_maintenance',
+                  nameEn: 'AC Maintenance',
+                  nameAr: 'صيانة المكيفات',
+                  iconKey: 'ac_unit',
+                  iconUrl: null,
+                  requiresSkillTest: false,
+                ),
+              );
+              onPick('ac_maintenance', ac.localizedName(locale));
+            },
           ),
           const SizedBox(height: 10),
           GridView.count(
@@ -672,11 +724,14 @@ class _BrowseSection extends StatelessWidget {
             children: [
               for (int i = 0; i < cats.length; i++)
                 _CategoryTile(
-                  label: cats[i].label,
-                  icon: cats[i].icon,
+                  label: cats[i].localizedName(locale),
+                  icon: cats[i].iconData,
                   popular: i == 0,
                   popularLabel: s.homePopularBadge,
-                  onTap: () => onPick(cats[i].id, cats[i].label),
+                  onTap: () => onPick(
+                    cats[i].slug,
+                    cats[i].localizedName(locale),
+                  ),
                 ),
             ],
           ),
@@ -922,8 +977,20 @@ class _BookAgainSection extends ConsumerWidget {
                     s: s,
                     job: jobs[i],
                     onBookAgain: () {
-                      final label =
+                      // Prefer the dynamic category name from the API; fall
+                      // back to the seeded `s.catX` switch when the slug
+                      // isn't in the active list (deactivated or new install
+                      // before first fetch).
+                      final locale = ref.read(localeProvider);
+                      final dynamicCat = ref
+                          .read(categoryBySlugProvider(jobs[i].categoryId));
+                      final label = dynamicCat?.localizedName(locale) ??
                           _labelForCategory(s, jobs[i].categoryId);
+                      log.d(_tag, 'category tap', data: {
+                        'id': jobs[i].categoryId,
+                        'bypassPicker': true,
+                        'source': 'book_again',
+                      });
                       ref
                           .read(bookingNotifierProvider.notifier)
                           .setCategory(jobs[i].categoryId, label);
@@ -1169,6 +1236,8 @@ class _FilteredGrid extends StatelessWidget {
         .toList();
 
     void onPick(String id, String label) {
+      log.d(_tag, 'category tap',
+          data: {'id': id, 'bypassPicker': true, 'source': 'search_filtered'});
       ref.read(bookingNotifierProvider.notifier).setCategory(id, label);
       this.context.go('/customer/booking/description');
     }

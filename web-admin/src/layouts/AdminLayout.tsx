@@ -9,6 +9,7 @@ const navItems = [
   { to: '/disputes', label: 'Disputes', icon: '⚖️' },
   { to: '/subscriptions', label: 'Subscriptions', icon: '💳' },
   { to: '/reminder-rules', label: 'Reminder Rules', icon: '🔔' },
+  { to: '/categories', label: 'Categories', icon: '🏷️' },
   { to: '/settings', label: 'Settings', icon: '⚙️' },
 ]
 
