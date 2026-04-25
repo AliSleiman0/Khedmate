@@ -64,3 +64,23 @@ Hero → HowItWorks → Services → TrustBadges → PlatformStats → ProviderC
 
 ## No auth needed
 This is the only platform in the project with no authentication. Do not add protected routes.
+
+## Static legal pages (Phase 12)
+- `public/privacy.html` — bilingual (EN + AR) Khudmati privacy policy.
+  Served at `/privacy.html` in dev and (with clean-URL hosting at
+  `/privacy`) in production. Effective 2026-04-24; pending legal
+  review before the first Apple / Google submission.
+- `public/terms.html` — bilingual terms of service. Same serving
+  model; same review pending.
+- Both files are plain static HTML with inline CSS — no React, no
+  i18next integration, no router. Each page has a brand-blue header,
+  a language-toggle strip linking to `#english` and `#arabic`, and
+  the same CSS variables as the rest of the site.
+- `components/layout/Footer.tsx` — the "Privacy Policy" and "Terms
+  of Service" footer links now point at `/privacy.html` and
+  `/terms.html` (previously `href="#"`).
+- Why static: Apple and Google reviewers expect these URLs to return
+  200 OK with valid HTML. Building them in as separate React routes
+  would require adding React Router (and rebuilding the landing
+  page's section-based SPA structure). Static pages are faster to
+  ship and don't touch the existing SPA.

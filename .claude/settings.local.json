@@ -41,7 +41,8 @@
       "Bash(docker-compose up:*)",
       "Bash(docker compose:*)",
       "Bash(dotnet run:*)",
-      "Bash(grep -E \"\\\\.dart$\")"
+      "Bash(grep -E \"\\\\.dart$\")",
+      "Bash(xargs wc *)"
     ]
   }
 }

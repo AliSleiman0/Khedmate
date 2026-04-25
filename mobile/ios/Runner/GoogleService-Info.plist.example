@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PLACEHOLDER — replace with the real GoogleService-Info.plist downloaded from the Firebase console.
+
+  Instructions:
+    1. In the Firebase console, add an iOS app with bundle id `com.khudmati.app`.
+    2. Download `GoogleService-Info.plist` and save it alongside this file as `GoogleService-Info.plist`
+       (drop the `.example` suffix).
+    3. Open `ios/Runner.xcworkspace` in Xcode once and drag the file into the `Runner` target so it is
+       added to the build resources.
+    4. Upload the APNs auth key from the Apple Developer portal under Cloud Messaging -> Apple app
+       configuration. Without the APNs key, iOS push notifications will silently fail.
+    5. The real file is git-ignored.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>_PLACEHOLDER_</key>
+  <true/>
+</dict>
+</plist>

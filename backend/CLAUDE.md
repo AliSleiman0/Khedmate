@@ -102,6 +102,68 @@ Run these SQL scripts against PostgreSQL **in order** before deploying the backe
 Without migration #1 the subscription and reminder-rules endpoints will throw on first request.
 Without migration #2 the provider-facing `ProviderSubscriptionController` will fail to read/write subscription state.
 
+## Account deletion endpoints (Phase 12 — Apple 5.1.1(v) / Google Data Safety)
+New endpoints — no DB migration required (uses existing columns):
+- `DELETE /api/customers/me` — `CustomersController.DeleteMe`,
+  `[Authorize(Policy = "CustomerOnly")]`. Blocks when the caller has
+  active jobs (`Pending|Accepted|EnRoute|InProgress`). On success:
+  deletes `CustomerRefreshToken` + `OtpVerification` + `DeviceToken`
+  (where `OwnerType="customer"`) rows for this account, then calls
+  `Customer.SoftDeletePii()` (sets `FullName="DELETED"`, `Email=null`,
+  `Phone="DEL_<shortId>"`, blanks `PasswordHash`, calls
+  `Deactivate()`). Wrapped in a single transaction; rollback +
+  `500 DELETE_FAILED` on any exception.
+- `DELETE /api/providers/me` — `ProvidersController.DeleteMe`,
+  `[Authorize(Policy = "ProviderOnly")]`. Same shape. Extra guard:
+  refuses when an `Active` or `PastDue` `ProviderSubscription` exists
+  → `409 HAS_ACTIVE_SUBSCRIPTION` (caller must cancel first via
+  `DELETE /api/providers/me/subscription`). Cleanup also deletes
+  `ProviderLocation` rows. `Provider.SoftDeletePii()` additionally
+  clears `ServiceCategories` and sets `IsOnline=false`.
+- Both endpoints return `{ success: true }` on success (200 OK).
+  Non-2xx codes: `404 CUSTOMER_NOT_FOUND|PROVIDER_NOT_FOUND`,
+  `409 HAS_ACTIVE_JOBS|HAS_ACTIVE_SUBSCRIPTION`, `500 DELETE_FAILED`.
+- The `Phone = "DEL_<shortId>"` placeholder preserves the unique index
+  on `Phone`, so the deleted row remains queryable for audit /
+  foreign-key integrity while guaranteeing no one can re-register
+  with the same phone.
+- Financial + audit rows (`bookings.jobs`, `payments.transactions`,
+  `bookings.ratings`, `providers.tier_history`) are **not** modified
+  — they reference the account by FK only and hold no PII directly,
+  so anonymising the parent row suffices for the 7-year tax-law
+  retention window.
+- Access tokens continue to work until they expire (~15 min); after
+  that the `ApiClient` refresh interceptor hits a now-wiped refresh
+  token and redirects to `/welcome`. No explicit JWT revocation is
+  performed.
+
+## Legacy-app force-upgrade gate (Phase 10 / Phase 12 cutover)
+New middleware — no DB migration required:
+- `Khudmati.API/Middleware/LegacyAppUpgradeMiddleware.cs` — inspects
+  the `X-App-Package` header on every request. If the flag
+  `Auth:ForceUpgradeForLegacyApps` is `true` AND the header is in
+  the legacy-bundle set (`com.khudmati.customer`,
+  `com.khudmati.provider`), short-circuits the pipeline with
+  `HTTP 426 Upgrade Required` and JSON body
+  `{ "success": false, "error": "UPGRADE_REQUIRED",
+  "data": { "storeUrl": "…", "iosStoreUrl": "…" } }` — matching the
+  payload the mobile interceptors (`ApiClient` + legacy apps) already
+  recognise.
+- **Registration**: `app.UseLegacyAppUpgradeGate()` sits between
+  `UseCors()` and `UseAuthentication()` so unauthenticated endpoints
+  like `/auth/*/login` are also gated. `/api/health` is explicitly
+  allowed through so load-balancer probes don't flap.
+- **Feature flag**: `Auth:ForceUpgradeForLegacyApps` in appsettings
+  (default `false`). Flip to `true` **only after** the unified app
+  is live in both stores and the legacy apps have received their
+  final "Download the new Khudmati app" update.
+- **Store URLs**: `Auth:UnifiedAndroidStoreUrl` and
+  `Auth:UnifiedIosStoreUrl` in appsettings — sent to clients in the
+  426 payload so they can deep-link to the store. Defaults in code
+  cover production Play Store + placeholder App Store id.
+- **Rollout runbook**: see `migration-plan/phase-12-implementation.md`
+  §"Legacy-app force-upgrade flag".
+
 ## Grok AI — Job Description Helper (Feature #21)
 New files — no DB migration required:
 - `Khudmati.API/Controllers/AiController.cs` — `POST /api/ai/improve-description` (CustomerOnly auth). Returns `503` if `Features:AiAssist = false`, `502` if Grok API fails.

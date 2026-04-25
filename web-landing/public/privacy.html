@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Khudmati</title>
+  <meta name="description" content="Khudmati privacy policy — how we collect, use, share, and protect your data." />
+  <style>
+    :root {
+      --brand-blue: #1B4F72;
+      --amber: #F39C12;
+      --surface: #F5F7FA;
+      --text-primary: #2C3E50;
+      --text-secondary: #7F8C8D;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--surface);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    header {
+      background: var(--brand-blue);
+      color: #fff;
+      padding: 24px 32px;
+    }
+    header a { color: #fff; text-decoration: none; font-weight: 600; }
+    .lang-toggle {
+      display: flex;
+      gap: 16px;
+      justify-content: flex-end;
+      padding: 12px 32px;
+      background: #fff;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .lang-toggle a {
+      color: var(--brand-blue);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    main {
+      max-width: 820px;
+      margin: 40px auto;
+      padding: 40px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    main.ar { direction: rtl; text-align: right; font-family: "Cairo", -apple-system, sans-serif; }
+    h1 { color: var(--brand-blue); margin-top: 0; }
+    h2 { color: var(--brand-blue); margin-top: 32px; }
+    h3 { color: var(--text-primary); }
+    a { color: var(--brand-blue); }
+    .meta { color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    th, td { padding: 10px 12px; border: 1px solid rgba(0,0,0,0.08); text-align: left; }
+    th { background: var(--surface); }
+    main.ar th, main.ar td { text-align: right; }
+    .section-divider { height: 80px; }
+  </style>
+</head>
+<body>
+  <header><a href="/">← Khudmati</a></header>
+  <div class="lang-toggle">
+    <a href="#english">English</a>
+    <a href="#arabic">العربية</a>
+  </div>
+
+  <!-- ────────────── ENGLISH ────────────── -->
+  <main id="english">
+    <h1>Privacy Policy</h1>
+    <p class="meta">Effective date: 2026-04-24 · Last updated: 2026-04-24</p>
+
+    <p>
+      Khudmati ("we", "our", "us") operates the Khudmati mobile application and the website at
+      <a href="https://khudmati.app">https://khudmati.app</a>. This Privacy Policy explains what
+      personal information we collect, how we use and share it, and the choices you have. By
+      using Khudmati you agree to this policy.
+    </p>
+
+    <h2>1. Information we collect</h2>
+    <table>
+      <thead>
+        <tr><th>Data type</th><th>Collected</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Name</td><td>Yes</td><td>Account creation and service delivery</td></tr>
+        <tr><td>Email address</td><td>Customers only</td><td>Account recovery, receipts</td></tr>
+        <tr><td>Phone number</td><td>Yes</td><td>Authentication, job coordination</td></tr>
+        <tr><td>Precise location</td><td>Yes</td><td>Matchmaking, navigation, live tracking during EnRoute</td></tr>
+        <tr><td>Approximate location</td><td>Yes</td><td>Matchmaking (nearby providers)</td></tr>
+        <tr><td>Photos</td><td>Yes</td><td>Before/after job documentation</td></tr>
+        <tr><td>Payment method</td><td>Yes</td><td>Payment processing via Stripe (we never store raw card numbers)</td></tr>
+        <tr><td>Usage telemetry</td><td>Yes</td><td>Performance monitoring, fraud prevention</td></tr>
+        <tr><td>Crash logs</td><td>Yes</td><td>Stability monitoring via Firebase Crashlytics</td></tr>
+        <tr><td>Device identifier (FCM token)</td><td>Yes</td><td>Push notification delivery</td></tr>
+      </tbody>
+    </table>
+
+    <h2>2. How we use your information</h2>
+    <ul>
+      <li>To operate the service — match customers with providers, deliver jobs, process payments, surface chat and notifications.</li>
+      <li>To provide safety — verify provider identity and skills, detect fraud, investigate disputes.</li>
+      <li>To improve Khudmati — measure performance, fix bugs, design new features. Aggregated, non-identifying analytics only.</li>
+      <li>To communicate with you — transactional messages, maintenance reminders, and important account notices. Marketing messages require your opt-in.</li>
+    </ul>
+
+    <h2>3. Who we share it with</h2>
+    <ul>
+      <li><strong>Stripe</strong> — payment processing. Stripe is PCI-DSS Level 1 certified. Their privacy policy governs data they hold.</li>
+      <li><strong>Firebase</strong> (Google) — push notifications, analytics, crash reporting. Data is stored in Google's infrastructure.</li>
+      <li><strong>The other party in a booking</strong> — a customer's first name, approximate location, and phone (masked) is shared with the assigned provider; during EnRoute the provider's live location is shared with the customer.</li>
+      <li><strong>Law enforcement</strong> — only when compelled by a valid Saudi Arabian legal order.</li>
+    </ul>
+    <p>We never sell your personal data. Full stop.</p>
+
+    <h2>4. How we secure it</h2>
+    <ul>
+      <li>All traffic between your device and our servers is encrypted using HTTPS / TLS.</li>
+      <li>Passwords are stored as salted hashes (bcrypt) — we can never see them in plain text.</li>
+      <li>Payment card data is tokenised by Stripe before it reaches our servers.</li>
+      <li>Access tokens are scoped per role (customer, provider, admin) and expire on a rolling basis.</li>
+    </ul>
+
+    <h2>5. How long we keep it</h2>
+    <p>
+      Personal information is retained for as long as your account is active. Financial records
+      (transactions, payouts, commissions) are retained for seven (7) years to comply with Saudi
+      Arabian tax law. Chat transcripts are retained for the lifetime of the booking plus 90 days.
+    </p>
+
+    <h2>6. Your rights</h2>
+    <ul>
+      <li><strong>Access</strong> — request a copy of the personal data we hold about you at any time by emailing <a href="mailto:privacy@khudmati.app">privacy@khudmati.app</a>.</li>
+      <li><strong>Correction</strong> — update your name and email directly in the app via Profile → Edit Profile.</li>
+      <li><strong>Deletion</strong> — permanently delete your account from within the app via Profile → Delete Account. All personal data is removed within 30 days; financial records are anonymised but retained for the tax-law window above.</li>
+      <li><strong>Export</strong> — request a machine-readable export of your data by emailing <a href="mailto:privacy@khudmati.app">privacy@khudmati.app</a>.</li>
+      <li><strong>Withdraw consent</strong> — opt out of non-transactional messaging by toggling Notifications in Profile, or by emailing us.</li>
+    </ul>
+
+    <h2>7. Children</h2>
+    <p>
+      Khudmati is not directed at children under 18. We do not knowingly collect data from
+      anyone under 18. If we learn that we have, we will delete it immediately.
+    </p>
+
+    <h2>8. Changes to this policy</h2>
+    <p>
+      We may update this policy as Khudmati evolves. When we make material changes we will
+      notify users in-app and update the "Last updated" date at the top. Continued use of
+      Khudmati after the change means you accept the updated policy.
+    </p>
+
+    <h2>9. Contact</h2>
+    <p>
+      Questions, requests, or concerns? Email <a href="mailto:privacy@khudmati.app">privacy@khudmati.app</a>
+      or write to us via the Help &amp; Support link in the app.
+    </p>
+  </main>
+
+  <div class="section-divider"></div>
+
+  <!-- ────────────── ARABIC ────────────── -->
+  <main id="arabic" class="ar" lang="ar">
+    <h1>سياسة الخصوصية</h1>
+    <p class="meta">تاريخ السريان: 2026-04-24 · آخر تحديث: 2026-04-24</p>
+
+    <p>
+      تُشغّل "خدمتي" تطبيق الجوال والموقع الإلكتروني
+      <a href="https://khudmati.app">https://khudmati.app</a>.
+      توضح هذه السياسة أي معلومات شخصية نجمعها وكيف نستخدمها ونشاركها، والخيارات المتاحة لك.
+      باستخدامك لخدمتي فإنك توافق على هذه السياسة.
+    </p>
+
+    <h2>1. البيانات التي نجمعها</h2>
+    <table>
+      <thead>
+        <tr><th>نوع البيانات</th><th>يتم جمعه</th><th>الغرض</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>الاسم</td><td>نعم</td><td>إنشاء الحساب وتقديم الخدمة</td></tr>
+        <tr><td>البريد الإلكتروني</td><td>للعملاء فقط</td><td>استعادة الحساب والفواتير</td></tr>
+        <tr><td>رقم الهاتف</td><td>نعم</td><td>التحقق والتواصل</td></tr>
+        <tr><td>الموقع الدقيق</td><td>نعم</td><td>المطابقة والملاحة والتتبع خلال "في الطريق"</td></tr>
+        <tr><td>الموقع التقريبي</td><td>نعم</td><td>إيجاد الفنيين القريبين</td></tr>
+        <tr><td>الصور</td><td>نعم</td><td>توثيق الخدمة قبل/بعد</td></tr>
+        <tr><td>وسيلة الدفع</td><td>نعم</td><td>المعالجة عبر Stripe — لا نحتفظ ببيانات البطاقة أبداً</td></tr>
+        <tr><td>بيانات الاستخدام</td><td>نعم</td><td>قياس الأداء ومنع الاحتيال</td></tr>
+        <tr><td>سجلات الأعطال</td><td>نعم</td><td>مراقبة الاستقرار عبر Firebase Crashlytics</td></tr>
+        <tr><td>معرّف الجهاز (رمز FCM)</td><td>نعم</td><td>إرسال الإشعارات</td></tr>
+      </tbody>
+    </table>
+
+    <h2>2. كيف نستخدم بياناتك</h2>
+    <ul>
+      <li>تشغيل الخدمة — مطابقة العملاء بالفنيين، تسليم الطلبات، معالجة المدفوعات، الدردشة، الإشعارات.</li>
+      <li>السلامة — التحقق من هوية ومهارات الفني، كشف الاحتيال، فحص النزاعات.</li>
+      <li>تحسين الخدمة — قياس الأداء، إصلاح الأخطاء، تصميم ميزات جديدة (إحصائيات مُجمّعة لا تُعرّف شخصياً).</li>
+      <li>التواصل معك — رسائل المعاملات وتذكيرات الصيانة والإشعارات المهمة. الرسائل التسويقية تتطلب موافقتك الصريحة.</li>
+    </ul>
+
+    <h2>3. مع من نشاركها</h2>
+    <ul>
+      <li><strong>Stripe</strong> — معالجة المدفوعات، معتمدة PCI-DSS المستوى 1.</li>
+      <li><strong>Firebase</strong> (Google) — الإشعارات والتحليلات وتقارير الأعطال.</li>
+      <li><strong>الطرف الآخر في الحجز</strong> — اسم العميل الأول وموقعه التقريبي ورقمه (مقنّع) يُشارك مع الفني المُعيّن؛ وخلال حالة "في الطريق" يُشارك موقع الفني المباشر مع العميل.</li>
+      <li><strong>الجهات النظامية</strong> — فقط بناءً على أمر قانوني سعودي ساري المفعول.</li>
+    </ul>
+    <p>لا نبيع بياناتك الشخصية أبداً.</p>
+
+    <h2>4. كيف نحميها</h2>
+    <ul>
+      <li>جميع الاتصالات بين جهازك وخوادمنا مشفّرة عبر HTTPS / TLS.</li>
+      <li>كلمات المرور تُحفظ كـ hash مع salt (bcrypt) — لا يمكن قراءتها بأي شكل.</li>
+      <li>بيانات البطاقة تُحوّل إلى token عبر Stripe قبل وصولها إلى خوادمنا.</li>
+      <li>رموز الوصول مُخصّصة حسب الدور (عميل، فني، إدارة) وتنتهي صلاحيتها بشكل متدرج.</li>
+    </ul>
+
+    <h2>5. مدة الاحتفاظ</h2>
+    <p>
+      نحتفظ بالبيانات الشخصية طوال فترة نشاط حسابك. السجلات المالية (المعاملات، التحويلات،
+      العمولات) تُحفظ لمدة 7 سنوات وفق قانون الضريبة السعودي. محادثات الدردشة تُحفظ طوال عمر
+      الحجز بالإضافة إلى 90 يوماً.
+    </p>
+
+    <h2>6. حقوقك</h2>
+    <ul>
+      <li><strong>الاطلاع</strong> — اطلب نسخة من بياناتك في أي وقت عبر
+        <a href="mailto:privacy@khudmati.app">privacy@khudmati.app</a>.</li>
+      <li><strong>التصحيح</strong> — حدّث اسمك وبريدك من داخل التطبيق: الملف الشخصي ← تعديل البيانات.</li>
+      <li><strong>الحذف</strong> — احذف حسابك نهائياً من داخل التطبيق: الملف الشخصي ← حذف الحساب.
+        تُحذف جميع البيانات الشخصية خلال 30 يوماً؛ تُخفى هوية السجلات المالية وتُحفظ وفق مدة قانون الضريبة أعلاه.</li>
+      <li><strong>التصدير</strong> — اطلب نسخة قابلة للقراءة آلياً من بياناتك عبر البريد.</li>
+      <li><strong>سحب الموافقة</strong> — عطّل الإشعارات من الملف الشخصي أو راسلنا.</li>
+    </ul>
+
+    <h2>7. الأطفال</h2>
+    <p>
+      خدمتي غير موجّهة للأطفال دون 18 عاماً. لا نجمع بيانات منهم عن معرفة. إن علمنا بذلك نحذفها فوراً.
+    </p>
+
+    <h2>8. التعديلات</h2>
+    <p>
+      قد نُحدّث هذه السياسة مع تطوّر خدمتي. عند أي تغيير جوهري سننبّهك داخل التطبيق ونُحدّث
+      تاريخ "آخر تحديث" أعلاه. استمرار استخدامك يعني قبولك للسياسة المُحدّثة.
+    </p>
+
+    <h2>9. التواصل</h2>
+    <p>
+      أسئلة أو طلبات؟ راسلنا على
+      <a href="mailto:privacy@khudmati.app">privacy@khudmati.app</a>
+      أو عبر "المساعدة والدعم" داخل التطبيق.
+    </p>
+  </main>
+</body>
+</html>
