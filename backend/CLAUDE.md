@@ -10,7 +10,9 @@ Migration: `AddSuperAdminTables`
 - `public.contact_inquiries` — landing page contact form submissions (`id`, `name`, `email`, `message`, `submitted_at`)
 
 EF entity: `Khudmati.API/Domain/ContactInquiry.cs`
-Migration: `AddContactInquiriesTable`
+Migration: `AddContactInquiriesTable` (apply via `backend/add-contact-inquiries.sql` on prod — `EnsureCreatedAsync` does not add new tables to existing databases)
+Submission flow: row inserted → two fire-and-forget SMTP2GO sends in parallel —
+(1) admin notification to `Smtp2Go:SenderEmail` (Reply-To = user's email so admin can reply directly), (2) bilingual AR/EN acknowledgement to the user. Each send has its own try/catch + log line; one failure does not block the other.
 
 ## New tables (Feature #17)
 - `customers.referral_codes` — one unique 8-char uppercase alphanumeric code per customer (`id`, `customer_id`, `code VARCHAR(10) UNIQUE`, `created_at`); unique index on `customer_id`
