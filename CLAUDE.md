@@ -12,7 +12,7 @@ Customers book home services; verified providers accept and fulfill jobs.
 | `mobile/` | Flutter unified app (Riverpod, GoRouter, Dio) — **in-progress migration** | — |
 | `mobile-customer/` | Flutter (Riverpod, GoRouter, Dio) — legacy, being merged into `mobile/` | — |
 | `mobile-provider/` | Flutter (Riverpod, GoRouter, Dio) — legacy, being merged into `mobile/` | — |
-| `web-landing/` | React + Vite + i18next (AR default / EN fallback) | 3000 |
+| `web-landing/` | React + Vite — design-token system, English-only, Lebanon-focused | 3000 |
 | `web-admin/` | React + Vite + Tailwind + Zustand | 3001 |
 | `web-superadmin/` | React + Vite + Tailwind + Zustand | 3002 |
 

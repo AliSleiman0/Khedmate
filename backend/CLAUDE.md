@@ -90,7 +90,10 @@ New domain classes (API-local, not in modules):
 - `Khudmati.API/Domain/ReminderRule.cs` — maps to `public.reminder_rules`
 
 ### ⚠️ Before deploying
-Run these SQL scripts against PostgreSQL **in order** before deploying the backend:
+Run these SQL scripts against PostgreSQL **in order** before deploying the backend.
+Each one is idempotent (`CREATE TABLE IF NOT EXISTS` + `ON CONFLICT DO NOTHING` /
+`ADD COLUMN IF NOT EXISTS`) so re-runs are safe — `EnsureCreatedAsync()` does **not**
+add new tables to existing databases, which is why these manual migrations exist.
 
 1. `backend/add-admin-features.sql` — creates:
    - `providers.provider_subscriptions` table (needed by `AdminSubscriptionsController`)
@@ -101,8 +104,21 @@ Run these SQL scripts against PostgreSQL **in order** before deploying the backe
    - `cancels_at_period_end BOOLEAN NOT NULL DEFAULT FALSE` — tracks scheduled cancellation
    - `cancelled_at TIMESTAMPTZ` — when the provider initiated cancellation
 
+3. `backend/add-contact-inquiries.sql` (Feature #16) — creates `public.contact_inquiries`
+   for the landing-page contact form. Required for `POST /api/landing/contact` to
+   work — without it `SaveChangesAsync` throws and the endpoint returns 500.
+   Columns are PascalCase + double-quoted to match the EF config (no snake_case
+   naming convention is registered for `ContactInquiry`).
+
 Without migration #1 the subscription and reminder-rules endpoints will throw on first request.
 Without migration #2 the provider-facing `ProviderSubscriptionController` will fail to read/write subscription state.
+Without migration #3 the landing-page contact form returns 500 on submit.
+
+Apply on prod with:
+```bash
+docker exec -i $(docker ps -qf name=postgres) \
+  psql -U khudmati_user -d khudmati < /opt/khudmati/backend/<file>.sql
+```
 
 ## Account deletion endpoints (Phase 12 — Apple 5.1.1(v) / Google Data Safety)
 New endpoints — no DB migration required (uses existing columns):
@@ -190,17 +206,61 @@ dotnet test
 API is available at `http://localhost:5000`. Swagger at `http://localhost:5000/swagger`.
 
 ## Production deployment (server: 157.230.22.154)
-Always use `docker-compose.prod.yml` on the server — it reads credentials from `.env`:
-```bash
-# On server: /opt/khudmati/backend/
-docker compose -f docker-compose.prod.yml build api
-docker compose -f docker-compose.prod.yml up -d api
+The server is git-based as of April 2026 — see `backend/deploy/README.md` for the
+full runbook. The pipeline:
+
 ```
-`docker-compose.yml` has been renamed to `docker-compose.dev.yml` on the server to prevent accidental use.
+┌── /opt/khudmati/khudmati-source/  ←── git clone of AliSleiman0/Khedmate (SSH deploy key)
+│       └── backend/                ←── source of truth for backend tree
+│
+└── /opt/khudmati/backend/          ←── live deploy dir (what docker-compose reads)
+        ├── .env                       (server-only, never in git)
+        ├── firebase-service-account.json (server-only, never in git)
+        ├── uploads/                   (server-only volume)
+        └── deploy/
+            ├── init-git.sh         ←── one-time bootstrap: clones source repo, rsyncs backend, applies categories.sql
+            ├── pull-and-deploy.sh  ←── each backend update: git pull + rsync + bash deploy/deploy.sh (rebuild + restart API)
+            ├── deploy-web.sh       ←── each web-* update: builds Vite app inside node:20-alpine, rsyncs dist/ to /var/www/<name>/
+            └── deploy.sh           ←── builds the API container, restarts compose, health-checks /api/health
+```
+
+**Standard backend update:**
+```bash
+ssh root@157.230.22.154
+bash /opt/khudmati/backend/deploy/pull-and-deploy.sh
+# If a new SQL migration shipped in the same release, apply it next (see "Before deploying" above).
+```
+
+**Standard web update** (one or more of admin / landing / superadmin):
+```bash
+ssh root@157.230.22.154
+bash /opt/khudmati/backend/deploy/deploy-web.sh landing
+# or all three: bash /opt/khudmati/backend/deploy/deploy-web.sh
+```
+The web apps are served as static files by the existing nginx container from
+bind-mounted `/var/www/{admin,landing,superadmin}/`. `deploy-web.sh` builds inside
+a one-shot `node:20-alpine` container (no Node on the host) with a per-app named
+volume for npm cache reuse, then rsyncs `dist/` over with `--delete`. No nginx
+restart needed.
+
+**Why both `init-git.sh` and `pull-and-deploy.sh`?** `init-git.sh` is one-time-only —
+it converts a freshly-scp'd backend into a git-tracked deploy. After it runs, all
+future deploys are just `pull-and-deploy.sh`. Don't re-run `init-git.sh` unless
+you're rebuilding the server from scratch (it takes a backup at
+`/opt/khudmati/backend.bak.<timestamp>` first, just in case).
 
 **Production `.env` keys** (server only — `/opt/khudmati/backend/.env`):
 - `POSTGRES_USER=khudmati_user`, `POSTGRES_PASSWORD=SomethingStrong123!`
 - `JWT_KEY`, `STRIPE_*`, `GROK_API_KEY`, `AI_ASSIST_ENABLED=true`
+- SMTP2GO: `Smtp2Go__ApiKey`, `Smtp2Go__SenderEmail`, `Smtp2Go__SenderName`
+
+**Manual fallback** (only if the wrappers are missing — they shouldn't be):
+```bash
+cd /opt/khudmati/backend
+docker compose -f docker-compose.prod.yml build api
+docker compose -f docker-compose.prod.yml up -d api
+```
+`docker-compose.yml` has been renamed to `docker-compose.dev.yml` on the server to prevent accidental use.
 
 ## Known bugs fixed
 - `SuperAdminController.GetDashboard` — EF Core could not translate `.Status.ToString()` inside a LINQ `.CountAsync()`. Fixed by comparing `JobStatus` enum values directly instead of converting to string.
