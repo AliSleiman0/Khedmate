@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api/api_client.dart';
+import '../core/network/connectivity_provider.dart';
 import '../core/providers/locale_provider.dart';
+import '../core/widgets/no_internet_screen.dart';
 import '../features/migration/presentation/upgrade_required_screen.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -16,6 +18,7 @@ class KhudmatiApp extends ConsumerWidget {
     final isRtl = locale.languageCode == 'ar';
     final router = ref.watch(routerProvider);
     final upgrade = ref.watch(upgradeRequiredProvider);
+    final noInternet = ref.watch(noInternetProvider);
 
     return MaterialApp.router(
       title: 'Khudmati',
@@ -33,7 +36,9 @@ class KhudmatiApp extends ConsumerWidget {
         textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
         child: upgrade != null
             ? UpgradeRequiredScreen(storeUrl: upgrade.storeUrl)
-            : child!,
+            : noInternet
+                ? const NoInternetScreen()
+                : child!,
       ),
     );
   }

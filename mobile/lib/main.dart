@@ -12,6 +12,7 @@ import 'app/router.dart';
 import 'core/api/api_client.dart';
 import 'core/logging/app_logger.dart';
 import 'core/logging/crashlytics_sink.dart';
+import 'core/network/connectivity_provider.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/services/fcm_service.dart';
 import 'core/services/notification_handler.dart';
@@ -104,6 +105,11 @@ void main() async {
     // log volume becomes noisy.
     observers: [TalkerRiverpodObserver(talker: log.talker)],
   );
+
+  // Start the connectivity listener before the first frame so the
+  // `noInternetProvider` already reflects the device's online state when
+  // `KhudmatiApp.builder` runs.
+  container.read(connectivityServiceProvider);
 
   final router = container.read(routerProvider);
   final handler = NotificationHandler(router: router, container: container);

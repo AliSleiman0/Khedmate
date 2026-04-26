@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Khudmati — Landing redesign</title>
+<meta name="description" content="Khudmati landing page redesign — verified home services in Beirut and across Lebanon"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,wght@1,500;1,600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles/tokens.css"/>
+<style>
+  body { margin:0; background:#f0eee9; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+  .kh-frame { background:#fff; border-radius:2px; overflow:hidden; height:100%; overflow-y:auto; scrollbar-width:thin; }
+  .kh-frame::-webkit-scrollbar { width:6px; }
+  .kh-frame::-webkit-scrollbar-thumb { background:rgba(0,0,0,.15); border-radius:3px; }
+  .kh-rationale { background:#fef4a8; padding:14px 16px; font-size:13px; color:#5a4a2a; line-height:1.5;
+    font-family:"Comic Sans MS","Marker Felt",cursive; max-width:280px; }
+  /* Italic display accent uses Fraunces */
+  .kh-display em, .kh-display i, span[style*="italic"] { font-family:'Fraunces','Inter',serif; font-style:italic; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="components/icons.jsx"></script>
+  <script type="text/babel" src="components/header.jsx"></script>
+  <script type="text/babel" src="components/heroes.jsx"></script>
+  <script type="text/babel" src="components/sections.jsx"></script>
+  <script type="text/babel" src="components/provider-cta-variants.jsx"></script>
+
+  <script type="text/babel">
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "previewHero": "split",
+    "previewViewport": "desktop",
+    "motion": true,
+    "providerVariant": "v2"
+  }/*EDITMODE-END*/;
+
+  function ProviderByKey({ which, viewport, motion }) {
+    const Comp = which==='v2' ? KhProviderCtaV2 : which==='v3' ? KhProviderCtaV3 : which==='v4' ? KhProviderCtaV4 : KhProviderCta;
+    return <Comp viewport={viewport} motion={motion}/>;
+  }
+
+  // Frame wrapper — renders the design at the artboard size
+  function Frame({ children, motion }) {
+    return (
+      <div className={`kh-frame kh-root ${motion?'':'kh-no-motion'}`}>
+        {children}
+      </div>
+    );
+  }
+
+  // Hero by key
+  function HeroByKey({ which, viewport, motion }) {
+    const Comp = which==='collage' ? KhHeroCollage : which==='map' ? KhHeroMap : KhHeroSplit;
+    return <Comp viewport={viewport} motion={motion}/>;
+  }
+
+  // Full landing — composed
+  function FullLanding({ heroKey, viewport, motion, t }) {
+    return (
+      <>
+        <KhHeader variant={heroKey==='collage'?'light':'dark'} viewport={viewport}/>
+        <HeroByKey which={heroKey} viewport={viewport} motion={motion}/>
+        <KhServicesGrid viewport={viewport} motion={motion}/>
+        <KhHowItWorks viewport={viewport} motion={motion}/>
+        <KhStats viewport={viewport} motion={motion}/>
+        <ProviderByKey which={t?.providerVariant || 'v2'} viewport={viewport} motion={motion}/>
+        <KhContact viewport={viewport} motion={motion}/>
+        <KhFooter viewport={viewport}/>
+      </>
+    );
+  }
+
+  function App() {
+    const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+    const desktopW = 1280, mobileW = 390;
+    const tallH = 5400; // total scroll height for full page
+    const sectionH = (key) => {
+      const map = {hero:760, services:780, how:680, stats:560, provider:680, contact:640, footer:520};
+      return map[key] || 600;
+    };
+
+    return (
+      <>
+        <DesignCanvas>
+
+          {/* Full landing (preview, controlled by tweaks) */}
+          <DCSection id="full" title="Full landing — live preview"
+            subtitle="Use the Tweaks panel (toolbar, bottom-right) to switch hero variant, viewport and motion.">
+            <DCArtboard id="preview"
+              label={`${t.previewHero === 'split'?'Split editorial':t.previewHero==='collage'?'Service collage':'Live map'} · ${t.previewViewport}`}
+              width={t.previewViewport==='mobile'?mobileW:desktopW}
+              height={t.previewViewport==='mobile'?900:840}>
+              <Frame motion={t.motion}>
+                <FullLanding heroKey={t.previewHero} viewport={t.previewViewport} motion={t.motion} t={t}/>
+              </Frame>
+            </DCArtboard>
+          </DCSection>
+
+          {/* Hero variants — desktop */}
+          <DCSection id="hero-desktop" title="Hero variants · desktop 1280"
+            subtitle="Three bets for the first 800 px. Drag to reorder; click to focus.">
+            <DCArtboard id="hero-split-d" label="A · Split editorial — phone mockup" width={desktopW} height={760}>
+              <Frame motion={t.motion}>
+                <KhHeader variant="dark" viewport="desktop"/>
+                <KhHeroSplit viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="hero-collage-d" label="B · Service collage — typographic center" width={desktopW} height={760}>
+              <Frame motion={t.motion}>
+                <KhHeader variant="light" viewport="desktop"/>
+                <KhHeroCollage viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="hero-map-d" label="C · Live map — track your tradesman" width={desktopW} height={760}>
+              <Frame motion={t.motion}>
+                <KhHeader variant="dark" viewport="desktop"/>
+                <KhHeroMap viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+          </DCSection>
+
+          {/* Hero variants — mobile */}
+          <DCSection id="hero-mobile" title="Hero variants · mobile 390"
+            subtitle="Same three bets, mobile. Headline scales down, CTAs stack, phone mockup centers.">
+            <DCArtboard id="hero-split-m" label="A · Split (mobile)" width={mobileW} height={780}>
+              <Frame motion={t.motion}>
+                <KhHeader variant="dark" viewport="mobile"/>
+                <KhHeroSplit viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="hero-collage-m" label="B · Collage (mobile)" width={mobileW} height={780}>
+              <Frame motion={t.motion}>
+                <KhHeader variant="light" viewport="mobile"/>
+                <KhHeroCollage viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="hero-map-m" label="C · Map (mobile)" width={mobileW} height={780}>
+              <Frame motion={t.motion}>
+                <KhHeader variant="dark" viewport="mobile"/>
+                <KhHeroMap viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+          </DCSection>
+
+          {/* Section: Services grid */}
+          <DCSection id="services" title="Services grid"
+            subtitle="Tactile soft cards · featured tile · amber underline on hover · per-card price + arrow.">
+            <DCArtboard id="services-d" label="Desktop" width={desktopW} height={620}>
+              <Frame motion={t.motion}>
+                <KhServicesGrid viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="services-m" label="Mobile" width={mobileW} height={780}>
+              <Frame motion={t.motion}>
+                <KhServicesGrid viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+          </DCSection>
+
+          {/* Section: How it works */}
+          <DCSection id="how" title="How it works"
+            subtitle="Visual timeline with dashed connector · numbered avatars · 54-second pill.">
+            <DCArtboard id="how-d" label="Desktop" width={desktopW} height={580}>
+              <Frame motion={t.motion}>
+                <KhHowItWorks viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="how-m" label="Mobile" width={mobileW} height={760}>
+              <Frame motion={t.motion}>
+                <KhHowItWorks viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+          </DCSection>
+
+          {/* Section: Stats + cities */}
+          <DCSection id="stats" title="Stats"
+            subtitle="Earned numbers · plus a live cities strip in lieu of a map. Counter-up on scroll wired through motion toggle.">
+            <DCArtboard id="stats-d" label="Desktop" width={desktopW} height={520}>
+              <Frame motion={t.motion}>
+                <KhStats viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="stats-m" label="Mobile" width={mobileW} height={680}>
+              <Frame motion={t.motion}>
+                <KhStats viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+          </DCSection>
+
+          {/* Provider CTA — exploration */}
+          <DCSection id="provider" title="Provider CTA — four bets"
+            subtitle="Original portrait card, plus three creative directions. Switch the live preview's variant in Tweaks.">
+            <DCArtboard id="provider-v1-d" label="V1 · Portrait card (original)" width={desktopW} height={720}>
+              <Frame motion={t.motion}>
+                <KhProviderCta viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="provider-v2-d" label="V2 · Live earnings cinema" width={desktopW} height={820}>
+              <Frame motion={t.motion}>
+                <KhProviderCtaV2 viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="provider-v3-d" label="V3 · Editorial almanac" width={desktopW} height={900}>
+              <Frame motion={t.motion}>
+                <KhProviderCtaV3 viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="provider-v4-d" label="V4 · Tools poster — kinetic strip" width={desktopW} height={920}>
+              <Frame motion={t.motion}>
+                <KhProviderCtaV4 viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="provider-v2-m" label="V2 · mobile" width={mobileW} height={1080}>
+              <Frame motion={t.motion}>
+                <KhProviderCtaV2 viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="provider-v3-m" label="V3 · mobile" width={mobileW} height={1180}>
+              <Frame motion={t.motion}>
+                <KhProviderCtaV3 viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="provider-v4-m" label="V4 · mobile" width={mobileW} height={1280}>
+              <Frame motion={t.motion}>
+                <KhProviderCtaV4 viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+          </DCSection>
+
+          {/* Contact */}
+          <DCSection id="contact" title="Contact"
+            subtitle="Two-column · contact rows on the left, validated form on the right. Inline error + success states.">
+            <DCArtboard id="contact-d" label="Desktop" width={desktopW} height={620}>
+              <Frame motion={t.motion}>
+                <KhContact viewport="desktop" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="contact-m" label="Mobile" width={mobileW} height={820}>
+              <Frame motion={t.motion}>
+                <KhContact viewport="mobile" motion={t.motion}/>
+              </Frame>
+            </DCArtboard>
+          </DCSection>
+
+          {/* Footer */}
+          <DCSection id="footer" title="Footer"
+            subtitle="Trust bar (Stripe / OMT / Whish / SSL / background-checks) · 4-col grid · app store badges.">
+            <DCArtboard id="footer-d" label="Desktop" width={desktopW} height={540}>
+              <Frame motion={t.motion}>
+                <KhFooter viewport="desktop"/>
+              </Frame>
+            </DCArtboard>
+            <DCArtboard id="footer-m" label="Mobile" width={mobileW} height={780}>
+              <Frame motion={t.motion}>
+                <KhFooter viewport="mobile"/>
+              </Frame>
+            </DCArtboard>
+          </DCSection>
+
+          {/* Tokens reference */}
+          <DCSection id="tokens" title="Design tokens"
+            subtitle="Lifted from /styles/tokens.css — what the engineer should implement.">
+            <DCArtboard id="tokens-card" label="Tokens & components" width={1100} height={720}>
+              <TokensCard/>
+            </DCArtboard>
+          </DCSection>
+
+        </DesignCanvas>
+
+        <TweaksPanel title="Tweaks">
+          <TweakSection label="Live preview"/>
+          <TweakSelect label="Hero variant"
+            value={t.previewHero}
+            options={[
+              {value:'split', label:'A · Split editorial'},
+              {value:'collage', label:'B · Service collage'},
+              {value:'map', label:'C · Live map'},
+            ]}
+            onChange={v=>setTweak('previewHero', v)}/>
+          <TweakRadio label="Viewport"
+            value={t.previewViewport}
+            options={['desktop','mobile']}
+            onChange={v=>setTweak('previewViewport', v)}/>
+          <TweakToggle label="Motion (fades, pulse, scroll)"
+            value={t.motion}
+            onChange={v=>setTweak('motion', v)}/>
+          <TweakSection label="Provider CTA"/>
+          <TweakSelect label="Variant"
+            value={t.providerVariant}
+            options={[
+              {value:'v1', label:'V1 · Portrait card'},
+              {value:'v2', label:'V2 · Live earnings cinema'},
+              {value:'v3', label:'V3 · Editorial almanac'},
+              {value:'v4', label:'V4 · Tools poster'},
+            ]}
+            onChange={v=>setTweak('providerVariant', v)}/>
+        </TweaksPanel>
+      </>
+    );
+  }
+
+  function TokensCard() {
+    const swatch = (label, hex) => (
+      <div style={{display:'flex', alignItems:'center', gap:10}}>
+        <div style={{width:36, height:36, borderRadius:8, background:hex, border:'1px solid rgba(0,0,0,.06)'}}/>
+        <div style={{fontSize:12}}>
+          <div style={{fontWeight:600, color:'#14181d'}}>{label}</div>
+          <div style={{color:'#6b7682', fontVariantNumeric:'tabular-nums'}}>{hex}</div>
+        </div>
+      </div>
+    );
+    return (
+      <div className="kh-root" style={{padding:32, height:'100%', overflowY:'auto', background:'#fbfbfc'}}>
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:32}}>
+          <div>
+            <div className="kh-eyebrow" style={{color:'#F39C12', marginBottom:8}}>Color</div>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:24}}>
+              {swatch('Primary 700', '#1B4F72')}
+              {swatch('Primary 900', '#0d2f47')}
+              {swatch('Primary 100', '#e8eef4')}
+              {swatch('Amber 500', '#F39C12')}
+              {swatch('Amber 100', '#fdf0d9')}
+              {swatch('Ink 800', '#1f262e')}
+              {swatch('Ink 500', '#6b7682')}
+              {swatch('Ink 100', '#e9ecef')}
+              {swatch('Success', '#1f9d55')}
+              {swatch('Danger', '#c53030')}
+            </div>
+
+            <div className="kh-eyebrow" style={{color:'#F39C12', marginBottom:8}}>Type · Inter</div>
+            <div style={{lineHeight:1.2}}>
+              <div className="kh-display" style={{fontSize:48, marginBottom:6}}>Display 56/64</div>
+              <div className="kh-h1" style={{marginBottom:6}}>H1 32/700 · -0.02em</div>
+              <div className="kh-h2" style={{marginBottom:6}}>H2 24/600</div>
+              <div className="kh-h3" style={{marginBottom:6}}>H3 20/600</div>
+              <div className="kh-body" style={{marginBottom:6}}>Body 16/1.55 — calm and readable.</div>
+              <div className="kh-caption">Caption 13/1.45 in Ink-500.</div>
+            </div>
+          </div>
+
+          <div>
+            <div className="kh-eyebrow" style={{color:'#F39C12', marginBottom:8}}>Spacing · 4 pt</div>
+            <div style={{display:'flex', alignItems:'flex-end', gap:6, marginBottom:24}}>
+              {[4,8,12,16,24,32,48,64,96].map(n=>(
+                <div key={n} style={{textAlign:'center'}}>
+                  <div style={{height:n, width:14, background:'#1B4F72', borderRadius:2, marginBottom:6}}/>
+                  <div style={{fontSize:10, color:'#6b7682', fontVariantNumeric:'tabular-nums'}}>{n}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="kh-eyebrow" style={{color:'#F39C12', marginBottom:8}}>Radius</div>
+            <div style={{display:'flex', gap:10, marginBottom:24}}>
+              {[6,10,14,20,28,999].map(r=>(
+                <div key={r} style={{width:48, height:48, background:'#e8eef4', border:'1px solid #d5dae0', borderRadius:r, display:'grid', placeItems:'center', fontSize:10, color:'#1B4F72', fontWeight:600}}>{r===999?'pill':r}</div>
+              ))}
+            </div>
+
+            <div className="kh-eyebrow" style={{color:'#F39C12', marginBottom:8}}>Shadows</div>
+            <div style={{display:'flex', gap:14, flexWrap:'wrap', marginBottom:24}}>
+              {[
+                {l:'Shadow 1', s:'var(--kh-shadow-1)'},
+                {l:'Shadow 2', s:'var(--kh-shadow-2)'},
+                {l:'Shadow 3', s:'var(--kh-shadow-3)'},
+                {l:'Shadow 4', s:'var(--kh-shadow-4)'},
+              ].map(sh=>(
+                <div key={sh.l} style={{textAlign:'center'}}>
+                  <div style={{width:64, height:48, background:'#fff', borderRadius:10, boxShadow:sh.s, marginBottom:6}}/>
+                  <div style={{fontSize:10, color:'#6b7682'}}>{sh.l}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="kh-eyebrow" style={{color:'#F39C12', marginBottom:8}}>Buttons</div>
+            <div style={{display:'flex', gap:10, flexWrap:'wrap', marginBottom:14}}>
+              <button className="kh-btn kh-btn-primary">Primary CTA</button>
+              <button className="kh-btn kh-btn-secondary">Secondary</button>
+              <button className="kh-btn kh-btn-dark">Dark</button>
+              <button className="kh-btn kh-btn-primary kh-btn-sm">Small</button>
+              <button className="kh-btn kh-btn-primary kh-btn-lg">Large</button>
+            </div>
+
+            <div className="kh-eyebrow" style={{color:'#F39C12', marginBottom:8}}>Badges</div>
+            <div style={{display:'flex', gap:10, flexWrap:'wrap'}}>
+              <span className="kh-badge">POPULAR</span>
+              <span className="kh-badge kh-badge-blue">Verified</span>
+              <span className="kh-badge kh-badge-success"><KhIcon.Check size={12} stroke="#1a7f47"/> Confirmed</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

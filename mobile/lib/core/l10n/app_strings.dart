@@ -126,6 +126,14 @@ class S {
   String get errorPhoneAlreadyRegistered =>
       isAr ? 'هذا الرقم مسجل مسبقاً' : 'This phone number is already registered';
 
+  // ── No-internet blocker ─────────────────────────────────────────────────────
+  String get noInternetTitle =>
+      isAr ? 'لا يوجد اتصال بالإنترنت' : 'No Internet Connection';
+  String get noInternetBody => isAr
+      ? 'يحتاج خدمتي إلى اتصال بالإنترنت للعمل. يرجى التحقق من شبكة Wi-Fi أو بيانات الهاتف والمحاولة مرة أخرى.'
+      : 'Khudmati needs an internet connection to work. Please check your Wi-Fi or mobile data and try again.';
+  String get noInternetRetry => isAr ? 'إعادة المحاولة' : 'Retry';
+
   // ── Nav bar (customer) ──────────────────────────────────────────────────────
   String get navHome          => isAr ? 'الرئيسية' : 'Home';
   String get navBookings      => isAr ? 'حجوزاتي'  : 'My Bookings';

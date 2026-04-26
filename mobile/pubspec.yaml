@@ -43,6 +43,7 @@ dependencies:
   talker_flutter: ^4.4.0
   talker_dio_logger: ^4.4.0
   talker_riverpod_logger: ^4.4.0
+  connectivity_plus: ^6.0.5
 
 dev_dependencies:
   flutter_test:

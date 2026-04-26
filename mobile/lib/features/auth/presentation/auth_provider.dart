@@ -94,9 +94,25 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final user = AppUser.fromJson(data);
       log.i(_tag, 'fetchMe ok', data: {'role': role.name, 'userId': user.id});
       return AuthAuthenticated(user, role);
+    } on DioException catch (e) {
+      // Network-level failures (offline, DNS, captive portal, server
+      // unreachable) must NOT clear the session — tokens are still on
+      // disk and the no-internet blocker will surface the issue. Only
+      // a hard 401/403 from the backend means the session is gone.
+      final status = e.response?.statusCode;
+      if (status == 401 || status == 403) {
+        log.w(_tag, 'fetchMe rejected — clearing session',
+            data: {'status': status});
+        return const AuthUnauthenticated();
+      }
+      log.w(_tag, 'fetchMe failed — keeping session', data: {
+        'status': status,
+        'type': e.type.name,
+      });
+      return AuthAuthenticated(AppUser.empty, role);
     } catch (e) {
-      log.w(_tag, 'fetchMe failed — treating as unauthenticated', error: e);
-      return const AuthUnauthenticated();
+      log.w(_tag, 'fetchMe crashed — keeping session', error: e);
+      return AuthAuthenticated(AppUser.empty, role);
     }
   }
 

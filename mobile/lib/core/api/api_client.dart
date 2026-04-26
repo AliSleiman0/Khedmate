@@ -5,6 +5,7 @@ import 'package:talker_dio_logger/talker_dio_logger.dart';
 import '../constants/app_config.dart';
 import '../logging/app_logger.dart';
 import '../logging/redact.dart';
+import '../network/connectivity_provider.dart';
 import '../providers/role_provider.dart';
 
 /// Thrown by the response interceptor when the backend returns
@@ -96,6 +97,23 @@ class ApiClient {
             });
             _ref?.read(upgradeRequiredProvider.notifier).state =
                 upgrade ?? const AppUpgradeRequired();
+            handler.next(error);
+            return;
+          }
+
+          // Connection-level failure (no DNS / no route / TLS handshake
+          // timeout / captive portal). Belt-and-braces to the platform
+          // connectivity stream — flips the `noInternetProvider` so the
+          // global blocker takes over even when the OS reports the
+          // interface as up.
+          if (error.type == DioExceptionType.connectionError ||
+              error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.unknown) {
+            log.w('ApiClient.onError', 'connection error', data: {
+              'type': error.type.name,
+              'path': path,
+            });
+            _ref?.read(noInternetProvider.notifier).state = true;
             handler.next(error);
             return;
           }
