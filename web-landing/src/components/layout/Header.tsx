@@ -1,119 +1,108 @@
-import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { Logo } from '../ui/Brand'
+import { Icon } from '../ui/Icons'
+import { useIsMobile } from '../../hooks/useIsMobile'
+
+const NAV_ITEMS: { label: string; href: string }[] = [
+  { label: 'How it works', href: '#how-it-works' },
+  { label: 'Services', href: '#services' },
+  { label: 'For Providers', href: '#providers' },
+  { label: 'Contact', href: '#contact' },
+]
 
 export default function Header() {
-  const { t, i18n } = useTranslation()
-  const toggle = () => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const isMobile = useIsMobile()
+  const [scrolled, setScrolled] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    const onScroll = () => setScrolled(window.scrollY > 100)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const { scrollY } = useScroll()
-  const headerBg = useTransform(scrollY, [0, 60], ['rgba(27,79,114,1)', 'rgba(27,79,114,0.95)'])
-  const headerBlur = useTransform(scrollY, [0, 60], ['blur(0px) saturate(100%)', 'blur(16px) saturate(180%)'])
-  const headerShadow = useTransform(scrollY, [0, 60], ['0 2px 20px rgba(27,79,114,0)', '0 2px 20px rgba(27,79,114,0.25)'])
-
-  const navLinks = [
-    { href: '#how-it-works', label: t('how_it_works') },
-    { href: '#services', label: t('services') },
-    { href: '#contact', label: t('contact_us') },
-  ]
+  const isDark = !scrolled
+  const bg = isDark ? 'rgba(13,47,71,.55)' : 'rgba(255,255,255,.94)'
+  const border = isDark ? 'rgba(255,255,255,.08)' : 'rgba(20,24,29,.06)'
+  const ink = isDark ? '#fff' : '#1f262e'
+  const muted = isDark ? 'rgba(255,255,255,.78)' : '#4d5763'
 
   return (
-    <motion.header style={{
-      background: headerBg,
-      backdropFilter: headerBlur,
-      boxShadow: headerShadow,
-      padding: '0 32px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      height: 72,
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
+    <header style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      background: bg, backdropFilter: 'blur(14px) saturate(160%)', WebkitBackdropFilter: 'blur(14px) saturate(160%)',
+      borderBottom: `1px solid ${border}`,
+      transition: 'background .25s var(--kh-ease), border-color .25s var(--kh-ease)',
     }}>
-      {/* Logo + brand name */}
-      <motion.div
-        style={{ display: 'flex', alignItems: 'center', gap: 12 }}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-      >
-        <div style={{ background: 'white', borderRadius: 10, padding: '4px 6px', display: 'flex', alignItems: 'center' }}>
-          <img src="/logo.webp" alt="خدمتي" style={{ height: 36 }} />
-        </div>
-        <span style={{ color: 'var(--amber)', fontWeight: 700, fontSize: 22, letterSpacing: '-0.3px' }}>
-          خدمتي
-        </span>
-      </motion.div>
+      <div style={{
+        maxWidth: 1280, margin: '0 auto',
+        padding: isMobile ? '12px 16px' : '14px 32px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24,
+      }}>
+        <a href="#top" style={{ display: 'inline-flex' }}>
+          <Logo size={isMobile ? 26 : 30} white={isDark} />
+        </a>
 
-      {/* Desktop nav */}
-      {!isMobile && (
-        <nav style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
-          {navLinks.map((link, index) => (
-            <motion.a
-              key={link.href}
-              href={link.href}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.06 + index * 0.06, ease: 'easeOut' }}
-              whileHover={{ color: 'white' }}
-              style={{ color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: 500, cursor: 'pointer' }}
-            >
-              {link.label}
-            </motion.a>
+        {!isMobile && (
+          <nav style={{ display: 'flex', gap: 28 }}>
+            {NAV_ITEMS.map(item => (
+              <a key={item.href} href={item.href} style={{
+                color: muted, fontSize: 14, fontWeight: 500, textDecoration: 'none',
+                position: 'relative', padding: '4px 0',
+                transition: 'color .15s var(--kh-ease)',
+              }}
+                onMouseEnter={e => (e.currentTarget.style.color = ink)}
+                onMouseLeave={e => (e.currentTarget.style.color = muted)}
+              >{item.label}</a>
+            ))}
+          </nav>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
+          {!isMobile && (
+            <span style={{
+              color: muted, fontSize: 13, fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 12px', borderRadius: 999, border: `1px solid ${border}`,
+            }}>
+              <Icon.Pin size={14} stroke={muted} />
+              Beirut
+            </span>
+          )}
+          <a href="#contact" className="kh-btn kh-btn-primary" style={{
+            height: isMobile ? 38 : 44, padding: isMobile ? '0 14px' : '0 18px',
+            fontSize: isMobile ? 13 : 14, textDecoration: 'none',
+          }}>
+            {isMobile ? 'Get app' : 'Download the App'}
+          </a>
+          {isMobile && (
+            <button aria-label="Menu" onClick={() => setMenuOpen(o => !o)} style={{
+              background: 'transparent', border: 'none', padding: 8, color: ink, cursor: 'pointer',
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M3 6h18M3 12h18M3 18h18" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isMobile && menuOpen && (
+        <nav style={{
+          background: scrolled ? '#fff' : '#0d2f47',
+          borderTop: `1px solid ${border}`,
+          padding: '8px 16px 16px',
+          display: 'flex', flexDirection: 'column', gap: 4,
+        }}>
+          {NAV_ITEMS.map(item => (
+            <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{
+              color: ink, fontSize: 15, fontWeight: 500, padding: '12px 4px',
+              borderBottom: `1px solid ${border}`,
+            }}>{item.label}</a>
           ))}
         </nav>
       )}
-
-      {/* Actions */}
-      <motion.div
-        style={{ display: 'flex', gap: 10, alignItems: 'center' }}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.24, ease: 'easeOut' }}
-      >
-        <motion.button
-          onClick={toggle}
-          whileHover={{ scale: 1.04, background: 'rgba(255,255,255,0.22)' }}
-          whileTap={{ scale: 0.96 }}
-          style={{
-            background: 'rgba(255,255,255,0.12)',
-            color: 'white',
-            border: '1px solid rgba(255,255,255,0.25)',
-            padding: '7px 18px',
-            borderRadius: 'var(--radius-pill)',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            fontSize: 14,
-          }}
-        >
-          {t('language')}
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.04, background: 'var(--amber-dark)' }}
-          whileTap={{ scale: 0.96 }}
-          style={{
-            background: 'var(--amber)',
-            color: 'white',
-            border: 'none',
-            padding: '9px 22px',
-            borderRadius: 'var(--radius-pill)',
-            cursor: 'pointer',
-            fontWeight: 700,
-            fontFamily: 'inherit',
-            fontSize: 14,
-          }}
-        >
-          {t('download_app')}
-        </motion.button>
-      </motion.div>
-    </motion.header>
+    </header>
   )
 }

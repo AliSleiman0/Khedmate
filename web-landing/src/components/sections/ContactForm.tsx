@@ -1,19 +1,43 @@
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { motion, AnimatePresence } from 'framer-motion'
-import { fadeInUp } from '../../animations/variants'
+import { Icon } from '../ui/Icons'
+import { useIsMobile } from '../../hooks/useIsMobile'
+
+function ContactRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: 10, background: '#e8eef4',
+        display: 'grid', placeItems: 'center', flexShrink: 0,
+      }}>{icon}</div>
+      <div>
+        <div style={{
+          fontSize: 11, color: '#8b95a1', fontWeight: 600,
+          letterSpacing: '.04em', textTransform: 'uppercase',
+        }}>{label}</div>
+        <div style={{ fontSize: 14, color: '#14181d', fontWeight: 500 }}>{value}</div>
+      </div>
+    </div>
+  )
+}
 
 export default function ContactForm() {
-  const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const [form, setForm] = useState({ name: '', email: '', message: '' })
-  const [sent, setSent] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [touched, setTouched] = useState<{ name?: boolean; email?: boolean }>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [focusedField, setFocusedField] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
+  const showEmailError = !!touched.email && !!form.email && !emailValid
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    if (!form.name || !emailValid || !form.message) {
+      setTouched({ name: true, email: true })
+      return
+    }
+    setSubmitting(true)
     setError(null)
     try {
       const res = await fetch('/api/landing/contact', {
@@ -22,165 +46,103 @@ export default function ContactForm() {
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error('server')
-      setSent(true)
+      setSubmitted(true)
     } catch {
-      setError(t('contact_error'))
+      setError("We couldn't send your message — please try again in a moment.")
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
-  const baseInput: React.CSSProperties = {
-    padding: '13px 16px',
-    borderRadius: 12,
-    border: 'none',
-    fontSize: 16,
-    fontFamily: 'inherit',
-    width: '100%',
-    outline: 'none',
-    background: 'white',
-    color: 'var(--text-primary)',
-  }
-
   return (
-    <section id="contact" style={{ background: 'var(--surface)' }}>
-      <div style={{ maxWidth: 600, margin: '0 auto' }}>
-        <motion.h2
-          variants={fadeInUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          style={{ fontSize: 38, fontWeight: 700, marginBottom: 12, textAlign: 'center', color: 'var(--brand-blue)' }}
-        >
-          {t('contact_us')}
-        </motion.h2>
-        <motion.div
-          variants={fadeInUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          style={{ width: 60, height: 4, borderRadius: 2, background: 'var(--amber)', margin: '0 auto 48px' }}
-        />
+    <section id="contact" style={{
+      padding: isMobile ? '56px 20px' : '112px 32px', background: '#fbfbfc',
+    }}>
+      <div style={{
+        maxWidth: 980, margin: '0 auto',
+        display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.2fr',
+        gap: isMobile ? 28 : 48, alignItems: 'flex-start',
+      }}>
+        <div>
+          <div className="kh-eyebrow" style={{ color: '#F39C12', marginBottom: 10 }}>Contact us</div>
+          <h2 className="kh-h1" style={{
+            fontSize: isMobile ? 28 : 36, color: '#14181d',
+            margin: '0 0 14px', letterSpacing: '-0.025em',
+          }}>
+            Question, feedback, or partnership?
+          </h2>
+          <p style={{ fontSize: 15, color: '#4d5763', lineHeight: 1.6, margin: '0 0 24px' }}>
+            We answer every message within one business day. No bots, no tickets — just our team in Beirut.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <ContactRow icon={<Icon.Mail size={16} stroke="#1B4F72" />} label="Email" value="info@khudmati.app" />
+            <ContactRow icon={<Icon.Phone size={16} stroke="#1B4F72" />} label="Phone" value="+961 70 000 000" />
+            <ContactRow icon={<Icon.Pin size={16} stroke="#1B4F72" />} label="Office" value="Hamra, Beirut · Lebanon" />
+          </div>
+        </div>
 
-        <AnimatePresence mode="wait">
-          {sent ? (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.85 }}
-              transition={{ duration: 0.35 }}
-              style={{
-                textAlign: 'center',
-                padding: '56px 24px',
-                background: 'white',
-                borderRadius: 'var(--radius-card)',
-                boxShadow: '0 4px 24px rgba(27,79,114,0.08)',
-                border: '1px solid rgba(27,79,114,0.10)',
-              }}
-            >
-              <motion.svg
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.15 }}
-                width="64" height="64" viewBox="0 0 24 24" fill="none"
-                style={{ margin: '0 auto 20px', display: 'block' }}
-              >
-                <circle cx="12" cy="12" r="10" stroke="var(--success)" strokeWidth="2"/>
-                <polyline points="9 12 11 14 15 10" stroke="var(--success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </motion.svg>
-              <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--brand-blue)' }}>{t('contact_success_title')}</p>
-              <p style={{ color: 'var(--text-secondary)', marginTop: 10 }}>{t('contact_success_desc')}</p>
-            </motion.div>
+        <div className="kh-card" style={{
+          padding: isMobile ? 20 : 32, background: '#fff', borderRadius: 18,
+        }}>
+          {submitted ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: '50%', margin: '0 auto 18px',
+                background: '#e3f5ec', color: '#1a7f47',
+                display: 'grid', placeItems: 'center',
+              }}>
+                <Icon.Check size={28} stroke="#1a7f47" />
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 600, color: '#14181d', marginBottom: 6 }}>Message sent</div>
+              <div style={{ fontSize: 14, color: '#6b7682' }}>We'll be in touch within one business day.</div>
+            </div>
           ) : (
-            <motion.form
-              key="form"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              onSubmit={handleSubmit}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16,
-                background: 'white',
-                padding: 36,
-                borderRadius: 'var(--radius-card)',
-                boxShadow: '0 4px 24px rgba(27,79,114,0.08)',
-                border: '1px solid rgba(27,79,114,0.10)',
-              }}
-            >
-              {(['name', 'email'] as const).map(f => (
-                <motion.div
-                  key={f}
-                  animate={{
-                    boxShadow: focusedField === f
-                      ? '0 0 0 2px var(--brand-blue)'
-                      : '0 0 0 1px rgba(27,79,114,0.15)',
-                  }}
-                  transition={{ duration: 0.18 }}
-                  style={{ borderRadius: 12 }}
-                >
-                  <input
-                    type={f === 'email' ? 'email' : 'text'}
-                    placeholder={t(f)}
-                    value={form[f]}
-                    onChange={e => setForm(p => ({ ...p, [f]: e.target.value }))}
-                    onFocus={() => setFocusedField(f)}
-                    onBlur={() => setFocusedField(null)}
-                    required
-                    style={baseInput}
-                  />
-                </motion.div>
-              ))}
-              <motion.div
-                animate={{
-                  boxShadow: focusedField === 'message'
-                    ? '0 0 0 2px var(--brand-blue)'
-                    : '0 0 0 1px rgba(27,79,114,0.15)',
-                }}
-                transition={{ duration: 0.18 }}
-                style={{ borderRadius: 12 }}
-              >
-                <textarea
-                  placeholder={t('message')}
+            <form onSubmit={submit}>
+              <div style={{ marginBottom: 14 }}>
+                <label className="kh-label">Your name</label>
+                <input className="kh-input" placeholder="Layal Khoury"
+                  value={form.name}
+                  onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                  onBlur={() => setTouched(t => ({ ...t, name: true }))} />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label className="kh-label">Email</label>
+                <input className={`kh-input ${showEmailError ? 'kh-input-error' : ''}`}
+                  placeholder="layal@example.com" type="email"
+                  value={form.email}
+                  onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                  onBlur={() => setTouched(t => ({ ...t, email: true }))} />
+                {showEmailError && (
+                  <div style={{ fontSize: 12, color: '#c53030', marginTop: 6 }}>
+                    Please enter a valid email address.
+                  </div>
+                )}
+              </div>
+              <div style={{ marginBottom: 18 }}>
+                <label className="kh-label">Message</label>
+                <textarea className="kh-input kh-textarea" placeholder="How can we help?"
                   value={form.message}
-                  onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
-                  onFocus={() => setFocusedField('message')}
-                  onBlur={() => setFocusedField(null)}
-                  rows={5}
-                  required
-                  style={{ ...baseInput, resize: 'vertical', display: 'block' }}
-                />
-              </motion.div>
+                  onChange={e => setForm(p => ({ ...p, message: e.target.value }))} />
+              </div>
               {error && (
-                <p style={{ color: 'var(--danger)', fontSize: 14, textAlign: 'center', margin: 0 }}>{error}</p>
+                <div style={{
+                  fontSize: 13, color: '#c53030', marginBottom: 12, textAlign: 'center',
+                }}>{error}</div>
               )}
-              <motion.button
-                type="submit"
-                disabled={loading}
-                whileHover={!loading ? { scale: 1.03, boxShadow: '0 6px 20px rgba(27,79,114,0.25)' } : {}}
-                whileTap={!loading ? { scale: 0.97 } : {}}
-                style={{
-                  background: loading ? '#2E6B99' : 'var(--brand-blue)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '15px',
-                  borderRadius: 'var(--radius-pill)',
-                  fontSize: 17,
-                  fontWeight: 700,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontFamily: 'inherit',
-                  opacity: loading ? 0.7 : 1,
-                  transition: 'background var(--transition-base), opacity var(--transition-base)',
-                }}
-              >
-                {loading ? t('sending') : t('send')}
-              </motion.button>
-            </motion.form>
+              <button type="submit" className="kh-btn kh-btn-dark"
+                style={{ width: '100%', height: 48, opacity: submitting ? 0.7 : 1 }}
+                disabled={submitting}>
+                {submitting ? 'Sending…' : (<>Send message <Icon.Arrow size={14} stroke="#fff" /></>)}
+              </button>
+              <div style={{
+                fontSize: 11, color: '#8b95a1', textAlign: 'center', marginTop: 12,
+                display: 'inline-flex', justifyContent: 'center', alignItems: 'center', gap: 4, width: '100%',
+              }}>
+                <Icon.Lock size={11} stroke="#8b95a1" /> Your details are private. We never share or sell.
+              </div>
+            </form>
           )}
-        </AnimatePresence>
+        </div>
       </div>
     </section>
   )

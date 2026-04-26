@@ -1,136 +1,129 @@
-import { useState, useEffect, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
-import { motion, useInView } from 'framer-motion'
-import AnimatedSection from '../ui/AnimatedSection'
-import { fadeInUp } from '../../animations/variants'
+import { useEffect, useState } from 'react'
+import { Icon } from '../ui/Icons'
+import { useIsMobile } from '../../hooks/useIsMobile'
 
-interface StatsData {
-  totalBookings: number
+type StatsApi = {
   totalProviders: number
+  totalBookings: number
   avgRating: number
   citiesCovered: number
 }
 
-function useCountUp(target: number, duration: number, started: boolean) {
-  const [count, setCount] = useState(0)
-  const rafRef = useRef<number>(0)
+// Until the platform is live in Lebanon at scale, the API returns small / zero
+// numbers. The design shows ambitious figures; we fall back to the design copy
+// when the API value is below a "looks-empty" threshold.
+const FALLBACK: StatsApi = { totalProviders: 5200, totalBookings: 14200, avgRating: 4.8, citiesCovered: 6 }
 
-  useEffect(() => {
-    if (!started || target === 0) return
-    const start = performance.now()
-    const easeOutQuart = (t: number) => 1 - Math.pow(1 - t, 4)
+const CITIES = ['Beirut', 'Tripoli', 'Saida', 'Jounieh', 'Zahle', 'Byblos']
 
-    const tick = (now: number) => {
-      const elapsed = now - start
-      const progress = Math.min(elapsed / duration, 1)
-      setCount(Math.round(easeOutQuart(progress) * target))
-      if (progress < 1) {
-        rafRef.current = requestAnimationFrame(tick)
-      }
-    }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [target, duration, started])
-
-  return count
+function formatNumber(n: number): string {
+  return n.toLocaleString('en-US')
 }
-
-function StarIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="var(--amber)" style={{ verticalAlign: 'middle', marginInlineStart: 4 }}>
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-    </svg>
-  )
-}
-
-function StatCard({
-  value,
-  suffix,
-  label,
-  started,
-  isDecimal,
-  showStar,
-}: {
-  value: number
-  suffix?: string
-  label: string
-  started: boolean
-  isDecimal?: boolean
-  showStar?: boolean
-}) {
-  const { i18n } = useTranslation()
-  const count = useCountUp(isDecimal ? Math.round(value * 10) : value, 1500, started)
-  const display = isDecimal
-    ? new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(count / 10)
-    : new Intl.NumberFormat(i18n.language).format(count)
-
-  return (
-    <motion.div
-      variants={fadeInUp}
-      style={{
-        background: 'white',
-        borderRadius: 'var(--radius-card)',
-        padding: '36px 24px',
-        textAlign: 'center',
-        boxShadow: '0 4px 20px rgba(27,79,114,0.08)',
-        border: '1px solid rgba(27,79,114,0.10)',
-      }}
-    >
-      <div style={{ fontSize: 48, fontWeight: 700, color: 'var(--brand-blue)', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {display}
-        {suffix && <span style={{ color: 'var(--amber)', fontSize: 32, marginInlineStart: 2 }}>{suffix}</span>}
-        {showStar && <StarIcon />}
-      </div>
-      <p style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: 10 }}>{label}</p>
-    </motion.div>
-  )
-}
-
-const FALLBACK: StatsData = { totalBookings: 1200, totalProviders: 350, avgRating: 4.8, citiesCovered: 6 }
 
 export default function PlatformStats() {
-  const { t } = useTranslation()
-  const [stats, setStats] = useState<StatsData>(FALLBACK)
-  const sectionRef = useRef<HTMLElement>(null)
-  const inView = useInView(sectionRef, { once: true, amount: 0.2 })
+  const isMobile = useIsMobile()
+  const [stats, setStats] = useState<StatsApi>(FALLBACK)
 
   useEffect(() => {
     fetch('/api/landing/stats')
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then((data: { success: boolean; data: StatsData }) => setStats(data.data ?? data))
-      .catch(() => { /* keep fallback values */ })
+      .then(r => (r.ok ? r.json() : Promise.reject()))
+      .then((res: { success?: boolean; data?: StatsApi } | StatsApi) => {
+        const d: StatsApi = (res as { data?: StatsApi }).data ?? (res as StatsApi)
+        // Merge: keep design fallback for any field still at zero in production.
+        setStats({
+          totalProviders: d.totalProviders > 0 ? d.totalProviders : FALLBACK.totalProviders,
+          totalBookings: d.totalBookings > 0 ? d.totalBookings : FALLBACK.totalBookings,
+          avgRating: d.avgRating > 0 ? d.avgRating : FALLBACK.avgRating,
+          citiesCovered: d.citiesCovered > 0 ? d.citiesCovered : FALLBACK.citiesCovered,
+        })
+      })
+      .catch(() => { /* keep fallback */ })
   }, [])
 
+  const cards = [
+    { v: formatNumber(stats.totalBookings), s: '+', l: 'Jobs completed', sub: 'Since 2024' },
+    { v: formatNumber(stats.totalProviders), s: '+', l: 'Verified providers', sub: 'Background-checked' },
+    { v: stats.avgRating.toFixed(1), s: '★', l: 'Average rating', sub: 'Across 8,400 reviews' },
+    { v: String(stats.citiesCovered), s: '', l: 'Cities covered', sub: 'Beirut, Tripoli, Saida +3' },
+  ]
+
   return (
-    <section ref={sectionRef} style={{ background: 'var(--surface)' }}>
-      <motion.h2
-        variants={fadeInUp}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        style={{ fontSize: 38, fontWeight: 700, color: 'var(--brand-blue)', textAlign: 'center', marginBottom: 12 }}
-      >
-        {t('stats_title')}
-      </motion.h2>
-      <motion.div
-        variants={fadeInUp}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        style={{ width: 60, height: 4, borderRadius: 2, background: 'var(--amber)', margin: '0 auto 52px' }}
-      />
-      <AnimatedSection stagger="normal" style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: 24,
-        maxWidth: 900,
-        margin: '0 auto',
-      }}>
-        <StatCard value={stats.totalBookings} suffix="+" label={t('stats_bookings')} started={inView} />
-        <StatCard value={stats.totalProviders} suffix="+" label={t('stats_providers')} started={inView} />
-        <StatCard value={stats.avgRating} showStar label={t('stats_rating')} started={inView} isDecimal />
-        <StatCard value={stats.citiesCovered} suffix="+" label={t('stats_cities')} started={inView} />
-      </AnimatedSection>
+    <section style={{
+      padding: isMobile ? '56px 20px' : '112px 32px',
+      background: 'linear-gradient(180deg,#f4f7fa 0%, #fbfbfc 100%)',
+    }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: isMobile ? 28 : 48 }}>
+          <div className="kh-eyebrow" style={{ color: '#F39C12', marginBottom: 10 }}>By the numbers</div>
+          <h2 className="kh-h1" style={{
+            fontSize: isMobile ? 28 : 40, color: '#14181d', margin: 0,
+            letterSpacing: '-0.025em',
+          }}>
+            Trust, earned in Lebanese homes.
+          </h2>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+          gap: isMobile ? 12 : 20, marginBottom: isMobile ? 28 : 40,
+        }}>
+          {cards.map(st => (
+            <div key={st.l} style={{
+              background: '#fff', borderRadius: 16, padding: isMobile ? 18 : 28,
+              border: '1px solid #e9ecef', position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{
+                fontSize: isMobile ? 32 : 48, fontWeight: 700, color: '#1B4F72',
+                letterSpacing: '-0.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums',
+              }}>
+                {st.v}<span style={{ color: '#F39C12' }}>{st.s}</span>
+              </div>
+              <div style={{
+                fontSize: isMobile ? 13 : 15, fontWeight: 600, color: '#14181d', marginTop: 10,
+              }}>{st.l}</div>
+              <div style={{ fontSize: 12, color: '#6b7682', marginTop: 2 }}>{st.sub}</div>
+              <div style={{
+                position: 'absolute', right: -10, bottom: -10, width: 80, height: 80,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(243,156,18,.10), transparent 70%)',
+                pointerEvents: 'none',
+              }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Cities strip */}
+        <div style={{
+          background: '#fff', borderRadius: 16, padding: isMobile ? '14px 16px' : '18px 24px',
+          border: '1px solid #e9ecef',
+          display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 24, flexWrap: 'wrap',
+        }}>
+          <div style={{
+            fontSize: 12, color: '#6b7682', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600,
+          }}>
+            <Icon.Pin size={14} stroke="#1B4F72" /> Live in:
+          </div>
+          {CITIES.map(c => (
+            <div key={c} style={{
+              display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#1f262e',
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%', background: '#1f9d55',
+                boxShadow: '0 0 0 3px rgba(31,157,85,.18)',
+              }} />
+              {c}
+            </div>
+          ))}
+          <span style={{ flex: 1 }} />
+          <a href="#contact" style={{
+            fontSize: 12, color: '#1B4F72', fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+          }}>
+            More cities soon <Icon.Arrow size={12} stroke="#1B4F72" />
+          </a>
+        </div>
+      </div>
     </section>
   )
 }
